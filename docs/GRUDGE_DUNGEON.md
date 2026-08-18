@@ -8,13 +8,14 @@ Playable layer on [Dungeon Forge](https://procedural-dungeon.netlify.app): the s
 
 | What | Where |
 |------|--------|
-| Manifest | `public/ssot.json` (1.2.2) |
+| Manifest | `public/ssot.json` (1.2.3) |
 | Fleet kit | `public/warlords-dungeon-kit.json` → R2 `models/dungeons/warlords-dungeon-kit.json` |
 | Characters | `https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb` |
 | Clip donor | `https://combat.grudge-studio.com/models/toon-clips/wk-knight.glb` |
 | Fallback clips | `…/glb/anim_{idle,walk,attack,death}.glb` |
 | Race list | human, barbarian, elf, dwarf, orc, undead |
-| Class kits | `ROLE_KITS` in `src/ssot.js` (knight A / mage D / ranger C) |
+| Class kits | `ROLE_KITS` in `src/ssot.js` (worge / warrior / mage / ranger) |
+| Combat math | `https://info.grudge-studio.com/api/v1/master-attributes.json` |
 | Spell catalog | `src/ssot.js` (aligned with `warlord-genesis/data/vfx/vfx-skill-types.json`) |
 
 Do **not** vendor Unity FBX into this repo. Do **not** put API keys in the client.

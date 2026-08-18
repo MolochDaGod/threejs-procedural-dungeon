@@ -7,7 +7,7 @@ Also: [https://grudge-dungeons-grudgenexus.vercel.app](https://grudge-dungeons-g
 
 **Enter dungeon (`E`)** after a forge. **WASD** move, **1–6** linear spells, **Esc** leave. Full play contract: [`docs/GRUDGE_DUNGEON.md`](docs/GRUDGE_DUNGEON.md).
 
-Current SSOT: **1.2.2** (`public/ssot.json`) · kit **2.1.1** · nav `grid-8` · `cellM` 2.
+Current SSOT: **1.2.3** (`public/ssot.json`) · kit **2.1.1** · nav `grid-8` · `cellM` 2.15.
 
 ---
 
@@ -38,7 +38,7 @@ Race GLBs are **full Toon-RTS wardrobes** on one `Bip001` skeleton. Showing ever
 | --- | --- |
 | Race wardrobe | `https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb` |
 | Clip donor | `https://combat.grudge-studio.com/models/toon-clips/wk-knight.glb` (55 named clips) |
-| Class kits | knight A / mage D / ranger C + one weapon (never the full wardrobe) |
+| Class kits | worge B / warrior A / mage D / ranger C + one weapon (never the full wardrobe) |
 | Retarget | rotation-only, alphanumeric `Bip001` match — **do not** apply donor translation/scale |
 | Fallback clips | `…/glb/anim_{idle,walk,attack,death}.glb` |
 | Dungeon kit | `https://assets.grudge-studio.com/models/dungeons/warlords-dungeon-kit.json` |

@@ -8,9 +8,16 @@ export function mountHud() {
   el.hidden = true;
   el.innerHTML = `
     <div class="ph-top">
-      <div class="ph-bars">
-        <div class="ph-bar hp"><i></i><b id="ph-hp">140</b></div>
-        <div class="ph-bar mp"><i></i><b id="ph-mp">100</b></div>
+      <div class="ph-frame" id="ph-frame">
+        <div class="ph-portrait">
+          <img id="ph-crest" alt="" />
+        </div>
+        <div class="ph-vitals">
+          <div class="ph-id"><b id="ph-class">WORGE</b><span id="ph-race">HUMAN</span></div>
+          <div class="ph-meter hp"><em>HP</em><div class="track"><i></i></div><b id="ph-hp">0</b></div>
+          <div class="ph-meter mp"><em>MP</em><div class="track"><i></i></div><b id="ph-mp">0</b></div>
+          <div class="ph-meter st"><em>ST</em><div class="track"><i></i></div><b id="ph-st">0</b></div>
+        </div>
       </div>
       <div class="ph-obj" id="ph-obj">Enter the halls</div>
     </div>
@@ -48,12 +55,22 @@ export function bindHud(hud, { onCast, onExit }) {
 export function renderHud(state) {
   const hud = document.getElementById('play-hud');
   if (!hud || hud.hidden) return;
-  const hp = hud.querySelector('.ph-bar.hp i');
-  const mp = hud.querySelector('.ph-bar.mp i');
-  hp.style.width = `${Math.max(0, 100 * state.hp / state.hpMax)}%`;
-  mp.style.width = `${Math.max(0, 100 * state.mana / state.manaMax)}%`;
-  hud.querySelector('#ph-hp').textContent = Math.ceil(state.hp);
-  hud.querySelector('#ph-mp').textContent = Math.ceil(state.mana);
+  const setMeter = (sel, cur, max) => {
+    const el = hud.querySelector(sel);
+    if (!el) return;
+    const fill = el.querySelector('i');
+    const lab = el.querySelector('b');
+    const pct = max > 0 ? Math.max(0, Math.min(100, 100 * cur / max)) : 0;
+    fill.style.width = `${pct}%`;
+    lab.textContent = `${Math.ceil(cur)}/${Math.ceil(max)}`;
+  };
+  setMeter('.ph-meter.hp', state.hp, state.hpMax);
+  setMeter('.ph-meter.mp', state.mana, state.manaMax);
+  setMeter('.ph-meter.st', state.stamina ?? 0, state.staminaMax ?? 100);
+  if (state.className) hud.querySelector('#ph-class').textContent = String(state.className).toUpperCase();
+  if (state.raceName) hud.querySelector('#ph-race').textContent = String(state.raceName).toUpperCase();
+  const crest = hud.querySelector('#ph-crest');
+  if (state.icon && crest.src !== state.icon) crest.src = state.icon;
   hud.querySelector('#ph-obj').textContent = state.objective;
   hud.querySelectorAll('.ph-slot').forEach((el) => {
     const slot = Number(el.dataset.slot);

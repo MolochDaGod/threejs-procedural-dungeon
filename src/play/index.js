@@ -12,9 +12,9 @@ import { createDungeonPhysics, stepDungeonPhysics, setPhysicsFeet, disposeDungeo
 import { spawnActor } from './characters.js';
 import { VfxWorld } from './vfx.js';
 import { TelegraphField } from './telegraph.js';
-import { tickBrain } from './brains.js';
 import { instanceCatalog, preloadDungeonAssets } from './assets.js';
 import { bindHud, mountHud, renderHud, showEnd, toast } from './hud.js';
+import { deriveSheet, fallbackSheet, loadInfoCombat, resolveHit } from './infoCombat.js';
 
 const KEYS = new Set();
 
@@ -32,6 +32,9 @@ export class PlaySession {
     this.aim = new THREE.Vector3(0, 0, 1);
     this.vel = new THREE.Vector3();
     this.raceId = 'human';
+    this.classId = 'worge';
+    this.sheet = fallbackSheet('human', 'worge');
+    this.stamina = this.sheet.staminaMax;
     this.hud = mountHud();
     bindHud(this.hud, {
       onCast: (slot) => this.castSlot(slot),
@@ -107,7 +110,7 @@ export class PlaySession {
     return path.filter(Boolean);
   }
 
-  async enter({ dungeon, raceId = 'human', linear = true }) {
+  async enter({ dungeon, raceId = 'human', classId = 'worge', linear = true }) {
     if (!dungeon?.valid) {
       toast('Forge a connected dungeon first');
       return;
@@ -116,6 +119,7 @@ export class PlaySession {
     this.active = true;
     this.d = dungeon;
     this.raceId = RACES[raceId] ? raceId : 'human';
+    this.classId = classId === 'warrior' || classId === 'mage' || classId === 'ranger' ? classId : 'worge';
     this.linear = linear;
     this.ctx.scene.add(this.group);
     this.hud.hidden = false;
@@ -127,8 +131,15 @@ export class PlaySession {
     const start = this.worldOf(dungeon, dungeon.rooms[dungeon.entrance].cx, dungeon.rooms[dungeon.entrance].cy);
     this.pos = new THREE.Vector3(start.x, 0, start.z);
     this.vel.set(0, 0, 0);
-    this.hp = PLAY.hp;
-    this.mana = PLAY.mana;
+    try {
+      this.sheet = deriveSheet(await loadInfoCombat(), this.raceId, this.classId);
+    } catch (err) {
+      console.warn('[grudge-dungeon] info.* combat miss', err);
+      this.sheet = fallbackSheet(this.raceId, this.classId);
+    }
+    this.hp = this.sheet.hpMax;
+    this.mana = this.sheet.manaMax;
+    this.stamina = this.sheet.staminaMax;
     this.cds = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
     this.casting = 0;
     this.castMax = 0.35;
@@ -142,7 +153,7 @@ export class PlaySession {
     this.instance = dungeonToInstance(dungeon, { linear, maxPlayers: 8, catalog: instanceCatalog(dungeon) });
     this.phys = await createDungeonPhysics(dungeon);
 
-    this.player = await spawnActor({ prefab: playerPrefab(this.raceId), equipped: true });
+    this.player = await spawnActor({ prefab: playerPrefab(this.raceId, this.classId), equipped: true });
     this.player.root.position.copy(this.pos);
     this.group.add(this.player.root);
 
@@ -197,7 +208,7 @@ export class PlaySession {
     this.ctx.cam.updateProjectionMatrix();
     this.ctx.camTarget.copy(this.pos);
     this.ctx.updateCam();
-    toast(`${RACES[this.raceId].label} · ${theme} cast · 1–6 to cast`);
+    toast(`${this.sheet.className} ${RACES[this.raceId].label} · ${theme} · 1–6`);
     } catch (err) {
       console.warn('[grudge-dungeon] enter failed', err);
       this.exit(true);
@@ -241,7 +252,9 @@ export class PlaySession {
 
   tryMove(dt) {
     const { fx, fz, moving } = this.facing();
-    const sprint = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+    const wantSprint = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+    const sprint = wantSprint && this.stamina > 2;
+    if (sprint) this.stamina = Math.max(0, this.stamina - PLAY.sprintStamina * dt);
     const speed = sprint ? PLAY.runSpeed : PLAY.walkSpeed;
     const target = new THREE.Vector3(fx, 0, fz);
     if (moving) target.normalize().multiplyScalar(speed);
@@ -277,12 +290,18 @@ export class PlaySession {
     const spell = SPELLS[n - 1];
     if (!spell) return;
     if ((this.cds[n] || 0) > 0) return;
+    const stamCost = spell.kind === 'slash' || spell.kind === 'dash' ? (spell.stamina || 12) : 0;
     if (this.mana < spell.mana) {
       toast('Not enough mana');
       return;
     }
+    if (this.stamina < stamCost) {
+      toast('Not enough stamina');
+      return;
+    }
     this.activeSlot = n;
     this.mana -= spell.mana;
+    this.stamina -= stamCost;
     this.cds[n] = spell.cd;
     this.casting = 0.18;
     this.castMax = 0.18;
@@ -304,9 +323,11 @@ export class PlaySession {
       this.vfx.linear({ origin: this.pos, dir, color: spell.color, range: Math.min(8, spell.range), width: 0.45, life: tel });
     }
 
+    const foeSheet = { defense: 18, block: 0.04, blockEffect: 0.25 };
+    const roll = (base) => resolveHit(base, this.sheet, foeSheet);
     if (spell.kind === 'slash') {
       this.vfx.slash({ origin, dir, color: spell.color, range: spell.range });
-      this.hitCone(dir, spell.range, 0.85, spell.damage);
+      this.hitCone(dir, spell.range, 0.85, roll(spell.damage));
     } else if (spell.kind === 'projectile') {
       this.vfx.projectile({
         origin,
@@ -315,15 +336,15 @@ export class PlaySession {
         speed: spell.speed || 18,
         range: spell.range,
         pierce: !!spell.pierce,
-        onHit: (e) => this.hurt(e, spell.damage),
+        onHit: (e) => this.hurt(e, roll(spell.damage)),
       });
     } else if (spell.kind === 'beam') {
       this.vfx.beam({ origin, dir, color: spell.color, range: spell.range });
-      this.hitLine(dir, spell.range, 0.55, spell.damage);
+      this.hitLine(dir, spell.range, 0.55, roll(spell.damage));
       this.punch(70, 0.35);
     } else if (spell.kind === 'nova') {
       this.vfx.nova({ origin: this.pos.clone(), color: spell.color, range: spell.range });
-      this.hitRadius(this.pos, spell.range, spell.damage);
+      this.hitRadius(this.pos, spell.range, roll(spell.damage));
       this.punch(80, 0.4);
     } else if (spell.kind === 'dash') {
       const dest = this.pos.clone().addScaledVector(dir, spell.range);
@@ -336,7 +357,7 @@ export class PlaySession {
       }
       setPhysicsFeet(this.phys, this.pos.x, this.pos.z);
       this.vfx.impact({ origin: this.pos.clone().setY(1), color: spell.color });
-      this.hitRadius(this.pos, 1.6, spell.damage);
+      this.hitRadius(this.pos, 1.6, roll(spell.damage));
       this.vfx.shake.add(0.25);
     }
   }
@@ -478,7 +499,7 @@ export class PlaySession {
     if (e.windKind === 'zone') {
       const mark = this.pos.clone();
       this.vfx.nova({ origin: mark, color: col, range: 3.4 });
-      if (this.pos.distanceTo(mark) <= 3.4) this.hp -= e.boss ? 18 : 10;
+      if (this.pos.distanceTo(mark) <= 3.4) this.hp -= resolveHit(e.boss ? 18 : 10, { damage: e.boss ? 40 : 16, crit: 0.06, critFactor: 1.5 }, this.sheet);
       this.vfx.zone({
         origin: mark,
         color: col,
@@ -486,7 +507,7 @@ export class PlaySession {
         life: 4.8,
         dps: e.boss ? 6 : 3,
         onTick: (it) => {
-          if (this.pos.distanceTo(mark) <= it.radius + 0.45) this.hp -= it.dps;
+          if (this.pos.distanceTo(mark) <= it.radius + 0.45) this.hp -= resolveHit(it.dps, { damage: 8 }, this.sheet);
         },
       });
     } else if (e.windKind === 'linear') {
@@ -495,7 +516,7 @@ export class PlaySession {
     } else {
       this.vfx.slash({ origin: e.pos.clone().setY(1.1), dir, color: col, range: 2.2 });
       const to = this.pos.clone().sub(e.pos);
-      if (to.length() <= 3.4 && to.normalize().dot(dir) > 0.45) this.hp -= e.boss ? 16 : 8;
+      if (to.length() <= 3.4 && to.normalize().dot(dir) > 0.45) this.hp -= resolveHit(e.boss ? 16 : 8, { damage: e.boss ? 36 : 14, crit: 0.05, critFactor: 1.5 }, this.sheet);
     }
     this.vfx.shake.add(e.boss ? 0.4 : 0.22);
   }
@@ -505,7 +526,7 @@ export class PlaySession {
     const along = to.dot(dir);
     if (along < 0 || along > range) return;
     const closest = origin.clone().addScaledVector(dir, along);
-    if (closest.distanceTo(this.pos) <= width + 0.4) this.hp -= dmg;
+    if (closest.distanceTo(this.pos) <= width + 0.4) this.hp -= resolveHit(dmg, { damage: 14, crit: 0.05, critFactor: 1.5 }, this.sheet);
   }
 
   objective() {
@@ -531,8 +552,12 @@ export class PlaySession {
     }
     for (const k of Object.keys(this.cds)) this.cds[k] = Math.max(0, this.cds[k] - gdt);
     this.casting = Math.max(0, this.casting - gdt);
-    this.mana = Math.min(PLAY.mana, this.mana + PLAY.manaRegen * gdt);
-    this.hp = Math.min(PLAY.hp, this.hp + PLAY.hpRegen * gdt);
+    const sheet = this.sheet || fallbackSheet(this.raceId, this.classId);
+    this.mana = Math.min(sheet.manaMax, this.mana + sheet.manaRegen * gdt);
+    this.hp = Math.min(sheet.hpMax, this.hp + sheet.hpRegen * gdt);
+    if (!this.keys.has('ShiftLeft') && !this.keys.has('ShiftRight')) {
+      this.stamina = Math.min(sheet.staminaMax, (this.stamina ?? sheet.staminaMax) + sheet.staminaRegen * gdt);
+    }
     this.tryMove(gdt);
     this.tickEnemies(gdt);
     this.vfx.update(gdt, this.enemies);
@@ -570,9 +595,14 @@ export class PlaySession {
 
     renderHud({
       hp: this.hp,
-      hpMax: PLAY.hp,
+      hpMax: sheet.hpMax,
       mana: this.mana,
-      manaMax: PLAY.mana,
+      manaMax: sheet.manaMax,
+      stamina: this.stamina,
+      staminaMax: sheet.staminaMax,
+      className: sheet.className,
+      raceName: sheet.raceName,
+      icon: sheet.icon,
       cds: this.cds,
       cdMax: Object.fromEntries(SPELLS.map((s) => [s.slot, s.cd])),
       activeSlot: this.activeSlot,

@@ -96,7 +96,7 @@
       "death": "asset-packs/toon-rts-characters/glb/anim_death.glb"
     },
     "deploy": "combat.grudge-studio.com kits + SkeletonUtils.clone + per-instance mixer",
-    "equipment": "Gladiators class kits (knight/mage/ranger letters) — never full wardrobe",
+    "equipment": "Gladiators class kits (worge/warrior/mage/ranger) — never full wardrobe",
     "prefabs": {
       "player": "race + warrior equipped",
       "brains": ["melee", "ranger", "mage", "warlord"],

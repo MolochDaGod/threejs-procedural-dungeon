@@ -2041,14 +2041,24 @@ const el = { seed:$('seed'), dice:$('dice'), forge:$('forge'),
   sCalls:$('sCalls'), sTris:$('sTris'), sFps:$('sFps') };
 
 let raceSel = 'human';
+let classSel = 'worge';
 function setRaceSel(id){
   raceSel = RACES[id] ? id : 'human';
   document.querySelectorAll('#racechips .chip').forEach(ch=>{
     ch.classList.toggle('on', ch.dataset.r === raceSel);
   });
 }
+function setClassSel(id){
+  classSel = id === 'warrior' || id === 'mage' || id === 'ranger' ? id : 'worge';
+  document.querySelectorAll('#classchips .chip').forEach(ch=>{
+    ch.classList.toggle('on', ch.dataset.c === classSel);
+  });
+}
 document.querySelectorAll('#racechips .chip').forEach(ch=>{
   ch.addEventListener('click', ()=> setRaceSel(ch.dataset.r));
+});
+document.querySelectorAll('#classchips .chip').forEach(ch=>{
+  ch.addEventListener('click', ()=> setClassSel(ch.dataset.c));
 });
 
 async function enterDungeon(){
@@ -2067,7 +2077,7 @@ async function enterDungeon(){
   if(el.enter){ el.enter.textContent = 'LOADING…'; el.enter.disabled = true; }
   try {
     forgeCast.setVisible(false);
-    await play.enter({ dungeon: D, raceId: raceSel, linear });
+    await play.enter({ dungeon: D, raceId: raceSel, classId: classSel, linear });
     if(el.enter) el.enter.textContent = 'LEAVE DUNGEON';
   } finally {
     if(el.enter) el.enter.disabled = false;

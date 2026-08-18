@@ -1,9 +1,11 @@
 {
-  "version": "1.2.2",
+  "version": "1.2.3",
   "product": "warlords",
   "era": "warlords",
   "cdn": "https://assets.grudge-studio.com",
   "combat": "https://combat.grudge-studio.com",
+  "info": "https://info.grudge-studio.com",
+  "classes": ["worge", "warrior", "mage", "ranger"],
   "clipDonor": "https://combat.grudge-studio.com/models/toon-clips/wk-knight.glb",
   "kit": "https://assets.grudge-studio.com/models/dungeons/warlords-dungeon-kit.json",
   "kitLocal": "./warlords-dungeon-kit.json",
