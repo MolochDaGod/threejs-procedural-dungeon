@@ -1,8 +1,16 @@
 {
+  "version": "1.2.2",
   "product": "warlords",
   "era": "warlords",
   "cdn": "https://assets.grudge-studio.com",
+  "combat": "https://combat.grudge-studio.com",
+  "clipDonor": "https://combat.grudge-studio.com/models/toon-clips/wk-knight.glb",
   "kit": "https://assets.grudge-studio.com/models/dungeons/warlords-dungeon-kit.json",
+  "kitLocal": "./warlords-dungeon-kit.json",
+  "nav": "grid-8",
+  "cellM": 2,
+  "physics": "@dimforge/rapier3d-compat@^0.19.3",
+  "instance": "src/gen/instance.js",
   "characters": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb",
   "anims": {
     "idle": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/anim_idle.glb",

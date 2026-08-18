@@ -1,10 +1,10 @@
 {
   "name": "grudge-dungeons",
-  "version": "1.1.0",
+  "version": "1.2.2",
   "description": "Grudge Warlords Era dungeons — Dungeon Forge pipeline plus playable linear crawl, 6-slot casting, and Toon-RTS / uMMORPG characters from the production CDN.",
   "type": "module",
   "author": "Majid Manzarpour (https://x.com/majidmanzarpour)",
-  "homepage": "https://procedural-dungeon.netlify.app",
+  "homepage": "https://grudge-dungeons.vercel.app",
   "license": "MIT",
   "keywords": [
     "three.js",
@@ -19,9 +19,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --port 4173"
+    "preview": "vite preview --port 4173",
+    "verify:cdn": "node scripts/verify-cdn.mjs",
+    "upload:kit": "node scripts/upload-kit.mjs",
+    "deploy": "node scripts/deploy.mjs"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.19.3",
     "three": "^0.185.0"
   },
   "devDependencies": {

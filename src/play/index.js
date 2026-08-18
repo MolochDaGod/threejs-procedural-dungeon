@@ -3,12 +3,19 @@
  * Entrance → combat/elite rooms → boss. 6-slot pre-match loadout. Linear casts.
  */
 import * as THREE from 'three';
-import { DUNGEON_SI, PLAY, RACES, SPELLS, THEME_ENEMY, spellById } from '../ssot.js';
+import { PLAY, RACES, SPELLS, spellById } from '../ssot.js';
+import { prefabFor, playerPrefab } from './prefabs.js';
+import { worldOf, cellOf, walkableWorld } from '../gen/cells.js';
+import { buildNavMesh } from '../gen/navmesh.js';
+import { dungeonToInstance } from '../gen/instance.js';
+import { createDungeonPhysics, stepDungeonPhysics, setPhysicsFeet, disposeDungeonPhysics } from './physics.js';
 import { spawnActor } from './characters.js';
 import { VfxWorld } from './vfx.js';
+import { TelegraphField } from './telegraph.js';
+import { tickBrain } from './brains.js';
+import { instanceCatalog, preloadDungeonAssets } from './assets.js';
 import { bindHud, mountHud, renderHud, showEnd, toast } from './hud.js';
 
-const VOID = 0, FLOOR = 1, WALL = 2, POOL = 3;
 const KEYS = new Set();
 
 export class PlaySession {
@@ -18,6 +25,7 @@ export class PlaySession {
     this.group = new THREE.Group();
     this.group.name = 'grudge-play';
     this.vfx = new VfxWorld(this.group);
+    this.tele = new TelegraphField(this.group);
     this.keys = KEYS;
     this.player = null;
     this.enemies = [];
@@ -46,23 +54,19 @@ export class PlaySession {
   }
 
   worldOf(d, x, y) {
-    const c = DUNGEON_SI.cell;
-    return { x: (x - d.W / 2 + 0.5) * c, z: (y - d.H / 2 + 0.5) * c };
+    return worldOf(d, x, y);
   }
 
   cellOf(d, wx, wz) {
-    const c = DUNGEON_SI.cell;
-    return {
-      x: Math.round(wx / c + d.W / 2 - 0.5),
-      y: Math.round(wz / c + d.H / 2 - 0.5),
-    };
+    return cellOf(d, wx, wz);
   }
 
-  walkable(d, wx, wz) {
-    const { x, y } = this.cellOf(d, wx, wz);
-    if (x < 0 || y < 0 || x >= d.W || y >= d.H) return false;
-    const t = d.grid[y * d.W + x];
-    return t === FLOOR;
+  walkable(d, wx, wz, radius = 0.32) {
+    return walkableWorld(d, wx, wz, radius);
+  }
+
+  applyPlayerFeet() {
+    setPhysicsFeet(this.phys, this.pos.x, this.pos.z);
   }
 
   critPath(d) {
@@ -117,6 +121,8 @@ export class PlaySession {
     this.hud.hidden = false;
     document.body.classList.add('playing');
     document.getElementById('ph-end')?.setAttribute('hidden', '');
+    try {
+    await preloadDungeonAssets();
 
     const start = this.worldOf(dungeon, dungeon.rooms[dungeon.entrance].cx, dungeon.rooms[dungeon.entrance].cy);
     this.pos = new THREE.Vector3(start.x, 0, start.z);
@@ -132,59 +138,55 @@ export class PlaySession {
     this.timeScale = 1;
     this.path = this.critPath(dungeon);
     this.pathI = 0;
+    this.nav = buildNavMesh(dungeon);
+    this.instance = dungeonToInstance(dungeon, { linear, maxPlayers: 8, catalog: instanceCatalog(dungeon) });
+    this.phys = await createDungeonPhysics(dungeon);
 
-    this.player = await spawnActor({ raceId: this.raceId, height: PLAY.playerHeight, role: 'warrior' });
+    this.player = await spawnActor({ prefab: playerPrefab(this.raceId), equipped: true });
     this.player.root.position.copy(this.pos);
     this.group.add(this.player.root);
 
     const theme = dungeon.params.themeKey;
-    const foeRace = THEME_ENEMY[theme] || 'orc';
     const rooms = linear ? this.path : dungeon.rooms;
     const jobs = [];
     for (const r of rooms) {
       if (r.type === 'entrance' || r.type === 'treasure' || r.type === 'shrine') continue;
+      const kind = r.type === 'boss' ? 'boss' : r.type === 'elite' ? 'elite' : 'combat';
       const n = r.type === 'boss' ? 3 : r.type === 'elite' ? 3 : 2;
       for (let i = 0; i < n; i++) {
         const ox = (i - (n - 1) / 2) * 1.8;
-        const w = this.worldOf(dungeon, r.cx + ox, r.cy);
-        const role =
-          r.type === 'boss' && i === 0
-            ? 'mage'
-            : i === n - 1
-              ? 'mage'
-              : 'warrior';
-        jobs.push({
-          r, w,
-          height: r.type === 'boss' && i === 0 ? PLAY.bossHeight : PLAY.enemyHeight,
-          role,
-          kind: role === 'mage' ? 'caster' : r.type === 'boss' ? 'boss' : 'grunt',
-        });
+        const w = this.worldOf(dungeon, r.cx + ox / 2, r.cy);
+        jobs.push({ r, w, prefab: prefabFor(theme, kind, r.id * 5 + i) });
       }
     }
     const spawned = await Promise.all(jobs.map((j) => spawnActor({
-      raceId: foeRace,
-      height: j.height,
-      role: j.role,
+      prefab: j.prefab,
+      equipped: true,
     }).then((actor) => ({ actor, j }))));
     for (const { actor, j } of spawned) {
       const r = j.r;
+      const p = j.prefab;
       const e = {
         actor,
+        prefab: p,
         pos: new THREE.Vector3(j.w.x, 0, j.w.z),
         spawn: new THREE.Vector3(j.w.x, 0, j.w.z),
-        hp: r.type === 'boss' && j.kind === 'boss' ? 260 : r.type === 'elite' ? 78 : 46,
-        hpMax: r.type === 'boss' && j.kind === 'boss' ? 260 : r.type === 'elite' ? 78 : 46,
-        radius: r.type === 'boss' && j.kind === 'boss' ? 0.72 : 0.42,
-        speed: j.kind === 'caster' ? 2.6 : r.type === 'boss' ? 2.4 : 3.2,
+        hp: p.hp,
+        hpMax: p.hp,
+        radius: p.radius,
+        speed: p.speed,
         alive: true,
         room: r,
         aggro: 0,
         hitCd: 0,
+        cycleI: 0,
+        windup: 0,
         wind: 0,
         windMax: 0,
         windKind: null,
-        boss: j.kind === 'boss' || (r.type === 'boss' && j.role === 'mage' && j.height >= PLAY.bossHeight),
-        kind: j.kind,
+        intent: null,
+        boss: r.type === 'boss' && (p.brain === 'warlord' || p.role === 'mage'),
+        kind: p.brain === 'mage' || p.role === 'mage' ? 'caster' : r.type === 'boss' ? 'boss' : 'grunt',
       };
       actor.root.position.copy(e.pos);
       this.group.add(actor.root);
@@ -195,7 +197,12 @@ export class PlaySession {
     this.ctx.cam.updateProjectionMatrix();
     this.ctx.camTarget.copy(this.pos);
     this.ctx.updateCam();
-    toast(`${RACES[this.raceId].label} · linear crawl · 1–6 to cast`);
+    toast(`${RACES[this.raceId].label} · ${theme} cast · 1–6 to cast`);
+    } catch (err) {
+      console.warn('[grudge-dungeon] enter failed', err);
+      this.exit(true);
+      toast('Could not enter — reforge and try again');
+    }
   }
 
   exit(silent = false) {
@@ -203,6 +210,11 @@ export class PlaySession {
     document.body.classList.remove('playing');
     this.hud.hidden = true;
     this.vfx.clear();
+    this.tele?.clear();
+    disposeDungeonPhysics(this.phys);
+    this.phys = null;
+    this.nav = null;
+    this.instance = null;
     this.player?.dispose();
     for (const e of this.enemies) e.actor.dispose();
     this.enemies = [];
@@ -235,12 +247,20 @@ export class PlaySession {
     if (moving) target.normalize().multiplyScalar(speed);
     this.vel.x += (target.x - this.vel.x) * Math.min(1, PLAY.accel * dt);
     this.vel.z += (target.z - this.vel.z) * Math.min(1, PLAY.accel * dt);
-    const nx = this.pos.x + this.vel.x * dt;
-    const nz = this.pos.z + this.vel.z * dt;
-    if (this.walkable(this.d, nx, this.pos.z)) this.pos.x = nx;
-    else this.vel.x = 0;
-    if (this.walkable(this.d, this.pos.x, nz)) this.pos.z = nz;
-    else this.vel.z = 0;
+    if (this.phys) {
+      const stepped = stepDungeonPhysics(this.phys, this.vel.x, this.vel.z, dt);
+      if (stepped) {
+        this.pos.x = stepped.x;
+        this.pos.z = stepped.z;
+      }
+    } else {
+      const nx = this.pos.x + this.vel.x * dt;
+      const nz = this.pos.z + this.vel.z * dt;
+      if (this.walkable(this.d, nx, this.pos.z)) this.pos.x = nx;
+      else this.vel.x = 0;
+      if (this.walkable(this.d, this.pos.x, nz)) this.pos.z = nz;
+      else this.vel.z = 0;
+    }
     if (this.player) {
       this.player.root.position.copy(this.pos);
       if (this.aim.lengthSq() > 0) {
@@ -314,6 +334,7 @@ export class PlaySession {
           if (this.walkable(this.d, p.x, p.z)) { this.pos.copy(p); break; }
         }
       }
+      setPhysicsFeet(this.phys, this.pos.x, this.pos.z);
       this.vfx.impact({ origin: this.pos.clone().setY(1), color: spell.color });
       this.hitRadius(this.pos, 1.6, spell.damage);
       this.vfx.shake.add(0.25);
@@ -337,7 +358,7 @@ export class PlaySession {
       e.actor.alive = false;
       e.actor.play('death', 0.08, false);
       this.punch(e.boss ? 90 : 40, e.boss ? 0.7 : 0.3);
-      toast(e.boss ? 'The warlord falls' : 'Foe down');
+      toast(e.boss ? `${e.prefab?.label || 'The warlord'} falls` : `${e.prefab?.label || 'Foe'} down`);
     }
   }
 
@@ -406,6 +427,33 @@ export class PlaySession {
         if (e.hitCd <= 0) this.beginEnemyCast(e, dir);
       }
     }
+    this.tele.update(dt);
+    for (let i = 0; i < this.enemies.length; i++) {
+      for (let j = i + 1; j < this.enemies.length; j++) {
+        const a = this.enemies[i];
+        const b = this.enemies[j];
+        if (!a.alive || !b.alive) continue;
+        const dx = b.pos.x - a.pos.x;
+        const dz = b.pos.z - a.pos.z;
+        const min = a.radius + b.radius;
+        const d2 = dx * dx + dz * dz;
+        if (d2 < 1e-6 || d2 >= min * min) continue;
+        const d = Math.sqrt(d2);
+        const push = (min - d) * 0.5;
+        const nx = dx / d;
+        const nz = dz / d;
+        const ax = a.pos.x - nx * push;
+        const az = a.pos.z - nz * push;
+        const bx = b.pos.x + nx * push;
+        const bz = b.pos.z + nz * push;
+        if (this.walkable(this.d, ax, a.pos.z, 0.2)) a.pos.x = ax;
+        if (this.walkable(this.d, a.pos.x, az, 0.2)) a.pos.z = az;
+        if (this.walkable(this.d, bx, b.pos.z, 0.2)) b.pos.x = bx;
+        if (this.walkable(this.d, b.pos.x, bz, 0.2)) b.pos.z = bz;
+        a.actor.root.position.copy(a.pos);
+        b.actor.root.position.copy(b.pos);
+      }
+    }
   }
 
   beginEnemyCast(e, dir) {
@@ -463,7 +511,7 @@ export class PlaySession {
   objective() {
     const living = this.enemies.filter((e) => e.alive);
     const boss = living.find((e) => e.boss);
-    if (boss) return `Slay the ${this.d.name.split(' of ')[0].replace('The ', '')} warlord`;
+    if (boss) return `Slay ${boss.prefab?.label || 'the warlord'}`;
     if (living.length) return `${living.length} foe${living.length > 1 ? 's' : ''} remain on the critical path`;
     return 'Dungeon cleared — the vault is yours';
   }
@@ -500,13 +548,20 @@ export class PlaySession {
       mana: this.mana,
       enemies: this.enemies.filter((e) => e.alive).length,
       pos: { x: this.pos.x, z: this.pos.z },
+      navWalkable: this.nav?.walkableCount ?? 0,
+      nav: this.nav?.kind,
+      cellM: this.nav?.cellM,
+      physics: this.phys ? 'rapier' : 'grid',
+      instanceId: this.instance?.id,
     };
 
     if (this.hp <= 0) {
       this.hp = 0;
       this.ended = 'lose';
-      this.player.alive = false;
-      this.player.play('death', 0.08, false);
+      if (this.player) {
+        this.player.alive = false;
+        this.player.play('death', 0.08, false);
+      }
       showEnd(false, 'The halls keep your bones. Reforge and descend again.');
     } else if (this.enemies.length && this.enemies.every((e) => !e.alive)) {
       this.ended = 'win';

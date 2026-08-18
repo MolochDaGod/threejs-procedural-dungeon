@@ -1,16 +1,21 @@
 # Grudge Dungeons — Warlords Era
 
-Playable layer on [Dungeon Forge](https://procedural-dungeon.netlify.app): the same seeded pipeline, plus a **linear crawl** using production Warlords / uMMORPG (Toon RTS) characters and Grudge spell VFX.
+Playable layer on [Dungeon Forge](https://procedural-dungeon.netlify.app): the same seeded pipeline, plus a **linear crawl** using production Warlords / uMMORPG (Toon RTS) characters bound the same way as [Grudge Gladiators](https://combat.grudge-studio.com/).
+
+**Live:** https://grudge-dungeons.vercel.app
 
 ## Source of truth
 
 | What | Where |
 |------|--------|
+| Manifest | `public/ssot.json` (1.2.2) |
+| Fleet kit | `public/warlords-dungeon-kit.json` → R2 `models/dungeons/warlords-dungeon-kit.json` |
 | Characters | `https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb` |
-| Loco / combat clips | `…/glb/anim_{idle,walk,attack,death}.glb` |
+| Clip donor | `https://combat.grudge-studio.com/models/toon-clips/wk-knight.glb` |
+| Fallback clips | `…/glb/anim_{idle,walk,attack,death}.glb` |
 | Race list | human, barbarian, elf, dwarf, orc, undead |
+| Class kits | `ROLE_KITS` in `src/ssot.js` (knight A / mage D / ranger C) |
 | Spell catalog | `src/ssot.js` (aligned with `warlord-genesis/data/vfx/vfx-skill-types.json`) |
-| Manifest | `public/ssot.json` |
 
 Do **not** vendor Unity FBX into this repo. Do **not** put API keys in the client.
 
@@ -35,13 +40,23 @@ Do **not** vendor Unity FBX into this repo. Do **not** put API keys in the clien
 
 ## Character deploy
 
-`SkeletonUtils.clone` + per-instance `AnimationMixer`. Native GLB clips first, shared Toon-RTS clips as fill. Empty clips are rejected.
+Race GLBs are full wardrobes. Apply Gladiators class visibility (one body / head / arms / legs + class weapon). Never show every mesh.
+
+`SkeletonUtils.clone` + per-instance `AnimationMixer`. Bind clips from the Combat `wk-knight.glb` donor with **rotation-only** retarget (`Bip001_Pelvis` → `Bip001 Pelvis`). Donor translation/scale tracks crush the race rest pose. Empty clips are rejected.
+
+## Instance
+
+- Nav: `grid-8` + string-pull (`src/gen/navmesh.js`)
+- Physics: `@dimforge/rapier3d-compat` (`src/play/physics.js`)
+- Cell size: 2 m
 
 ## Deploy
 
 ```bash
 npm install
 npm run build
-# Netlify: publish dist/  (netlify.toml)
-# or: npx netlify deploy --prod --dir=dist
+npm run verify:cdn
+npm run deploy     # existing Vercel project + existing R2 kit only
 ```
+
+No new hosts. Play stays on `grudgenexus/grudge-dungeons`. Assets stay on `assets.grudge-studio.com` and `combat.grudge-studio.com`.

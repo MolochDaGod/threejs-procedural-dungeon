@@ -1,10 +1,120 @@
-# 🏰 Grudge Dungeons — Warlords Era
+# Grudge Dungeons — Warlords Era
 
-Playable crawl on top of [Dungeon Forge](https://procedural-dungeon.netlify.app). Same seeded pipeline. Production characters come from the Grudge Toon-RTS / uMMORPG CDN — not from vendored Unity FBX.
+Playable crawl on top of [Dungeon Forge](https://procedural-dungeon.netlify.app). Same seeded pipeline. Production characters come from the Grudge Toon-RTS / uMMORPG CDN and bind like [Grudge Gladiators](https://combat.grudge-studio.com/) — not from vendored Unity FBX.
 
-**Enter dungeon (`E`)** after a forge. **WASD** move, **1–6** linear spells, **Esc** leave. See `docs/GRUDGE_DUNGEON.md`.
+**Live:** [https://grudge-dungeons.vercel.app](https://grudge-dungeons.vercel.app)  
+Also: [https://grudge-dungeons-grudgenexus.vercel.app](https://grudge-dungeons-grudgenexus.vercel.app)
 
-# 🏰 Dungeon Forge (upstream generator)
+**Enter dungeon (`E`)** after a forge. **WASD** move, **1–6** linear spells, **Esc** leave. Full play contract: [`docs/GRUDGE_DUNGEON.md`](docs/GRUDGE_DUNGEON.md).
+
+Current SSOT: **1.2.2** (`public/ssot.json`) · kit **2.1.1** · nav `grid-8` · `cellM` 2.
+
+---
+
+## Play
+
+1. Forge a dungeon (or check **Linear crawl** — 16 rooms, 0 loops).
+2. Pick a Warlords Era race: human, barbarian, elf, dwarf, orc, undead.
+3. **ENTER DUNGEON** / `E`.
+4. Walk the critical path (entrance → combat/elite → boss).
+5. Cast from the 6-slot bar (`1–6`). Loadout is picked before the crawl.
+
+| Slot | Spell | Motion |
+| --- | --- | --- |
+| 1 | Cleave | Front cone slash |
+| 2 | Fireball | Linear projectile |
+| 3 | Frost Lance | Linear pierce projectile |
+| 4 | Thunder | Instant line / beam |
+| 5 | Holy Nova | Expanding ring |
+| 6 | Void Step | Linear dash + burst |
+
+---
+
+## Characters and assets
+
+Race GLBs are **full Toon-RTS wardrobes** on one `Bip001` skeleton. Showing every mesh at once is a spiked blob. The dungeon uses the same Gladiators deploy path:
+
+| Piece | Source |
+| --- | --- |
+| Race wardrobe | `https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb` |
+| Clip donor | `https://combat.grudge-studio.com/models/toon-clips/wk-knight.glb` (55 named clips) |
+| Class kits | knight A / mage D / ranger C + one weapon (never the full wardrobe) |
+| Retarget | rotation-only, alphanumeric `Bip001` match — **do not** apply donor translation/scale |
+| Fallback clips | `…/glb/anim_{idle,walk,attack,death}.glb` |
+| Dungeon kit | `https://assets.grudge-studio.com/models/dungeons/warlords-dungeon-kit.json` |
+
+Runtime: `SkeletonUtils.clone` + per-instance `AnimationMixer` on `RootNode` / `Bip001`. Empty clips are a bug.
+
+Do **not** vendor Unity FBX. Do **not** put API keys in this client.
+
+---
+
+## Instance contract
+
+- Nav: generated `grid-8` walkable cells + string-pull (`src/gen/navmesh.js`)
+- Physics: `@dimforge/rapier3d-compat` kinematic character + cuboid proxies (`src/play/physics.js`)
+- Cell size: 2 m (`CELL_M`)
+- Host: Three.js client + Rapier. No new Vercel project, no new asset bucket.
+
+---
+
+## Quick start
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+```
+
+```bash
+npm run build
+npm run preview    # http://localhost:4173
+npm run verify:cdn
+```
+
+Requires Node 18+.
+
+### Production deploy (existing hosts only)
+
+```bash
+npm run deploy     # vite build → HEAD-check CDN → upload kit to R2 → vercel --prod
+```
+
+- App: existing Vercel project `grudgenexus/grudge-dungeons`
+- Kit: existing R2 bucket `grudge-assets` → `models/dungeons/warlords-dungeon-kit.json`
+- Characters / clips: existing CDN + Combat host (CORS `*`)
+
+---
+
+## Project structure
+
+```
+threejs-procedural-dungeon/
+├── index.html
+├── public/
+│   ├── ssot.json                 # production SSOT 1.2.2
+│   └── warlords-dungeon-kit.json # fleet kit 2.1.1
+├── scripts/
+│   ├── deploy.mjs
+│   ├── upload-kit.mjs
+│   └── verify-cdn.mjs
+├── src/
+│   ├── ssot.js                   # CDN + Combat donor + spells + kits
+│   ├── main.js                   # Dungeon Forge pipeline + forge cast
+│   ├── gen/                      # cells, navmesh, instance payload
+│   ├── play/
+│   │   ├── characters.js         # wardrobe + rotation-only mixer
+│   │   ├── index.js              # crawl, casts, feel
+│   │   ├── prefabs.js            # theme monster / boss kits
+│   │   ├── physics.js            # Rapier
+│   │   ├── telegraph.js          # cone / line / aoe windup
+│   │   └── …
+│   └── ui/styles.css
+└── docs/GRUDGE_DUNGEON.md
+```
+
+---
+
+# Dungeon Forge (upstream generator)
 
 ### ▶ [Play the live demo](https://procedural-dungeon.netlify.app)  ·  by [@majidmanzarpour](https://x.com/majidmanzarpour)
 
@@ -21,7 +131,7 @@ single number, so any seed rebuilds the exact same dungeon.** Rendered live with
 
 ---
 
-## ✨ Features
+## Features
 
 - **One seed, one dungeon.** A single `mulberry32` stream is threaded through *every* stage —
   scatter, separation, triangulation, room roles, carving, decoration. The same seed always yields
@@ -57,7 +167,7 @@ single number, so any seed rebuilds the exact same dungeon.** Rendered live with
 
 ---
 
-## 🎮 Controls
+## Controls
 
 | Action | Input |
 | --- | --- |
@@ -70,32 +180,15 @@ single number, so any seed rebuilds the exact same dungeon.** Rendered live with
 | Toggle difficulty heatmap | `H` |
 | Toggle post FX | `P` |
 | Skip build animation | `space` |
+| Enter dungeon | `E` or **ENTER DUNGEON** |
+| Leave crawl | `Esc` |
 
 The panel (top-left) drives everything: type a **seed** (or roll the dice), pick a **theme**, and
 adjust **rooms**, **loopiness**, and **decor density**. Every change re-forges deterministically.
 
 ---
 
-## 🚀 Quick start
-
-```bash
-npm install
-npm run dev        # http://localhost:5173
-```
-
-Build a static bundle (drop `dist/` on any static host — Netlify, GitHub Pages, itch.io, a plain
-folder):
-
-```bash
-npm run build
-npm run preview    # serve the production build locally
-```
-
-Requires Node 18+.
-
----
-
-## 🧠 How it works
+## How it works
 
 Every forge runs the same deterministic pipeline. Nothing is random in the "different each run"
 sense — the only entropy is the seed you give it.
@@ -122,27 +215,9 @@ sense — the only entropy is the seed you give it.
 9. **Render.** Everything is batched into `InstancedMesh` draw calls and composited through the
    custom post-processing stack.
 
-### Project structure
-
-```
-dungeon-forge/
-├── index.html          # canvas mount + control/telemetry panel markup
-├── src/
-│   ├── main.js         # the whole app: RNG, generator pipeline, themes,
-│   │                   #   procedural textures/geometry, instanced render,
-│   │                   #   post-processing, camera, input, HUD
-│   └── ui/
-│       └── styles.css  # panel, HUD, legend, and control styling
-├── docs/preview.jpg    # README hero
-└── public/og.jpg       # social-share image
-```
-
-The generator and renderer live in a single self-contained `main.js` — it's one tightly-coupled
-system (shared RNG, materials, geometry caches, and render targets), so it reads best as one module.
-
 ---
 
-## 🎛️ The panel
+## The panel
 
 | Control | What it does |
 | --- | --- |
@@ -162,13 +237,14 @@ the canvas back to the dungeon.
 
 ---
 
-## 🛠️ Built with
+## Built with
 
 - [Three.js](https://threejs.org/) — WebGL rendering
 - [Vite](https://vitejs.dev/) — dev server & bundler
+- [@dimforge/rapier3d-compat](https://rapier.rs/) — crawl physics
 
-No game engine, no physics library, no asset pipeline — the geometry, textures, and post-processing
-are all generated in the browser.
+Characters and clip donors stay on the existing Grudge CDN / Combat host. The forge geometry,
+textures, and post-processing are still generated in the browser.
 
 > **A note on the Three.js version.** This started life as a single-file prototype pinned to
 > Three.js **r128** (loaded from a CDN). It has since been migrated to the latest Three.js as an ES
@@ -178,6 +254,6 @@ are all generated in the browser.
 
 ---
 
-## 📄 License
+## License
 
 [MIT](LICENSE) © 2026 [Majid Manzarpour](https://x.com/majidmanzarpour).

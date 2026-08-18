@@ -14,6 +14,10 @@
 import * as THREE from 'three';
 import { PlaySession } from './play/index.js';
 import { DUNGEON_SI, RACES } from './ssot.js';
+import { CELL_M } from './gen/cells.js';
+import { DungeonDressing } from './play/dressing.js';
+import { ForgeCast } from './play/previews.js';
+import { preloadDungeonAssets } from './play/assets.js';
 
 /* ================================================================
    DUNGEON FORGE — procedural dungeon generator core + showcase
@@ -61,7 +65,7 @@ const THEMES = {
     hemi:[0x2e3a52, 0x0a0b10, 0.55], dir:[0xffe8c8, 0.85],
     floor:0x8a8f9c, corridor:0x6d7380, wall:0x5c626e, cap:0x757b88,
     pillar:0x6a707e, debris:[0x4c515e, 0x60584a],
-    flame:0xffa640, flameCore:0xfff3c8, torchLight:[0xff8c3a, 1.5, 9.5],
+    flame:0xffa640, flameCore:0xfff3c8, torchLight:[0xff9a48, 2.05, 12.5],
     cloth:0x7d2c26,
     pools:null, particles:{kind:0, color:0xaab4cc, n:110},
     nameA:['Sunken','Forgotten','Silent','Hollow','Elder','Broken','Nameless','Fallen'],
@@ -73,7 +77,7 @@ const THEMES = {
     hemi:[0x6b3419, 0x160503, 0.55], dir:[0xffd9b0, 0.5],
     floor:0x7a685c, corridor:0x614f44, wall:0x503e34, cap:0x6b5546,
     pillar:0x5e4a3e, debris:[0x4a382e, 0x60462f],
-    flame:0xff8c26, flameCore:0xffe9b0, torchLight:[0xff7326, 1.7, 10],
+    flame:0xff8c26, flameCore:0xffe9b0, torchLight:[0xff7a28, 2.25, 13],
     cloth:0x7d2416,
     pools:{mode:0, colA:0x2b0d05, colB:0xff5a1f, glow:1.55, amount:0.16, pits:2},
     particles:{kind:1, color:0xffa050, n:240},
@@ -86,7 +90,7 @@ const THEMES = {
     hemi:[0x3a5a80, 0x0a0e18, 0.5], dir:[0xcfe4ff, 0.82],
     floor:0x93a0b2, corridor:0x78848f, wall:0x60708a, cap:0x8194ac,
     pillar:0x70809a, debris:[0x55617a, 0x6d7a90],
-    flame:0x86d9ff, flameCore:0xe8f7ff, torchLight:[0x6fc4ff, 1.35, 9.5],
+    flame:0x86d9ff, flameCore:0xe8f7ff, torchLight:[0x8fd4ff, 1.85, 12],
     cloth:0x2b4d70,
     pools:{mode:1, colA:0x4a86c0, colB:0xbfe4ff, glow:0.55, amount:0},
     lakes:true, icicles:true, particles:{kind:2, color:0xdff0ff, n:260},
@@ -99,7 +103,7 @@ const THEMES = {
     hemi:[0x2c4030, 0x070a06, 0.52], dir:[0xbfd8b0, 0.45],
     floor:0x7c8276, corridor:0x62685c, wall:0x4f5549, cap:0x666c5e,
     pillar:0x5c6254, debris:[0x4a4f44, 0x5e5c48],
-    flame:0x8fe05a, flameCore:0xe9ffd0, torchLight:[0x77d94a, 1.35, 9],
+    flame:0x8fe05a, flameCore:0xe9ffd0, torchLight:[0x88e05a, 1.85, 11.5],
     cloth:0x33461f,
     pools:{mode:3, colA:0x0a1207, colB:0x41602c, glow:0.6, amount:0.05, pits:1},
     graveyards:true, bones:true, particles:{kind:3, color:0x9fe66a, n:150},
@@ -112,7 +116,7 @@ const THEMES = {
     hemi:[0x2f5a46, 0x08120c, 0.6], dir:[0xd8f0c8, 0.8],
     floor:0x848e7e, corridor:0x6a7560, wall:0x556050, cap:0x6e7a66,
     pillar:0x606c5c, debris:[0x49543f, 0x5c644c],
-    flame:0x62e0a8, flameCore:0xe6fff0, torchLight:[0x4ad98e, 1.3, 9],
+    flame:0x62e0a8, flameCore:0xe6fff0, torchLight:[0x5ae09a, 1.8, 11.5],
     cloth:0x1f5038,
     pools:{mode:2, colA:0x0c3532, colB:0x2fa38a, glow:0.6, amount:0.05, pits:1},
     roots:true, shafts:true, particles:{kind:4, color:0x8fe6b8, n:200},
@@ -1447,9 +1451,13 @@ let floorColorsBase = null, floorColorsHeat = null;
 let animT = Infinity, animEnd = 0, animating = false;
 let fx = { liquids:[], shafts:[], spinners:[], parts:null };
 let levelGeos = [];
+const dressing = new DungeonDressing();
+const forgeCast = new ForgeCast();
 const lerpC = (a,b,t)=> _c.set(a).lerp(new THREE.Color(b), t).getHex();
 
 function disposeLevel(){
+  dressing.dispose();
+  forgeCast.dispose();
   if(group){ scene.remove(group);
     group.traverse(o=>{
       if(o.isInstancedMesh) o.dispose();
@@ -1502,7 +1510,9 @@ function buildScene(d){
   const TH = THEMES[d.params.themeKey];
   const accC = parseInt(TH.accent.slice(1),16);
   applyThemeEnv(TH);
-  group = new THREE.Group(); scene.add(group);
+  group = new THREE.Group();
+  group.scale.setScalar(CELL_M);
+  scene.add(group);
   const W=d.W, H=d.H, grid=d.grid, roomId=d.roomId, corridor=d.corridor,
         doorway=d.doorway, bfs=d.bfs, maxBfs=d.maxBfs, rooms=d.rooms,
         lakeMask=d.lakeMask;
@@ -1869,7 +1879,7 @@ function buildScene(d){
   dirL.shadow.camera.updateProjectionMatrix();
 
   /* lights: farthest-point sample of torches + key lights */
-  const budget = 12;
+  const budget = 16;
   const keys = [];
   keys.push({x:rooms[d.entrance].cx, y:rooms[d.entrance].cy, col:0x3fd0bb, i:1.0, dist:13});
   keys.push({x:rooms[d.boss].cx, y:rooms[d.boss].cy, col:0xff4030, i:1.7, dist:17, ry:2.2});
@@ -2056,6 +2066,7 @@ async function enterDungeon(){
   if(!D || !D.valid){ return; }
   if(el.enter){ el.enter.textContent = 'LOADING…'; el.enter.disabled = true; }
   try {
+    forgeCast.setVisible(false);
     await play.enter({ dungeon: D, raceId: raceSel, linear });
     if(el.enter) el.enter.textContent = 'LEAVE DUNGEON';
   } finally {
@@ -2066,6 +2077,7 @@ if(el.enter) el.enter.addEventListener('click', ()=> enterDungeon());
 play.ctx.onExitPlay = ()=>{
   cam.zoom = 1; cam.updateProjectionMatrix();
   if(el.enter) el.enter.textContent = 'ENTER DUNGEON';
+  forgeCast.setVisible(true);
 };
 
 /* -------- theme selection -------- */
@@ -2102,6 +2114,7 @@ function applyObjectVis(){
   for(const m of fx.liquids) m.visible = objVis.liquids;
   for(const sp of fx.spinners) sp.m.visible = objVis.props;
   for(const L of lights) L.visible = objVis.lights;
+  dressing.setTorchVisible(objVis.torches);
 }
 
 const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2136,8 +2149,10 @@ function forge(animate){
   };
   const d = generateDungeon(params);
   buildScene(d);
-  applyObjectVis();
   const TH = THEMES[themeKey];
+  dressing.apply(d, group, TH).catch((err) => console.warn('[dressing]', err));
+  forgeCast.refresh(d, group).catch((err) => console.warn('[forge-cast]', err));
+  applyObjectVis();
   el.vTheme.textContent = themeSel==='auto' ? 'AUTO \u00b7 '+TH.label : TH.label;
   el.dname.textContent = d.name;
   const st = d.stats;
@@ -2201,7 +2216,7 @@ function liveUpdate(time, tt){
 }
 
 /* -------- main loop -------- */
-const timer = new THREE.Timer();   // Clock is deprecated in modern three; Timer replaces it
+const timer = new THREE.Timer();
 let elapsed = 0;
 let fpsFrames = 0, fpsTime = 0;
 function tick(){
@@ -2218,6 +2233,8 @@ function tick(){
     if(animT > animEnd + 0.35) finishAnim();
   }
   liveUpdate(elapsed, animating ? animT - 2.3 : Infinity);
+  dressing.update(elapsed);
+  forgeCast.update(dt);
   play.update(dt);
   renderer.info.reset();
   renderFrame();
@@ -2323,5 +2340,6 @@ addEventListener('resize', ()=>{
 });
 
 /* -------- go -------- */
+preloadDungeonAssets();
 forge(true);
 tick();

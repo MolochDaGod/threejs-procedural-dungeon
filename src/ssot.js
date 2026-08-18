@@ -10,6 +10,10 @@
  *   Spells:  aligned with warlord-genesis/data/vfx/vfx-skill-types.json
  */
 export const CDN = 'https://assets.grudge-studio.com';
+/** Live Gladiators host — game-ready clip donors, telegraphs, arena deployables. */
+export const COMBAT = 'https://combat.grudge-studio.com';
+/** ObjectStore combat math + class/race SSOT. */
+export const INFO = 'https://info.grudge-studio.com';
 export const TOON_RTS = `${CDN}/asset-packs/toon-rts-characters`;
 /** Fleet catalog — same file DungeonInstanceSystem loads. */
 export const DUNGEON_KIT_URL = `${CDN}/models/dungeons/warlords-dungeon-kit.json`;
@@ -30,12 +34,33 @@ export function raceCharacterUrl(raceId) {
   return `${TOON_RTS}/glb/characters/${id}.glb`;
 }
 
-/** Shared Toon-RTS clips (same skeleton family as the race GLBs). */
+/**
+ * Combat clip donor — 55 named Bip001 clips (idle/walk/run/attack/cast…).
+ * Same file Gladiators binds with rotation-only retarget. Do not use
+ * anim_*.glb translation tracks; those crush the race rest pose.
+ */
+export const CLIP_DONOR = `${COMBAT}/models/toon-clips/wk-knight.glb`;
+
+/** Fallback single-clip GLBs if the combat donor is unreachable. */
 export const ANIM_URLS = {
   idle:   `${TOON_RTS}/glb/anim_idle.glb`,
   walk:   `${TOON_RTS}/glb/anim_walk.glb`,
   attack: `${TOON_RTS}/glb/anim_attack.glb`,
   death:  `${TOON_RTS}/glb/anim_death.glb`,
+};
+
+export const COMBAT_DEPLOY = {
+  clipDonor: CLIP_DONOR,
+  telegraphWarning: `${COMBAT}/models/telegraph_warning.glb`,
+  telegraphArrow: `${COMBAT}/models/telegraph_arrow.glb`,
+};
+
+/** Combat Gladiators class kits (body/head letters, not wardrobe A-only). */
+export const ROLE_KITS = {
+  warrior: { body: 'A', arms: 'A', legs: 'A', head: 'A', shoulders: 'A', weapon: 'sword', shield: true },
+  worge:   { body: 'B', arms: 'B', legs: 'B', head: 'B', shoulders: 'B', weapon: 'axe' },
+  mage:    { body: 'D', arms: 'D', legs: 'A', head: 'D', shoulders: 'B', weapon: 'staff' },
+  ranger:  { body: 'C', arms: 'C', legs: 'C', head: 'C', shoulders: 'A', weapon: 'bow', quiver: true },
 };
 
 /**
@@ -54,6 +79,7 @@ export const SPELLS = [
 
 export const CLASS_LOADOUTS = {
   warrior: ['cleave', 'fireball', 'frostlance', 'thunder', 'holy_nova', 'void_dash'],
+  worge:   ['cleave', 'void_dash', 'thunder', 'fireball', 'holy_nova', 'frostlance'],
   mage:    ['thunder', 'fireball', 'frostlance', 'holy_nova', 'void_dash', 'cleave'],
   ranger:  ['cleave', 'frostlance', 'fireball', 'void_dash', 'thunder', 'holy_nova'],
 };
@@ -76,6 +102,13 @@ export const DUNGEON_SI = {
   wallH: 3.85,
 };
 
+/** Kit meshes used by forge dressing (KayKit on CDN). */
+export const DRESSING = {
+  torch: `${CDN}/game-assets/glb/kaykit/gltf/torch.glb`,
+  chest: `${CDN}/game-assets/glb/kaykit/gltf/chest_rare.glb`,
+  banner: `${CDN}/game-assets/glb/kaykit/gltf/banner.glb`,
+};
+
 export const PLAY = {
   playerHeight: 1.82,
   enemyHeight: 1.72,
@@ -86,8 +119,22 @@ export const PLAY = {
   friction: 18,
   hp: 140,
   mana: 100,
+  stamina: 100,
   manaRegen: 8,
   hpRegen: 1.4,
+  staminaRegen: 14,
+  sprintStamina: 18,
+};
+
+/** Physics + nav for generated instances (matches Rapier fleet SSOT). */
+export const INSTANCE = {
+  cellM: 2.15,
+  nav: 'grid-8',
+  physics: 'rapier3d-compat',
+  physicsPackage: '@dimforge/rapier3d-compat',
+  physicsVersion: '^0.19.3',
+  maxPlayers: 8,
+  host: 'three+rapier+node',
 };
 
 export function spellById(id) {

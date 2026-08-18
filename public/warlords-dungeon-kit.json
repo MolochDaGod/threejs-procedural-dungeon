@@ -1,0 +1,123 @@
+{
+  "version": "2.1.1",
+  "product": "warlords",
+  "cdn": "https://assets.grudge-studio.com",
+  "note": "Game-ready dungeon kit compiled from D1 gn_assets (tag=dungeon) + cave contracts + Rapier/nav contract. No new host.",
+  "d1": {
+    "database": "grudge-objectstore",
+    "tables": ["gn_assets", "gn_asset_tags", "world_dungeons", "dungeon_kit_pieces"],
+    "dungeonTagged": 192,
+    "source": "game-assets/glb/kaykit"
+  },
+  "generation": {
+    "algorithm": "scatter-separate-delaunay-mst-carve-bfs",
+    "deterministic": "mulberry32",
+    "cellM": 2,
+    "linearDefault": { "rooms": 16, "loops": 0, "path": "critical" },
+    "graphDefault": { "rooms": 42, "loopChance": 0.15 },
+    "themes": ["ancient", "molten", "frost", "grim", "verdant"],
+    "host": "three.js client + node instance server",
+    "instance": {
+      "version": 1,
+      "maxPlayers": 8,
+      "payload": "src/gen/instance.js dungeonToInstance"
+    }
+  },
+  "navmesh": {
+    "generated": { "kind": "grid-8", "cellM": 2, "walkable": "FLOOR", "blocked": ["WALL", "VOID", "POOL"], "stringPull": true },
+    "authoredInteriors": {
+      "kind": "floor-name-sample",
+      "contract": "grudge-builder/shared/definitions/caveDungeonContract.ts",
+      "floorNamePatterns": ["floor", "ground", "walk", "path", "stone", "dirt"]
+    }
+  },
+  "physics": {
+    "engine": "rapier3d-compat",
+    "package": "@dimforge/rapier3d-compat",
+    "version": "^0.19.3",
+    "fixedDt": 0.0166666667,
+    "gravityY": -30,
+    "character": { "kind": "kinematic-cct", "radius": 0.32, "halfHeight": 0.55, "offset": 0.01 },
+    "proxies": "cuboid floor + merged wall runs — never visual-mesh collision",
+    "fleet": "grudge-builder/docs/RAPIER_FLEET.md"
+  },
+  "textures": [
+    { "id": "pbr_ground_1", "role": "floor", "albedo": "textures/pbr/ground/Ground_1_BaseColor.png", "gameReady": true },
+    { "id": "kaykit_vertex", "role": "kit", "note": "KayKit dungeon GLBs ship vertex color / embedded maps", "gameReady": true }
+  ],
+  "pieces": [
+    { "id": "cave_twin_mouth", "glb": "models/caves/2cave.glb", "category": "entrance", "targetHeightM": 8, "gameReady": true, "nav": "authored-floor", "collider": "trimesh-fixed" },
+    { "id": "cave_lethal_ape", "glb": "models/caves/old_cave_lethal_ape_redux.glb", "category": "entrance", "targetHeightM": 10, "gameReady": true, "nav": "authored-floor", "collider": "trimesh-fixed" },
+    { "id": "triad_mountain", "glb": "models/evil_rock_mountains_triad.glb", "category": "entrance", "targetHeightM": 14, "gameReady": true, "nav": "none", "collider": "none" },
+    { "id": "kaykit_floor_tiles_large", "glb": "game-assets/glb/kaykit/gltf/floorDecoration_tilesLarge.glb", "category": "floor", "targetHeightM": 0.08, "gameReady": true, "nav": "walkable", "collider": "cuboid" },
+    { "id": "kaykit_floor_tiles_small", "glb": "game-assets/glb/kaykit/gltf/floorDecoration_tilesSmall.glb", "category": "floor", "targetHeightM": 0.08, "gameReady": true, "nav": "walkable", "collider": "cuboid" },
+    { "id": "kaykit_floor_bricks", "glb": "game-assets/glb/kaykit/gltf/floorDecoration_shatteredBricks.glb", "category": "floor", "targetHeightM": 0.08, "gameReady": true, "nav": "walkable", "collider": "cuboid" },
+    { "id": "kaykit_floor_wood", "glb": "game-assets/glb/kaykit/gltf/floorDecoration_wood.glb", "category": "floor", "targetHeightM": 0.08, "gameReady": true, "nav": "walkable", "collider": "cuboid" },
+    { "id": "kaykit_wall", "glb": "game-assets/glb/kaykit/gltf/wall.glb", "category": "wall", "targetHeightM": 3, "gameReady": true, "nav": "blocked", "collider": "cuboid" },
+    { "id": "kaykit_wall_corner", "glb": "game-assets/glb/kaykit/gltf/wallCorner.glb", "category": "wall", "targetHeightM": 3, "gameReady": true, "nav": "blocked", "collider": "cuboid" },
+    { "id": "kaykit_stairs", "glb": "game-assets/glb/kaykit/gltf/stairs.glb", "category": "wall", "targetHeightM": 2.2, "gameReady": true, "nav": "walkable", "collider": "cuboid" },
+    { "id": "kaykit_pillar", "glb": "game-assets/glb/kaykit/gltf/pillar.glb", "category": "pillar", "targetHeightM": 3.2, "gameReady": true, "nav": "blocked", "collider": "cuboid" },
+    { "id": "kaykit_door", "glb": "game-assets/glb/kaykit/gltf/door.glb", "category": "entrance", "targetHeightM": 2.4, "gameReady": true, "nav": "doorway", "collider": "cuboid" },
+    { "id": "kaykit_door_gate", "glb": "game-assets/glb/kaykit/gltf/door_gate.glb", "category": "entrance", "targetHeightM": 2.6, "gameReady": true, "nav": "doorway", "collider": "cuboid" },
+    { "id": "kaykit_chest_common", "glb": "game-assets/glb/kaykit/gltf/chest_common.glb", "category": "prop", "targetHeightM": 0.7, "gameReady": true, "nav": "blocked-small", "collider": "cuboid" },
+    { "id": "kaykit_chest_rare", "glb": "game-assets/glb/kaykit/gltf/chest_rare.glb", "category": "prop", "targetHeightM": 0.7, "gameReady": true, "nav": "blocked-small", "collider": "cuboid" },
+    { "id": "kaykit_barrel", "glb": "game-assets/glb/kaykit/gltf/barrel.glb", "category": "prop", "targetHeightM": 0.9, "gameReady": true, "nav": "blocked-small", "collider": "cuboid" },
+    { "id": "kaykit_crate", "glb": "game-assets/glb/kaykit/gltf/crate.glb", "category": "prop", "targetHeightM": 0.8, "gameReady": true, "nav": "blocked-small", "collider": "cuboid" },
+    { "id": "kaykit_banner", "glb": "game-assets/glb/kaykit/gltf/banner.glb", "category": "prop", "targetHeightM": 2.2, "gameReady": true, "nav": "none", "collider": "none" },
+    { "id": "kaykit_torch", "glb": "game-assets/glb/kaykit/gltf/torch.glb", "category": "prop", "targetHeightM": 0.6, "gameReady": true, "nav": "none", "collider": "none" },
+    { "id": "kaykit_pillar_broken", "glb": "game-assets/glb/kaykit/gltf/pillar_broken.glb", "category": "pillar", "targetHeightM": 2.4, "gameReady": true, "nav": "blocked", "collider": "cuboid" }
+  ],
+  "worldDungeons": [
+    { "id": "tropical_dungeon_0", "name": "Pirate's Crypt", "theme": "ancient", "portal": "cave_door" },
+    { "id": "frozen_dungeon_0", "name": "Glacial Depths", "theme": "frost", "portal": "cave_door" },
+    { "id": "forest_dungeon_0", "name": "Thornwood Labyrinth", "theme": "verdant", "portal": "tree_hollow" },
+    { "id": "volcanic_dungeon_0", "name": "Magma Core", "theme": "molten", "portal": "gate" },
+    { "id": "abyssal_dungeon_0", "name": "Drowned Cathedral", "theme": "grim", "portal": "ruins" },
+    { "id": "desert_dungeon_0", "name": "Sunken Tomb", "theme": "ancient", "portal": "ruins" },
+    { "id": "nexus_dungeon_0", "name": "Racalvin's Vault", "theme": "grim", "portal": "portal" }
+  ],
+  "characters": {
+    "pack": "asset-packs/toon-rts-characters/glb/characters/{race}.glb",
+    "races": ["human", "barbarian", "elf", "dwarf", "orc", "undead"],
+    "urls": {
+      "human": "asset-packs/toon-rts-characters/glb/characters/human.glb",
+      "barbarian": "asset-packs/toon-rts-characters/glb/characters/barbarian.glb",
+      "elf": "asset-packs/toon-rts-characters/glb/characters/elf.glb",
+      "dwarf": "asset-packs/toon-rts-characters/glb/characters/dwarf.glb",
+      "orc": "asset-packs/toon-rts-characters/glb/characters/orc.glb",
+      "undead": "asset-packs/toon-rts-characters/glb/characters/undead.glb"
+    },
+    "anims": {
+      "donor": "https://combat.grudge-studio.com/models/toon-clips/wk-knight.glb",
+      "retarget": "rotation-only alphanumeric Bip001 match (Gladiators wF)",
+      "idle": "asset-packs/toon-rts-characters/glb/anim_idle.glb",
+      "walk": "asset-packs/toon-rts-characters/glb/anim_walk.glb",
+      "attack": "asset-packs/toon-rts-characters/glb/anim_attack.glb",
+      "death": "asset-packs/toon-rts-characters/glb/anim_death.glb"
+    },
+    "deploy": "combat.grudge-studio.com kits + SkeletonUtils.clone + per-instance mixer",
+    "equipment": "Gladiators class kits (knight/mage/ranger letters) — never full wardrobe",
+    "prefabs": {
+      "player": "race + warrior equipped",
+      "brains": ["melee", "ranger", "mage", "warlord"],
+      "telegraphs": ["cone", "line", "aoe"],
+      "monsters": ["wight_blade", "wight_bow", "ash_reaver", "cinder_hunter", "rime_thane", "rime_bolt", "grave_stalker", "grave_blade", "thorn_raider", "briar_cleaver"],
+      "elites": ["barrow_mage", "barrow_brute", "cinder_shaman", "slag_brute", "hoar_runecaster", "ice_warden", "ossuary_blade", "plague_chanter", "root_brute", "spore_mage"],
+      "bosses": ["lich_warlord", "slag_warlord", "glacier_warlord", "death_warlord", "bloom_warlord"]
+    }
+  },
+  "spells": [
+    { "id": "cleave", "slot": 1, "kind": "slash", "element": "physical" },
+    { "id": "fireball", "slot": 2, "kind": "projectile", "element": "fire" },
+    { "id": "frostlance", "slot": 3, "kind": "projectile", "element": "frost" },
+    { "id": "thunder", "slot": 4, "kind": "beam", "element": "lightning" },
+    { "id": "holy_nova", "slot": 5, "kind": "nova", "element": "holy" },
+    { "id": "void_dash", "slot": 6, "kind": "dash", "element": "shadow" }
+  ],
+  "play": {
+    "loadout": "pre-crawl",
+    "path": "critical",
+    "feel": ["hitstop", "trauma-shake", "cooldown-rings"],
+    "hotbar": "character.weaponSkillSelections / Danger Room 1-6"
+  }
+}
