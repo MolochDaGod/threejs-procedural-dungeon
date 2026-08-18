@@ -169,51 +169,27 @@ export class VfxWorld {
     });
   }
 
-  /** Ground cone telegraph (cleave / boss swipe). */
+  /** 3D wedge telegraph (cleave) — volume, not a floor sprite. */
   cone({ origin, dir, color, range = 4, half = 0.7, life = 0.55 }) {
-    const steps = 10;
-    const shape = new THREE.Shape();
-    shape.moveTo(0, 0);
-    for (let i = 0; i <= steps; i++) {
-      const a = -half + (2 * half * i) / steps;
-      shape.lineTo(Math.sin(a) * range, Math.cos(a) * range);
-    }
-    shape.closePath();
     const mesh = new THREE.Mesh(
-      new THREE.ShapeGeometry(shape),
-      new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity: 0.38,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-      }),
+      new THREE.CylinderGeometry(0.05, range * Math.tan(half), range, 10, 1, false, -half, half * 2),
+      glowMat(color, 0.32),
     );
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.copy(origin);
-    mesh.position.y = 0.05;
-    mesh.rotation.z = -Math.atan2(dir.x, dir.z);
+    const n = dir.clone().setY(0).normalize();
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
+    mesh.position.copy(origin).addScaledVector(n, range * 0.5);
+    mesh.position.y = 0.35;
     this.scene.add(mesh);
     this.items.push({ type: 'fade', root: mesh, life, max: life });
   }
 
-  /** Linear charge / beam telegraph on the floor. */
+  /** 3D corridor telegraph — box volume, not a plane sprite. */
   linear({ origin, dir, color, range = 10, width = 0.7, life = 0.45 }) {
-    const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(width, range),
-      new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity: 0.4,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-      }),
-    );
-    mesh.rotation.x = -Math.PI / 2;
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, 0.22, range), glowMat(color, 0.38));
     const n = dir.clone().setY(0).normalize();
     mesh.position.copy(origin).addScaledVector(n, range * 0.5);
-    mesh.position.y = 0.05;
-    mesh.rotation.z = -Math.atan2(n.x, n.z);
+    mesh.position.y = 0.14;
+    mesh.rotation.y = Math.atan2(n.x, n.z);
     this.scene.add(mesh);
     this.items.push({ type: 'fade', root: mesh, life, max: life });
   }

@@ -146,8 +146,9 @@
   .ph-portrait{
     width:56px;height:56px;flex:none;border:1px solid #6a5730;background:#0a0c12;
     box-shadow:inset 0 0 0 2px #1c160c;
+    display:flex;align-items:center;justify-content:center;
   }
-  .ph-portrait img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.05)}
+  .ph-portrait b{font-family:var(--serif);font-size:26px;color:var(--gold);letter-spacing:.04em}
   .ph-vitals{flex:1;min-width:0}
   .ph-id{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
   .ph-id b{font-size:11px;letter-spacing:.14em;color:var(--gold)}

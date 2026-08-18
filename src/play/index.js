@@ -3,7 +3,7 @@
  * Entrance → combat/elite rooms → boss. 6-slot pre-match loadout. Linear casts.
  */
 import * as THREE from 'three';
-import { PLAY, RACES, SPELLS, spellById } from '../ssot.js';
+import { PLAY, RACES, loadoutFor, spellById } from '../ssot.js';
 import { prefabFor, playerPrefab } from './prefabs.js';
 import { worldOf, cellOf, walkableWorld } from '../gen/cells.js';
 import { buildNavMesh } from '../gen/navmesh.js';
@@ -13,8 +13,10 @@ import { spawnActor } from './characters.js';
 import { VfxWorld } from './vfx.js';
 import { TelegraphField } from './telegraph.js';
 import { instanceCatalog, preloadDungeonAssets } from './assets.js';
-import { bindHud, mountHud, renderHud, showEnd, toast } from './hud.js';
+import { bindHud, mountHud, renderHud, setHudSkills, showEnd, toast } from './hud.js';
 import { deriveSheet, fallbackSheet, loadInfoCombat, resolveHit } from './infoCombat.js';
+import { LinearCastWorld } from './linearCast.js';
+import { AimTarget } from './aimTarget.js';
 
 const KEYS = new Set();
 
@@ -25,6 +27,10 @@ export class PlaySession {
     this.group = new THREE.Group();
     this.group.name = 'grudge-play';
     this.vfx = new VfxWorld(this.group);
+    this.linear = new LinearCastWorld(this.group);
+    this.aiming = null;
+    this.loadout = loadoutFor('worge');
+    this.look = new THREE.Vector3();
     this.tele = new TelegraphField(this.group);
     this.keys = KEYS;
     this.player = null;
@@ -52,8 +58,18 @@ export class PlaySession {
         }
       }
       if (e.code === 'Escape') this.exit();
+      if (e.code === 'Tab') {
+        e.preventDefault();
+        this.aiming?.cycleTarget(this.enemies);
+      }
     });
     addEventListener('keyup', (e) => this.keys.delete(e.code));
+    addEventListener('pointermove', (e) => {
+      if (!this.active) return;
+      const nx = (e.clientX / innerWidth) * 2 - 1;
+      const ny = -(e.clientY / innerHeight) * 2 + 1;
+      this.aiming?.setPointer(nx, ny);
+    });
   }
 
   worldOf(d, x, y) {
@@ -120,7 +136,9 @@ export class PlaySession {
     this.d = dungeon;
     this.raceId = RACES[raceId] ? raceId : 'human';
     this.classId = classId === 'warrior' || classId === 'mage' || classId === 'ranger' ? classId : 'worge';
-    this.linear = linear;
+    this.loadout = loadoutFor(this.classId);
+    setHudSkills(this.hud, this.loadout);
+    this.linearCrawl = linear;
     this.ctx.scene.add(this.group);
     this.hud.hidden = false;
     document.body.classList.add('playing');
@@ -150,7 +168,8 @@ export class PlaySession {
     this.path = this.critPath(dungeon);
     this.pathI = 0;
     this.nav = buildNavMesh(dungeon);
-    this.instance = dungeonToInstance(dungeon, { linear, maxPlayers: 8, catalog: instanceCatalog(dungeon) });
+    this.instance = dungeonToInstance(dungeon, { linear: this.linearCrawl, maxPlayers: 8, catalog: instanceCatalog(dungeon) });
+    this.aiming = new AimTarget(this.group, this.ctx.cam);
     this.phys = await createDungeonPhysics(dungeon);
 
     this.player = await spawnActor({ prefab: playerPrefab(this.raceId, this.classId), equipped: true });
@@ -221,6 +240,9 @@ export class PlaySession {
     document.body.classList.remove('playing');
     this.hud.hidden = true;
     this.vfx.clear();
+    this.linear?.clear();
+    this.aiming?.dispose();
+    this.aiming = null;
     this.tele?.clear();
     disposeDungeonPhysics(this.phys);
     this.phys = null;
@@ -246,7 +268,11 @@ export class PlaySession {
     if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) { fx -= Math.cos(yaw); fz += Math.sin(yaw); }
     if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) { fx += Math.cos(yaw); fz -= Math.sin(yaw); }
     const moving = fx * fx + fz * fz > 0.01;
-    if (moving) this.aim.set(fx, 0, fz).normalize();
+    if (this.aiming && (this.aiming.hasPointer || this.aiming.target)) {
+      this.aim.copy(this.aiming.dir);
+    } else if (moving) {
+      this.aim.set(fx, 0, fz).normalize();
+    }
     return { fx, fz, moving };
   }
 
@@ -285,13 +311,25 @@ export class PlaySession {
     }
   }
 
+  dashAlong(dir, range) {
+    const dest = this.pos.clone().addScaledVector(dir, range);
+    if (this.walkable(this.d, dest.x, dest.z)) this.pos.copy(dest);
+    else {
+      for (let t = 0.85; t > 0.2; t -= 0.15) {
+        const p = this.pos.clone().addScaledVector(dir, range * t);
+        if (this.walkable(this.d, p.x, p.z)) { this.pos.copy(p); break; }
+      }
+    }
+    setPhysicsFeet(this.phys, this.pos.x, this.pos.z);
+  }
+
   castSlot(n) {
     if (!this.active || this.ended || this.casting > 0) return;
-    const spell = SPELLS[n - 1];
+    const spell = (this.loadout || [])[n - 1];
     if (!spell) return;
     if ((this.cds[n] || 0) > 0) return;
-    const stamCost = spell.kind === 'slash' || spell.kind === 'dash' ? (spell.stamina || 12) : 0;
-    if (this.mana < spell.mana) {
+    const stamCost = spell.stamina || 0;
+    if (this.mana < (spell.mana || 0)) {
       toast('Not enough mana');
       return;
     }
@@ -300,64 +338,57 @@ export class PlaySession {
       return;
     }
     this.activeSlot = n;
-    this.mana -= spell.mana;
+    this.mana -= spell.mana || 0;
     this.stamina -= stamCost;
     this.cds[n] = spell.cd;
-    this.casting = 0.18;
-    this.castMax = 0.18;
     const origin = this.pos.clone();
     origin.y = 1.15;
     const dir = this.aim.clone().normalize();
-    this.player?.requestOneShot(spell.kind === 'slash' ? 'attack' : 'cast', 0.42);
+    this.aiming?.setRanges(1.1, spell.range, spell.kind === 'zone' || spell.kind === 'nova' ? 'zone' : 'line');
+    this.player?.requestOneShot(spell.anim || (spell.kind === 'slash' || spell.kind === 'dash' ? 'attack' : 'cast'), 0.42);
     this.vfx.aura({ origin: this.pos.clone(), color: spell.color, life: 0.28 });
     const tel = spell.telegraphSec || 0.15;
-    this.casting = Math.max(this.casting, tel);
-    this.castMax = Math.max(this.castMax, tel);
+    this.casting = Math.max(0.16, tel);
+    this.castMax = this.casting;
     if (spell.kind === 'slash') {
       this.vfx.cone({ origin: this.pos, dir, color: spell.color, range: spell.range, half: 0.85, life: tel });
-    } else if (spell.kind === 'beam' || spell.kind === 'dash') {
-      this.vfx.linear({ origin: this.pos, dir, color: spell.color, range: spell.range, width: 0.85, life: tel });
-    } else if (spell.kind === 'nova') {
-      this.vfx.zone({ origin: this.pos, color: spell.color, radius: spell.range, life: tel, dps: 0 });
+    } else if (spell.kind === 'nova' || spell.kind === 'zone') {
+      this.linear.zone({ origin: this.pos, color: spell.color, radius: spell.range, life: tel });
     } else {
-      this.vfx.linear({ origin: this.pos, dir, color: spell.color, range: Math.min(8, spell.range), width: 0.45, life: tel });
+      this.vfx.linear({ origin: this.pos, dir, color: spell.color, range: Math.min(spell.range, 10), width: 0.55, life: tel });
     }
 
     const foeSheet = { defense: 18, block: 0.04, blockEffect: 0.25 };
     const roll = (base) => resolveHit(base, this.sheet, foeSheet);
+    const onHit = (e) => this.hurt(e, roll(spell.damage));
+
     if (spell.kind === 'slash') {
       this.vfx.slash({ origin, dir, color: spell.color, range: spell.range });
       this.hitCone(dir, spell.range, 0.85, roll(spell.damage));
     } else if (spell.kind === 'projectile') {
-      this.vfx.projectile({
-        origin,
-        dir,
-        color: spell.color,
-        speed: spell.speed || 18,
-        range: spell.range,
-        pierce: !!spell.pierce,
-        onHit: (e) => this.hurt(e, roll(spell.damage)),
+      this.linear.line({
+        origin, dir, color: spell.color, range: spell.range,
+        speed: spell.speed || 20, forks: !!spell.forks, onHit,
       });
     } else if (spell.kind === 'beam') {
-      this.vfx.beam({ origin, dir, color: spell.color, range: spell.range });
+      this.linear.line({
+        origin, dir, color: spell.color, range: spell.range,
+        speed: 38, width: 0.22, forks: spell.forks || spell.linear === 'thunder', onHit,
+      });
       this.hitLine(dir, spell.range, 0.55, roll(spell.damage));
       this.punch(70, 0.35);
-    } else if (spell.kind === 'nova') {
-      this.vfx.nova({ origin: this.pos.clone(), color: spell.color, range: spell.range });
+    } else if (spell.kind === 'fissure') {
+      this.linear.fissure({ origin: this.pos, dir, color: spell.color, range: spell.range, onHit });
+      this.hitLine(dir, spell.range, 0.85, roll(spell.damage));
+      this.punch(80, 0.45);
+    } else if (spell.kind === 'nova' || spell.kind === 'zone') {
+      this.linear.zone({ origin: this.pos, color: spell.color, radius: spell.range, life: 0.7 });
       this.hitRadius(this.pos, spell.range, roll(spell.damage));
       this.punch(80, 0.4);
-    } else if (spell.kind === 'dash') {
-      const dest = this.pos.clone().addScaledVector(dir, spell.range);
-      if (this.walkable(this.d, dest.x, dest.z)) this.pos.copy(dest);
-      else {
-        for (let t = 0.85; t > 0.2; t -= 0.15) {
-          const p = this.pos.clone().addScaledVector(dir, spell.range * t);
-          if (this.walkable(this.d, p.x, p.z)) { this.pos.copy(p); break; }
-        }
-      }
-      setPhysicsFeet(this.phys, this.pos.x, this.pos.z);
+    } else if (spell.kind === 'dash' || spell.kind === 'teleport') {
+      this.dashAlong(dir, spell.range);
       this.vfx.impact({ origin: this.pos.clone().setY(1), color: spell.color });
-      this.hitRadius(this.pos, 1.6, roll(spell.damage));
+      this.hitRadius(this.pos, spell.kind === 'teleport' ? 2.1 : 1.6, roll(spell.damage));
       this.vfx.shake.add(0.25);
     }
   }
@@ -561,8 +592,12 @@ export class PlaySession {
     this.tryMove(gdt);
     this.tickEnemies(gdt);
     this.vfx.update(gdt, this.enemies);
-
-    this.ctx.camTarget.lerp(this.pos, 1 - Math.pow(0.001, dt));
+    this.linear.update(gdt, this.enemies);
+    const armed = this.loadout[this.activeSlot - 1];
+    this.aiming?.setRanges(1.1, armed?.range || 10, armed?.kind === 'zone' || armed?.kind === 'nova' ? 'zone' : 'line');
+    this.aiming?.update(this.pos, this.aim, this.enemies);
+    this.aiming?.lookAhead(this.look, 2.6);
+    this.ctx.camTarget.lerp(this.look, 1 - Math.pow(0.002, dt));
     const shake = this.vfx.shake.offset(dt);
     this.ctx.camTarget.x += shake.x;
     this.ctx.camTarget.z += shake.z;
@@ -604,7 +639,7 @@ export class PlaySession {
       raceName: sheet.raceName,
       icon: sheet.icon,
       cds: this.cds,
-      cdMax: Object.fromEntries(SPELLS.map((s) => [s.slot, s.cd])),
+      cdMax: Object.fromEntries((this.loadout || []).map((s) => [s.slot, s.cd])),
       activeSlot: this.activeSlot,
       casting: this.casting,
       castMax: this.castMax,

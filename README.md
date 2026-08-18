@@ -7,7 +7,9 @@ Also: [https://grudge-dungeons-grudgenexus.vercel.app](https://grudge-dungeons-g
 
 **Enter dungeon (`E`)** after a forge. **WASD** move, **1–6** linear spells, **Esc** leave. Full play contract: [`docs/GRUDGE_DUNGEON.md`](docs/GRUDGE_DUNGEON.md).
 
-Current SSOT: **1.2.3** (`public/ssot.json`) · kit **2.1.1** · nav `grid-8` · `cellM` 2.15.
+Current SSOT: **1.2.4** (`public/ssot.json`) · kit **2.1.1** · nav `grid-8` · `cellM` 2.15.
+
+Skills are **3D linear / zone / fissure** (LinearAbilityCasting lessons). No 2D sprites. Worge uses the samurai fork + flame sword. **Tab** cycles targets; mouse aims on the ground.
 
 ---
 

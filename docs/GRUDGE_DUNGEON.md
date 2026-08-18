@@ -30,14 +30,18 @@ Do **not** vendor Unity FBX into this repo. Do **not** put API keys in the clien
 
 ### Linear spells
 
-| Slot | Spell | Motion |
-|------|--------|--------|
-| 1 | Cleave | Front cone slash |
-| 2 | Fireball | Linear projectile |
-| 3 | Frost Lance | Linear pierce projectile |
-| 4 | Thunder | Instant line / beam |
-| 5 | Holy Nova | Expanding ring |
-| 6 | Void Step | Linear dash + burst |
+Class loadouts live in `src/play/weaponSkills.js`. Worge (default):
+
+| Slot | Skill | Delivery |
+|------|--------|----------|
+| 1 | Twin Slash | 3D cone (samurai combo) |
+| 2 | Shadow Step | Teleport strike |
+| 3 | Slashing Dash | Line dash |
+| 4 | Flame Sword | Forked 3D fissure |
+| 5 | Storm Lance | Linear thunder + forks |
+| 6 | Holy Nova | 3D zone cylinder |
+
+No 2D sprites. Aim: mouse on ground plane, **Tab** soft-lock. Camera looks ahead along aim.
 
 ## Character deploy
 

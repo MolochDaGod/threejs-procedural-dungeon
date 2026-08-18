@@ -1,4 +1,4 @@
-import { SPELLS } from '../ssot.js';
+import { loadoutFor } from './weaponSkills.js';
 
 export function mountHud() {
   let el = document.getElementById('play-hud');
@@ -9,9 +9,7 @@ export function mountHud() {
   el.innerHTML = `
     <div class="ph-top">
       <div class="ph-frame" id="ph-frame">
-        <div class="ph-portrait">
-          <img id="ph-crest" alt="" />
-        </div>
+        <div class="ph-portrait"><b id="ph-crest-mark">W</b></div>
         <div class="ph-vitals">
           <div class="ph-id"><b id="ph-class">WORGE</b><span id="ph-race">HUMAN</span></div>
           <div class="ph-meter hp"><em>HP</em><div class="track"><i></i></div><b id="ph-hp">0</b></div>
@@ -31,8 +29,15 @@ export function mountHud() {
     </div>
   `;
   document.body.appendChild(el);
-  const bar = el.querySelector('#ph-bar6');
-  for (const s of SPELLS) {
+  setHudSkills(el, loadoutFor('worge'));
+  return el;
+}
+
+export function setHudSkills(hud, skills) {
+  const bar = hud.querySelector('#ph-bar6');
+  if (!bar) return;
+  bar.innerHTML = '';
+  for (const s of skills) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'ph-slot';
@@ -40,7 +45,6 @@ export function mountHud() {
     b.innerHTML = `<i class="ring"></i><kbd>${s.slot}</kbd><span>${s.name}</span>`;
     bar.appendChild(b);
   }
-  return el;
 }
 
 export function bindHud(hud, { onCast, onExit }) {
@@ -69,8 +73,8 @@ export function renderHud(state) {
   setMeter('.ph-meter.st', state.stamina ?? 0, state.staminaMax ?? 100);
   if (state.className) hud.querySelector('#ph-class').textContent = String(state.className).toUpperCase();
   if (state.raceName) hud.querySelector('#ph-race').textContent = String(state.raceName).toUpperCase();
-  const crest = hud.querySelector('#ph-crest');
-  if (state.icon && crest.src !== state.icon) crest.src = state.icon;
+  const mark = hud.querySelector('#ph-crest-mark');
+  if (mark) mark.textContent = String(state.className || 'W').charAt(0).toUpperCase();
   hud.querySelector('#ph-obj').textContent = state.objective;
   hud.querySelectorAll('.ph-slot').forEach((el) => {
     const slot = Number(el.dataset.slot);
