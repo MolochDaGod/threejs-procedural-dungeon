@@ -1,7 +1,7 @@
 {
-  "name": "dungeon-forge",
-  "version": "1.0.0",
-  "description": "A deterministic procedural dungeon generator you can watch build itself, room by room — scatter, separate, Delaunay-triangulate, MST + loops, carve, and theme, rendered live with Three.js.",
+  "name": "grudge-dungeons",
+  "version": "1.1.0",
+  "description": "Grudge Warlords Era dungeons — Dungeon Forge pipeline plus playable linear crawl, 6-slot casting, and Toon-RTS / uMMORPG characters from the production CDN.",
   "type": "module",
   "author": "Majid Manzarpour (https://x.com/majidmanzarpour)",
   "homepage": "https://procedural-dungeon.netlify.app",

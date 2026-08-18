@@ -1,0 +1,15 @@
+{
+  "product": "grudge-dungeons",
+  "era": "warlords",
+  "cdn": "https://assets.grudge-studio.com",
+  "characters": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb",
+  "anims": {
+    "idle": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/anim_idle.glb",
+    "walk": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/anim_walk.glb",
+    "attack": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/anim_attack.glb",
+    "death": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/anim_death.glb"
+  },
+  "races": ["human", "barbarian", "elf", "dwarf", "orc", "undead"],
+  "spells": ["cleave", "fireball", "frostlance", "thunder", "holy_nova", "void_dash"],
+  "note": "Production SSOT. Do not vendor Unity FBX. Do not put GEMINI keys in this client."
+}

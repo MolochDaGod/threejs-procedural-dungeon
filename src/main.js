@@ -12,6 +12,8 @@
  * the global `THREE` the original prototype pulled from a CDN.
  */
 import * as THREE from 'three';
+import { PlaySession } from './play/index.js';
+import { RACES } from './ssot.js';
 
 /* ================================================================
    DUNGEON FORGE — procedural dungeon generator core + showcase
@@ -796,6 +798,13 @@ function updateCam(){
   cam.lookAt(camTarget);
 }
 updateCam();
+
+const play = new PlaySession({
+  scene, cam, camTarget, updateCam, renderer,
+  get yaw(){ return yaw; },
+  onExitPlay(){ cam.zoom = 1; cam.updateProjectionMatrix(); }
+});
+window.__GRUDGE_PLAY__ = play;
 
 /* Analytic-light gain. r128 shipped the legacy (pre-physical) lighting model;
    modern three is physically based and dropped `useLegacyLights`, so the same
@@ -2008,10 +2017,49 @@ const el = { seed:$('seed'), dice:$('dice'), forge:$('forge'),
   rooms:$('rooms'), loops:$('loops'), decor:$('decor'),
   vRooms:$('vRooms'), vLoops:$('vLoops'), vDecor:$('vDecor'),
   tGraph:$('tGraph'), tHeat:$('tHeat'), tAnim:$('tAnim'), tPost:$('tPost'),
+  tLinear:$('tLinear'), enter:$('enter'),
   dname:$('dname'), dsub:$('dsub'), vTheme:$('vTheme'),
   sRooms:$('sRooms'), sEdges:$('sEdges'), sCrit:$('sCrit'),
   sTiles:$('sTiles'), sLights:$('sLights'), sMs:$('sMs'),
   sCalls:$('sCalls'), sTris:$('sTris'), sFps:$('sFps') };
+
+let raceSel = 'human';
+function setRaceSel(id){
+  raceSel = RACES[id] ? id : 'human';
+  document.querySelectorAll('#racechips .chip').forEach(ch=>{
+    ch.classList.toggle('on', ch.dataset.r === raceSel);
+  });
+}
+document.querySelectorAll('#racechips .chip').forEach(ch=>{
+  ch.addEventListener('click', ()=> setRaceSel(ch.dataset.r));
+});
+
+async function enterDungeon(){
+  if(play.active){ play.exit(); return; }
+  const linear = !!(el.tLinear && el.tLinear.checked);
+  if(linear){
+    el.rooms.value = 16;
+    el.loops.value = 0;
+    el.vRooms.textContent = '16';
+    el.vLoops.textContent = '0%';
+    forge(false);
+  } else if(animating){
+    finishAnim();
+  }
+  if(!D || !D.valid){ return; }
+  if(el.enter){ el.enter.textContent = 'LOADING…'; el.enter.disabled = true; }
+  try {
+    await play.enter({ dungeon: D, raceId: raceSel, linear });
+    if(el.enter) el.enter.textContent = 'LEAVE DUNGEON';
+  } finally {
+    if(el.enter) el.enter.disabled = false;
+  }
+}
+if(el.enter) el.enter.addEventListener('click', ()=> enterDungeon());
+play.ctx.onExitPlay = ()=>{
+  cam.zoom = 1; cam.updateProjectionMatrix();
+  if(el.enter) el.enter.textContent = 'ENTER DUNGEON';
+};
 
 /* -------- theme selection -------- */
 let themeSel = 'auto';
@@ -2163,6 +2211,7 @@ function tick(){
     if(animT > animEnd + 0.35) finishAnim();
   }
   liveUpdate(elapsed, animating ? animT - 2.3 : Infinity);
+  play.update(dt);
   renderer.info.reset();
   renderFrame();
   fpsFrames++; fpsTime += dt;
@@ -2185,6 +2234,7 @@ cnv.addEventListener('pointerdown', e=>{
   cnv.setPointerCapture(e.pointerId);
 });
 cnv.addEventListener('pointermove', e=>{
+  if(play.active && !orbiting) return;
   if(!dragging && !orbiting) return;
   const dx = e.clientX - lastX, dy = e.clientY - lastY;
   lastX = e.clientX; lastY = e.clientY;
@@ -2243,7 +2293,9 @@ addEventListener('keydown', e=>{
   const tag = e.target.tagName;
   if(tag==='BUTTON') return;
   if(tag==='INPUT' && e.target.type!=='range' && e.target.type!=='checkbox') return;
-  if(e.code==='KeyR'){ el.seed.value = 1 + Math.floor(Math.random()*999999); forge(true); }
+  if(play.active && (e.code==='KeyW'||e.code==='KeyA'||e.code==='KeyS'||e.code==='KeyD'||e.code.startsWith('Digit')||e.code==='Escape')) return;
+  if(e.code==='KeyE'){ enterDungeon(); return; }
+  if(e.code==='KeyR'){ if(play.active) play.exit(); el.seed.value = 1 + Math.floor(Math.random()*999999); forge(true); }
   else if(e.code==='KeyG'){ el.tGraph.checked = !el.tGraph.checked; if(!animating) setOverlayStatic(); }
   else if(e.code==='KeyH'){ el.tHeat.checked = !el.tHeat.checked; applyHeat(el.tHeat.checked); }
   else if(e.code==='KeyT'){

@@ -1,4 +1,10 @@
-# 🏰 Dungeon Forge
+# 🏰 Grudge Dungeons — Warlords Era
+
+Playable crawl on top of [Dungeon Forge](https://procedural-dungeon.netlify.app). Same seeded pipeline. Production characters come from the Grudge Toon-RTS / uMMORPG CDN — not from vendored Unity FBX.
+
+**Enter dungeon (`E`)** after a forge. **WASD** move, **1–6** linear spells, **Esc** leave. See `docs/GRUDGE_DUNGEON.md`.
+
+# 🏰 Dungeon Forge (upstream generator)
 
 ### ▶ [Play the live demo](https://procedural-dungeon.netlify.app)  ·  by [@majidmanzarpour](https://x.com/majidmanzarpour)
 

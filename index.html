@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#07080d" />
-    <meta name="description" content="A deterministic procedural dungeon generator you can watch build itself, room by room. Scatter → separate → Delaunay → MST + loops → carve → theme, rendered live with Three.js." />
-    <title>Dungeon Forge — Procedural Dungeon Generator</title>
+    <meta name="description" content="Grudge Warlords Era dungeons — deterministic forge plus playable linear crawl, 6-slot casting, and Toon-RTS / uMMORPG characters from the production CDN." />
+    <title>Grudge Dungeons — Warlords Era</title>
 
     <meta name="author" content="Majid Manzarpour" />
     <link rel="author" href="https://x.com/majidmanzarpour" />
@@ -34,7 +34,7 @@
     <div id="panel">
       <button id="collapse" aria-label="Collapse panel" title="Collapse">–</button>
       <div class="head">
-        <div class="brand"><span>DUNGEON&nbsp;FORGE</span><span>procgen&nbsp;core</span></div>
+        <div class="brand"><span>GRUDGE&nbsp;DUNGEONS</span><span>warlords&nbsp;era</span></div>
         <h1 id="dname">—</h1>
         <div id="dsub">forging…</div>
       </div>
@@ -53,6 +53,20 @@
           </label>
         </div>
         <button class="btn primary" id="forge" style="width:100%;margin-top:10px">FORGE&nbsp;DUNGEON</button>
+        <button class="btn" id="enter" style="width:100%;margin-top:8px">ENTER&nbsp;DUNGEON</button>
+      </div>
+
+      <div class="sec">
+        <span class="lab"><span>WARLORDS&nbsp;ERA</span><b>uMMORPG</b></span>
+        <div class="chips" id="racechips">
+          <button class="chip on" data-r="human">HUMAN</button>
+          <button class="chip" data-r="barbarian">BARB</button>
+          <button class="chip" data-r="elf">ELF</button>
+          <button class="chip" data-r="dwarf">DWARF</button>
+          <button class="chip" data-r="orc">ORC</button>
+          <button class="chip" data-r="undead">UNDEAD</button>
+        </div>
+        <label class="tog" style="margin-top:10px"><input type="checkbox" id="tLinear" checked> Linear crawl <span class="key">E</span></label>
       </div>
 
       <div class="sec">
@@ -116,7 +130,7 @@
       </div>
     </div>
 
-    <div id="hints"><b>drag</b> pan · <b>wheel</b> zoom · <b>shift-drag</b> orbit · <b>R</b> reforge · <b>T</b> theme · <b>G</b> graph · <b>H</b> heat · <b>P</b> post · <b>space</b> skip</div>
+    <div id="hints"><b>drag</b> pan · <b>wheel</b> zoom · <b>shift-drag</b> orbit · <b>E</b> enter · <b>WASD</b> move · <b>1–6</b> cast · <b>R</b> reforge · <b>T</b> theme · <b>Esc</b> leave</div>
 
     <script type="module" src="./src/main.js"></script>
   </body>
