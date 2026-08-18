@@ -11,6 +11,8 @@
  */
 export const CDN = 'https://assets.grudge-studio.com';
 export const TOON_RTS = `${CDN}/asset-packs/toon-rts-characters`;
+/** Fleet catalog — same file DungeonInstanceSystem loads. */
+export const DUNGEON_KIT_URL = `${CDN}/models/dungeons/warlords-dungeon-kit.json`;
 
 export const RACES = {
   human:     { id: 'human',     label: 'Human',     pack: 'western_kingdoms', prefix: 'WK',  faction: 'Crusade' },

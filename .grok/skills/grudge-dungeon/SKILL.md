@@ -27,6 +27,7 @@ Then load siblings from the map. **Loaded** = you actually read the file.
 - Spells are **linear** (projectile / beam / slash / nova / dash) per `SPELLS` in `src/ssot.js`.
 - Linear crawl = critical path, 16 rooms, 0 loops unless the user asks for the full graph.
 - Secrets stay out of the client. `GEMINI_API_KEY` is agent-only.
+- **No new hosts.** Play ships on existing Vercel SPA (`/dungeon` on grudge-builder). Assets go to existing R2 `models/dungeons/warlords-dungeon-kit.json`. Deploy with `grudge-assets-sync` / `npm run upload:warlords-assets` / `agent:deploy --client` — never a new Vercel project.
 
 ## When the user says “tune / polish / feel / HUD / AI skills”
 

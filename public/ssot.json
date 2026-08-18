@@ -1,7 +1,8 @@
 {
-  "product": "grudge-dungeons",
+  "product": "warlords",
   "era": "warlords",
   "cdn": "https://assets.grudge-studio.com",
+  "kit": "https://assets.grudge-studio.com/models/dungeons/warlords-dungeon-kit.json",
   "characters": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb",
   "anims": {
     "idle": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/anim_idle.glb",
