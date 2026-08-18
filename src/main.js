@@ -2042,6 +2042,7 @@ const el = { seed:$('seed'), dice:$('dice'), forge:$('forge'),
 
 let raceSel = 'human';
 let classSel = 'worge';
+let weaponSel = '1h_tome';
 function setRaceSel(id){
   raceSel = RACES[id] ? id : 'human';
   document.querySelectorAll('#racechips .chip').forEach(ch=>{
@@ -2053,12 +2054,23 @@ function setClassSel(id){
   document.querySelectorAll('#classchips .chip').forEach(ch=>{
     ch.classList.toggle('on', ch.dataset.c === classSel);
   });
+  const row = document.getElementById('worge-weapons');
+  if (row) row.hidden = classSel !== 'worge';
+}
+function setWeaponSel(id){
+  weaponSel = id === 'nature_staff' || id === 'arcane_staff' ? id : '1h_tome';
+  document.querySelectorAll('#weapchips .chip').forEach(ch=>{
+    ch.classList.toggle('on', ch.dataset.w === weaponSel);
+  });
 }
 document.querySelectorAll('#racechips .chip').forEach(ch=>{
   ch.addEventListener('click', ()=> setRaceSel(ch.dataset.r));
 });
 document.querySelectorAll('#classchips .chip').forEach(ch=>{
   ch.addEventListener('click', ()=> setClassSel(ch.dataset.c));
+});
+document.querySelectorAll('#weapchips .chip').forEach(ch=>{
+  ch.addEventListener('click', ()=> setWeaponSel(ch.dataset.w));
 });
 
 async function enterDungeon(){
@@ -2077,7 +2089,7 @@ async function enterDungeon(){
   if(el.enter){ el.enter.textContent = 'LOADING…'; el.enter.disabled = true; }
   try {
     forgeCast.setVisible(false);
-    await play.enter({ dungeon: D, raceId: raceSel, classId: classSel, linear });
+    await play.enter({ dungeon: D, raceId: raceSel, classId: classSel, weaponId: weaponSel, linear });
     if(el.enter) el.enter.textContent = 'LEAVE DUNGEON';
   } finally {
     if(el.enter) el.enter.disabled = false;

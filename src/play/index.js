@@ -39,6 +39,7 @@ export class PlaySession {
     this.vel = new THREE.Vector3();
     this.raceId = 'human';
     this.classId = 'worge';
+    this.weaponId = '1h_tome';
     this.sheet = fallbackSheet('human', 'worge');
     this.stamina = this.sheet.staminaMax;
     this.hud = mountHud();
@@ -126,7 +127,7 @@ export class PlaySession {
     return path.filter(Boolean);
   }
 
-  async enter({ dungeon, raceId = 'human', classId = 'worge', linear = true }) {
+  async enter({ dungeon, raceId = 'human', classId = 'worge', weaponId = '1h_tome', linear = true }) {
     if (!dungeon?.valid) {
       toast('Forge a connected dungeon first');
       return;
@@ -136,7 +137,8 @@ export class PlaySession {
     this.d = dungeon;
     this.raceId = RACES[raceId] ? raceId : 'human';
     this.classId = classId === 'warrior' || classId === 'mage' || classId === 'ranger' ? classId : 'worge';
-    this.loadout = loadoutFor(this.classId);
+    this.weaponId = weaponId === 'nature_staff' || weaponId === 'arcane_staff' ? weaponId : '1h_tome';
+    this.loadout = loadoutFor(this.classId, this.weaponId);
     setHudSkills(this.hud, this.loadout);
     this.linearCrawl = linear;
     this.ctx.scene.add(this.group);
@@ -172,7 +174,7 @@ export class PlaySession {
     this.aiming = new AimTarget(this.group, this.ctx.cam);
     this.phys = await createDungeonPhysics(dungeon);
 
-    this.player = await spawnActor({ prefab: playerPrefab(this.raceId, this.classId), equipped: true });
+    this.player = await spawnActor({ prefab: playerPrefab(this.raceId, this.classId, this.weaponId), equipped: true });
     this.player.root.position.copy(this.pos);
     this.group.add(this.player.root);
 

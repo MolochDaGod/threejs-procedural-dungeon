@@ -30,7 +30,9 @@ Do **not** vendor Unity FBX into this repo. Do **not** put API keys in the clien
 
 ### Linear spells
 
-Class loadouts live in `src/play/weaponSkills.js`. Worge (default):
+Worge is the knight class. Weapon two (forge chips): **1H+Tome**, **Nature Staff**, or **Arcane Staff**.
+
+Class loadouts live in `src/play/weaponSkills.js`. Worge 1H+Tome default:
 
 | Slot | Skill | Delivery |
 |------|--------|----------|

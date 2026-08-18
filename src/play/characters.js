@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
-import { ANIM_URLS, CLIP_DONOR, PLAY, RACES, ROLE_KITS, raceCharacterUrl } from '../ssot.js';
+import { ANIM_URLS, CLIP_DONOR, PLAY, RACES, ROLE_KITS, WORGE_WEAPONS, raceCharacterUrl } from '../ssot.js';
 import { loadGltf } from './assets.js';
 
 const RACE_PREFIXES = ['WK_', 'BRB_', 'ELF_', 'DWF_', 'ORC_', 'UD_'];
@@ -32,8 +32,20 @@ const SLOT_DEFS = [
 
 const WARDROBE_HINT = /units_|weapon_|shield|xtra_|shoulder|body_|arms_|legs_|head_/i;
 
-function kitToWant(role, equipped) {
-  const kit = ROLE_KITS[role] || ROLE_KITS.warrior;
+function resolveKit(role, weaponId) {
+  const base = { ...(ROLE_KITS[role] || ROLE_KITS.warrior) };
+  if (role !== 'worge') return base;
+  const opt = WORGE_WEAPONS[weaponId] || WORGE_WEAPONS['1h_tome'];
+  base.weapon = opt.weapon;
+  base.tome = !!opt.tome;
+  base.staffVar = opt.staffVar;
+  base.staffTint = opt.staffTint;
+  base.shield = false;
+  return base;
+}
+
+function kitToWant(role, equipped, weaponId) {
+  const kit = resolveKit(role, weaponId);
   const want = {
     body: kit.body,
     arms: kit.arms,
@@ -44,10 +56,12 @@ function kitToWant(role, equipped) {
   if (!equipped) return want;
   if (kit.weapon === 'sword') want.sword = 'A';
   if (kit.weapon === 'axe') want.axe = 'A';
-  if (kit.weapon === 'staff') want.staff = 'A';
+  if (kit.weapon === 'staff') want.staff = kit.staffVar || 'A';
   if (kit.weapon === 'bow') want.bow = true;
   if (kit.shield) want.shield = 'A';
   if (kit.quiver) want.quiver = true;
+  if (kit.tome) want.tome = true;
+  want.staffTint = kit.staffTint;
   return want;
 }
 
@@ -79,9 +93,54 @@ function variantOf(match, def) {
  * One body + one head + one arms + one legs + class weapon.
  * Showing every mesh is the classic spiked / deformed wardrobe blob.
  */
-function applyWardrobe(root, role = 'warrior', equipped = true, raceId = 'human') {
+function makeTome() {
+  const g = new THREE.Group();
+  g.name = 'worge_tome';
+  const cover = new THREE.Mesh(
+    new THREE.BoxGeometry(0.16, 0.22, 0.045),
+    new THREE.MeshStandardMaterial({ color: 0x3a1848, roughness: 0.55, metalness: 0.15, emissive: 0x2a1040, emissiveIntensity: 0.25 }),
+  );
+  const page = new THREE.Mesh(
+    new THREE.BoxGeometry(0.13, 0.19, 0.03),
+    new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.85 }),
+  );
+  page.position.z = 0.012;
+  const gem = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.028, 0),
+    new THREE.MeshStandardMaterial({ color: 0xb070ff, emissive: 0x6a30c8, emissiveIntensity: 0.7, roughness: 0.25 }),
+  );
+  gem.position.set(0, 0.02, 0.03);
+  g.add(cover, page, gem);
+  g.rotation.set(-0.35, 0.4, 0.15);
+  g.position.set(0.04, 0.06, 0.08);
+  return g;
+}
+
+function attachTome(root) {
+  const hand = root.getObjectByName('L_hand_container')
+    || root.getObjectByName('Bip001 L Hand')
+    || root.getObjectByName('Bip001_L_Hand');
+  if (!hand) return;
+  const old = hand.getObjectByName('worge_tome');
+  if (old) hand.remove(old);
+  hand.add(makeTome());
+}
+
+function tintMesh(mesh, hex) {
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  for (const m of mats) {
+    if (!m?.color) continue;
+    const copy = m.clone();
+    copy.color.multiply(new THREE.Color(hex));
+    copy.emissive = new THREE.Color(hex);
+    copy.emissiveIntensity = 0.22;
+    mesh.material = copy;
+  }
+}
+
+function applyWardrobe(root, role = 'warrior', equipped = true, raceId = 'human', weaponId = '1h_tome') {
   const prefix = racePrefix(raceId);
-  const want = kitToWant(role, equipped);
+  const want = kitToWant(role, equipped, weaponId);
   const catalog = {};
   root.traverse((o) => {
     if (!o.isMesh) return;
@@ -116,6 +175,12 @@ function applyWardrobe(root, role = 'warrior', equipped = true, raceId = 'human'
   for (const slot of ['sword', 'axe', 'hammer', 'staff', 'bow', 'shield', 'quiver', 'dagger', 'spear']) {
     if (want[slot]) pick(slot, want[slot]);
   }
+  if (want.staffTint && catalog.staff) {
+    for (const mesh of Object.values(catalog.staff)) {
+      if (mesh.visible) tintMesh(mesh, want.staffTint);
+    }
+  }
+  if (want.tome) attachTome(root);
 
   let vis = 0;
   root.traverse((o) => { if (o.isMesh && o.visible) vis++; });
@@ -329,7 +394,8 @@ export async function spawnActor({
   const h = prefab?.height || height;
   const r = prefab?.role || role;
   const eq = prefab?.equipped ?? equipped;
-  actor.prefab = prefab || { raceId: rid, role: r, height: h };
+  const wid = prefab?.weaponId || '1h_tome';
+  actor.prefab = prefab || { raceId: rid, role: r, height: h, weaponId: wid };
   const url = raceCharacterUrl(rid);
   let gltf;
   try {
@@ -347,7 +413,7 @@ export async function spawnActor({
       if (o.material?.map) o.material.map.colorSpace = THREE.SRGBColorSpace;
     }
   });
-  applyWardrobe(visual, r, eq, rid);
+  applyWardrobe(visual, r, eq, rid, wid);
   actor.visual = visual;
   actor.root.add(visual);
 

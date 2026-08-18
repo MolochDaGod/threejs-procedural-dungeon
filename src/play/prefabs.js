@@ -80,13 +80,14 @@ export function prefabFor(themeKey, roomType, salt = 0) {
   return list[Math.abs(salt) % list.length];
 }
 
-export function playerPrefab(raceId, classId = 'worge') {
+export function playerPrefab(raceId, classId = 'worge', weaponId = '1h_tome') {
   const role = classId === 'worge' || classId === 'mage' || classId === 'ranger' ? classId : 'warrior';
   return {
-    id: `hero_${raceId}_${role}`,
+    id: `hero_${raceId}_${role}_${weaponId}`,
     label: role === 'worge' ? 'Worge' : 'Warlord',
     raceId,
     role,
+    weaponId: role === 'worge' ? weaponId : null,
     height: 1.82,
     equipped: true,
   };

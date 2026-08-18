@@ -22,12 +22,18 @@ export const SKILLS = [
   { id: 'shield_bash',         slot: 2, name: 'Shield Bash',    kind: 'slash',     linear: null,      element: 'physical', color: 0xc9cedb, mana: 0,  stamina: 14, cd: 2.20, range: 2.4,  damage: 16, telegraphSec: 0.16 },
 ];
 
-/** info.* class → 6-slot bar. Worge uses the samurai fork + flame sword. */
+/** info.* class → 6-slot bar. Worge (knight) swaps bar with weapon two. */
 export const CLASS_LOADOUTS = {
-  worge:   ['gs_samurai_combo', 'gs_samurai_teleport', 'gs_samurai_dash', 'flame_sword', 'thunder', 'holy_nova'],
+  worge:   ['gs_samurai_combo', 'thunder', 'glacier', 'holy_beam', 'snare', 'void_dash'],
   warrior: ['cleave', 'shield_bash', 'gs_samurai_dash', 'flame_sword', 'thunder', 'holy_nova'],
   mage:    ['fireball', 'frostlance', 'thunder', 'holy_beam', 'glacier', 'snare'],
   ranger:  ['frostlance', 'fireball', 'void_dash', 'thunder', 'holy_nova', 'cleave'],
+};
+
+export const WORGE_LOADOUTS = {
+  '1h_tome':      ['cleave', 'thunder', 'glacier', 'holy_beam', 'snare', 'void_dash'],
+  nature_staff:   ['frostlance', 'glacier', 'thunder', 'holy_beam', 'holy_nova', 'snare'],
+  arcane_staff:   ['fireball', 'thunder', 'holy_beam', 'snare', 'glacier', 'void_dash'],
 };
 
 const byId = new Map(SKILLS.map((s) => [s.id, s]));
@@ -36,8 +42,10 @@ export function skillById(id) {
   return byId.get(id) || SKILLS[0];
 }
 
-export function loadoutFor(classId = 'worge') {
-  const ids = CLASS_LOADOUTS[classId] || CLASS_LOADOUTS.worge;
+export function loadoutFor(classId = 'worge', weaponId = '1h_tome') {
+  const ids = classId === 'worge'
+    ? (WORGE_LOADOUTS[weaponId] || WORGE_LOADOUTS['1h_tome'])
+    : (CLASS_LOADOUTS[classId] || CLASS_LOADOUTS.worge);
   return ids.map((id, i) => {
     const s = { ...skillById(id) };
     s.slot = i + 1;

@@ -55,10 +55,22 @@ export const COMBAT_DEPLOY = {
   telegraphArrow: `${COMBAT}/models/telegraph_arrow.glb`,
 };
 
+/**
+ * Worge = knight. Weapon two is caster kit:
+ *   1h_tome      — 1H + tome (offhand)
+ *   nature_staff — 2H nature staff
+ *   arcane_staff — 2H arcane staff
+ */
+export const WORGE_WEAPONS = {
+  '1h_tome':      { id: '1h_tome',      label: '1H + Tome',    weapon: 'sword', staff: false, tome: true,  staffTint: null,     staffVar: null },
+  nature_staff:   { id: 'nature_staff', label: 'Nature Staff', weapon: 'staff', staff: true,  tome: false, staffTint: 0x6bbf4a, staffVar: 'B' },
+  arcane_staff:   { id: 'arcane_staff', label: 'Arcane Staff', weapon: 'staff', staff: true,  tome: false, staffTint: 0xb070ff, staffVar: 'C' },
+};
+
 /** Combat Gladiators class kits (body/head letters, not wardrobe A-only). */
 export const ROLE_KITS = {
   warrior: { body: 'A', arms: 'A', legs: 'A', head: 'A', shoulders: 'A', weapon: 'sword', shield: true },
-  worge:   { body: 'B', arms: 'B', legs: 'B', head: 'B', shoulders: 'B', weapon: 'axe' },
+  worge:   { body: 'B', arms: 'B', legs: 'B', head: 'B', shoulders: 'B', weapon: 'sword', tome: true },
   mage:    { body: 'D', arms: 'D', legs: 'A', head: 'D', shoulders: 'B', weapon: 'staff' },
   ranger:  { body: 'C', arms: 'C', legs: 'C', head: 'C', shoulders: 'A', weapon: 'bow', quiver: true },
 };
