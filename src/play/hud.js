@@ -30,7 +30,7 @@ export function mountHud() {
     b.type = 'button';
     b.className = 'ph-slot';
     b.dataset.slot = String(s.slot);
-    b.innerHTML = `<kbd>${s.slot}</kbd><span>${s.name}</span><em></em>`;
+    b.innerHTML = `<i class="ring"></i><kbd>${s.slot}</kbd><span>${s.name}</span>`;
     bar.appendChild(b);
   }
   return el;
@@ -61,7 +61,11 @@ export function renderHud(state) {
     const max = state.cdMax[slot] || 1;
     el.classList.toggle('cd', cd > 0);
     el.classList.toggle('on', state.activeSlot === slot);
-    el.querySelector('em').style.height = cd > 0 ? `${100 * cd / max}%` : '0';
+    const pct = cd > 0 ? Math.round(100 * cd / max) : 0;
+    el.querySelector('.ring').style.background =
+      pct > 0
+        ? `conic-gradient(#000c ${pct}%, transparent ${pct}%)`
+        : 'transparent';
   });
   const cast = hud.querySelector('#ph-cast');
   if (state.casting > 0) {

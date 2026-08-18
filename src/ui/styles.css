@@ -154,7 +154,7 @@
   }
   .ph-slot kbd{position:absolute;top:6px;left:8px;font-size:10px;color:var(--ember)}
   .ph-slot span{font-size:9px;letter-spacing:.04em}
-  .ph-slot em{position:absolute;left:0;right:0;bottom:0;height:0;background:#0008;pointer-events:none}
+  .ph-slot .ring{position:absolute;inset:0;pointer-events:none;border-radius:8px}
   .ph-slot.on{border-color:var(--ember);box-shadow:0 0 0 1px color-mix(in srgb,var(--ember) 40%,transparent)}
   .ph-slot.cd{color:#6d7386}
   .ph-cast{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);width:220px;height:6px;background:#12141f;border:1px solid #2c3042;border-radius:4px}

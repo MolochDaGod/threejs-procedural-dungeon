@@ -123,6 +123,8 @@ export class PlaySession {
     this.castMax = 0.35;
     this.activeSlot = 1;
     this.ended = null;
+    this.hitstop = 0;
+    this.timeScale = 1;
     this.path = this.critPath(dungeon);
     this.pathI = 0;
 
@@ -269,9 +271,11 @@ export class PlaySession {
     } else if (spell.kind === 'beam') {
       this.vfx.beam({ origin, dir, color: spell.color, range: spell.range });
       this.hitLine(dir, spell.range, 0.55, spell.damage);
+      this.punch(70, 0.35);
     } else if (spell.kind === 'nova') {
       this.vfx.nova({ origin: this.pos.clone(), color: spell.color, range: spell.range });
       this.hitRadius(this.pos, spell.range, spell.damage);
+      this.punch(80, 0.4);
     } else if (spell.kind === 'dash') {
       const dest = this.pos.clone().addScaledVector(dir, spell.range);
       if (this.walkable(this.d, dest.x, dest.z)) this.pos.copy(dest);
@@ -283,7 +287,14 @@ export class PlaySession {
       }
       this.vfx.impact({ origin: this.pos.clone().setY(1), color: spell.color });
       this.hitRadius(this.pos, 1.6, spell.damage);
+      this.vfx.shake.add(0.25);
     }
+  }
+
+  punch(ms, trauma) {
+    this.hitstop = Math.max(this.hitstop, ms / 1000);
+    this.timeScale = 0.05;
+    this.vfx.shake.add(trauma);
   }
 
   hurt(e, dmg) {
@@ -291,10 +302,12 @@ export class PlaySession {
     e.hp -= dmg;
     e.aggro = 6;
     e.actor.requestOneShot('attack', 0.2);
+    this.vfx.shake.add(0.22);
     if (e.hp <= 0) {
       e.alive = false;
       e.actor.alive = false;
       e.actor.play('death', 0.08, false);
+      this.punch(e.boss ? 90 : 40, e.boss ? 0.7 : 0.3);
       toast(e.boss ? 'The warlord falls' : 'Foe down');
     }
   }
@@ -355,6 +368,7 @@ export class PlaySession {
           e.hitCd = e.boss ? 1.15 : 0.85;
           e.actor.requestOneShot('attack', 0.4);
           this.hp -= e.boss ? 16 : 8;
+          this.vfx.shake.add(e.boss ? 0.45 : 0.28);
           this.vfx.slash({
             origin: e.pos.clone().setY(1.1),
             dir: this.pos.clone().sub(e.pos),
@@ -376,27 +390,37 @@ export class PlaySession {
 
   update(dt) {
     if (!this.active) return;
+    if (this.hitstop > 0) {
+      this.hitstop -= dt;
+      if (this.hitstop <= 0) this.timeScale = 1;
+    }
+    const gdt = dt * this.timeScale;
     if (this.ended) {
       this.player?.update(dt);
       for (const e of this.enemies) e.actor.update(dt);
-      this.vfx.update(dt, this.enemies);
+      this.vfx.update(gdt, this.enemies);
       return;
     }
-    for (const k of Object.keys(this.cds)) this.cds[k] = Math.max(0, this.cds[k] - dt);
-    this.casting = Math.max(0, this.casting - dt);
-    this.mana = Math.min(PLAY.mana, this.mana + PLAY.manaRegen * dt);
-    this.hp = Math.min(PLAY.hp, this.hp + PLAY.hpRegen * dt);
-    this.tryMove(dt);
-    this.tickEnemies(dt);
-    this.vfx.update(dt, this.enemies);
+    for (const k of Object.keys(this.cds)) this.cds[k] = Math.max(0, this.cds[k] - gdt);
+    this.casting = Math.max(0, this.casting - gdt);
+    this.mana = Math.min(PLAY.mana, this.mana + PLAY.manaRegen * gdt);
+    this.hp = Math.min(PLAY.hp, this.hp + PLAY.hpRegen * gdt);
+    this.tryMove(gdt);
+    this.tickEnemies(gdt);
+    this.vfx.update(gdt, this.enemies);
 
-    const shake = this.vfx.shake;
     this.ctx.camTarget.lerp(this.pos, 1 - Math.pow(0.001, dt));
-    if (shake > 0) {
-      this.ctx.camTarget.x += (Math.random() - 0.5) * shake;
-      this.ctx.camTarget.z += (Math.random() - 0.5) * shake;
-    }
+    const shake = this.vfx.shake.offset(dt);
+    this.ctx.camTarget.x += shake.x;
+    this.ctx.camTarget.z += shake.z;
     this.ctx.updateCam();
+    window.__THREE_GAME_DIAGNOSTICS__ = {
+      state: this.ended || 'play',
+      hp: this.hp,
+      mana: this.mana,
+      enemies: this.enemies.filter((e) => e.alive).length,
+      pos: { x: this.pos.x, z: this.pos.z },
+    };
 
     if (this.hp <= 0) {
       this.hp = 0;

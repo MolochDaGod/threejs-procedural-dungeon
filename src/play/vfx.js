@@ -17,11 +17,34 @@ function glowMat(color, opacity = 0.9) {
   });
 }
 
+/** Trauma² shake from threejs-gameplay-systems/references/game-feel.md */
+export class ShakeRig {
+  constructor() {
+    this.trauma = 0;
+    this.time = 0;
+  }
+  add(amount) {
+    this.trauma = Math.min(1, this.trauma + amount);
+  }
+  offset(dt) {
+    this.time += dt;
+    this.trauma = Math.max(0, this.trauma - 1.4 * dt);
+    if (this.trauma <= 0) return { x: 0, z: 0 };
+    const s = this.trauma * this.trauma;
+    const n = (t, seed) => {
+      const x = Math.sin(t * 12.9898 + seed * 78.233) * 43758.5453;
+      return (x - Math.floor(x)) * 2 - 1;
+    };
+    const freq = this.time * 32;
+    return { x: 0.45 * s * n(freq, 1), z: 0.45 * s * n(freq, 2) };
+  }
+}
+
 export class VfxWorld {
   constructor(scene) {
     this.scene = scene;
     this.items = [];
-    this.shake = 0;
+    this.shake = new ShakeRig();
   }
 
   spawn(kind, opts) {
@@ -65,7 +88,7 @@ export class VfxWorld {
     mesh.position.y = origin.y;
     this.scene.add(mesh);
     this.items.push({ type: 'fade', root: mesh, life, max: life });
-    this.shake = Math.max(this.shake, 0.18);
+    this.shake.add(0.35);
   }
 
   slash({ origin, dir, color, range = 2.4 }) {
@@ -79,6 +102,7 @@ export class VfxWorld {
     mesh.position.y = 1.05;
     this.scene.add(mesh);
     this.items.push({ type: 'fade', root: mesh, life: 0.16, max: 0.16, spin: 8 });
+    this.shake.add(0.18);
   }
 
   nova({ origin, color, range = 4.5 }) {
@@ -88,7 +112,7 @@ export class VfxWorld {
     ring.position.y = 0.12;
     this.scene.add(ring);
     this.items.push({ type: 'nova', root: ring, life: 0.45, max: 0.45, range });
-    this.shake = Math.max(this.shake, 0.22);
+    this.shake.add(0.4);
   }
 
   impact({ origin, color }) {
@@ -108,7 +132,6 @@ export class VfxWorld {
   }
 
   update(dt, enemies) {
-    this.shake = Math.max(0, this.shake - dt * 1.8);
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i];
       it.life -= dt;
