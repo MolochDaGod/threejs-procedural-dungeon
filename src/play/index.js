@@ -3,7 +3,7 @@
  * Entrance → combat/elite rooms → boss. 6-slot pre-match loadout. Linear casts.
  */
 import * as THREE from 'three';
-import { PLAY, RACES, SPELLS, THEME_ENEMY, spellById } from '../ssot.js';
+import { DUNGEON_SI, PLAY, RACES, SPELLS, THEME_ENEMY, spellById } from '../ssot.js';
 import { spawnActor } from './characters.js';
 import { VfxWorld } from './vfx.js';
 import { bindHud, mountHud, renderHud, showEnd, toast } from './hud.js';
@@ -46,11 +46,16 @@ export class PlaySession {
   }
 
   worldOf(d, x, y) {
-    return { x: x - d.W / 2 + 0.5, z: y - d.H / 2 + 0.5 };
+    const c = DUNGEON_SI.cell;
+    return { x: (x - d.W / 2 + 0.5) * c, z: (y - d.H / 2 + 0.5) * c };
   }
 
   cellOf(d, wx, wz) {
-    return { x: Math.round(wx + d.W / 2 - 0.5), y: Math.round(wz + d.H / 2 - 0.5) };
+    const c = DUNGEON_SI.cell;
+    return {
+      x: Math.round(wx / c + d.W / 2 - 0.5),
+      y: Math.round(wz / c + d.H / 2 - 0.5),
+    };
   }
 
   walkable(d, wx, wz) {
@@ -138,14 +143,21 @@ export class PlaySession {
     const jobs = [];
     for (const r of rooms) {
       if (r.type === 'entrance' || r.type === 'treasure' || r.type === 'shrine') continue;
-      const n = r.type === 'boss' ? 1 : r.type === 'elite' ? 2 : 1;
+      const n = r.type === 'boss' ? 3 : r.type === 'elite' ? 3 : 2;
       for (let i = 0; i < n; i++) {
-        const ox = (i - (n - 1) / 2) * 1.6;
+        const ox = (i - (n - 1) / 2) * 1.8;
         const w = this.worldOf(dungeon, r.cx + ox, r.cy);
+        const role =
+          r.type === 'boss' && i === 0
+            ? 'mage'
+            : i === n - 1
+              ? 'mage'
+              : 'warrior';
         jobs.push({
           r, w,
-          height: r.type === 'boss' ? PLAY.bossHeight : PLAY.enemyHeight,
-          role: r.type === 'boss' ? 'mage' : 'warrior',
+          height: r.type === 'boss' && i === 0 ? PLAY.bossHeight : PLAY.enemyHeight,
+          role,
+          kind: role === 'mage' ? 'caster' : r.type === 'boss' ? 'boss' : 'grunt',
         });
       }
     }
@@ -159,22 +171,27 @@ export class PlaySession {
       const e = {
         actor,
         pos: new THREE.Vector3(j.w.x, 0, j.w.z),
-        hp: r.type === 'boss' ? 220 : r.type === 'elite' ? 70 : 42,
-        hpMax: r.type === 'boss' ? 220 : r.type === 'elite' ? 70 : 42,
-        radius: r.type === 'boss' ? 0.7 : 0.42,
-        speed: r.type === 'boss' ? 2.4 : 3.1,
+        spawn: new THREE.Vector3(j.w.x, 0, j.w.z),
+        hp: r.type === 'boss' && j.kind === 'boss' ? 260 : r.type === 'elite' ? 78 : 46,
+        hpMax: r.type === 'boss' && j.kind === 'boss' ? 260 : r.type === 'elite' ? 78 : 46,
+        radius: r.type === 'boss' && j.kind === 'boss' ? 0.72 : 0.42,
+        speed: j.kind === 'caster' ? 2.6 : r.type === 'boss' ? 2.4 : 3.2,
         alive: true,
         room: r,
         aggro: 0,
         hitCd: 0,
-        boss: r.type === 'boss',
+        wind: 0,
+        windMax: 0,
+        windKind: null,
+        boss: j.kind === 'boss' || (r.type === 'boss' && j.role === 'mage' && j.height >= PLAY.bossHeight),
+        kind: j.kind,
       };
       actor.root.position.copy(e.pos);
       this.group.add(actor.root);
       this.enemies.push(e);
     }
 
-    this.ctx.cam.zoom = 2.35;
+    this.ctx.cam.zoom = 1.55;
     this.ctx.cam.updateProjectionMatrix();
     this.ctx.camTarget.copy(this.pos);
     this.ctx.updateCam();
@@ -254,6 +271,18 @@ export class PlaySession {
     const dir = this.aim.clone().normalize();
     this.player?.requestOneShot(spell.kind === 'slash' ? 'attack' : 'cast', 0.42);
     this.vfx.aura({ origin: this.pos.clone(), color: spell.color, life: 0.28 });
+    const tel = spell.telegraphSec || 0.15;
+    this.casting = Math.max(this.casting, tel);
+    this.castMax = Math.max(this.castMax, tel);
+    if (spell.kind === 'slash') {
+      this.vfx.cone({ origin: this.pos, dir, color: spell.color, range: spell.range, half: 0.85, life: tel });
+    } else if (spell.kind === 'beam' || spell.kind === 'dash') {
+      this.vfx.linear({ origin: this.pos, dir, color: spell.color, range: spell.range, width: 0.85, life: tel });
+    } else if (spell.kind === 'nova') {
+      this.vfx.zone({ origin: this.pos, color: spell.color, radius: spell.range, life: tel, dps: 0 });
+    } else {
+      this.vfx.linear({ origin: this.pos, dir, color: spell.color, range: Math.min(8, spell.range), width: 0.45, life: tel });
+    }
 
     if (spell.kind === 'slash') {
       this.vfx.slash({ origin, dir, color: spell.color, range: spell.range });
@@ -346,38 +375,89 @@ export class PlaySession {
       e.actor.update(dt);
       if (!e.alive) continue;
       const dist = e.pos.distanceTo(this.pos);
-      if (dist < 11) e.aggro = Math.max(e.aggro, 4);
+      if (dist < 14) e.aggro = Math.max(e.aggro, 5);
       e.hitCd = Math.max(0, e.hitCd - dt);
       if (e.aggro <= 0) {
         e.actor.setGait(false, false);
         continue;
       }
       e.aggro -= dt;
-      if (dist > 1.15) {
-        const dir = this.pos.clone().sub(e.pos).setY(0).normalize();
+      const dir = this.pos.clone().sub(e.pos).setY(0);
+      if (dir.lengthSq() > 1e-6) dir.normalize();
+      e.actor.root.rotation.y = Math.atan2(dir.x, dir.z);
+
+      if (e.wind > 0) {
+        e.wind -= dt;
+        e.actor.setGait(false, false);
+        if (e.wind <= 0) this.resolveEnemyCast(e, dir);
+        continue;
+      }
+
+      const hold = e.kind === 'caster' ? 5.2 : 1.35;
+      if (dist > hold) {
         const nx = e.pos.x + dir.x * e.speed * dt;
         const nz = e.pos.z + dir.z * e.speed * dt;
         if (this.walkable(this.d, nx, e.pos.z)) e.pos.x = nx;
         if (this.walkable(this.d, e.pos.x, nz)) e.pos.z = nz;
         e.actor.root.position.copy(e.pos);
-        e.actor.root.rotation.y = Math.atan2(dir.x, dir.z);
         e.actor.setGait(true, false);
       } else {
         e.actor.setGait(false, false);
-        if (e.hitCd <= 0) {
-          e.hitCd = e.boss ? 1.15 : 0.85;
-          e.actor.requestOneShot('attack', 0.4);
-          this.hp -= e.boss ? 16 : 8;
-          this.vfx.shake.add(e.boss ? 0.45 : 0.28);
-          this.vfx.slash({
-            origin: e.pos.clone().setY(1.1),
-            dir: this.pos.clone().sub(e.pos),
-            color: e.boss ? 0xd8433a : 0xc9cedb,
-            range: 1.6,
-          });
-        }
+        if (e.hitCd <= 0) this.beginEnemyCast(e, dir);
       }
     }
+  }
+
+  beginEnemyCast(e, dir) {
+    const caster = e.kind === 'caster' || e.boss;
+    e.hitCd = e.boss ? 2.4 : caster ? 2.0 : 1.15;
+    e.windMax = e.boss ? 0.85 : caster ? 0.7 : 0.42;
+    e.wind = e.windMax;
+    e.windKind = e.boss ? 'zone' : caster ? 'linear' : 'cone';
+    e.actor.requestOneShot(caster ? 'cast' : 'attack', e.windMax);
+    const col = e.boss ? 0xd8433a : caster ? 0x9b6cf0 : 0xc9cedb;
+    if (e.windKind === 'zone') {
+      this.vfx.zone({ origin: this.pos.clone(), color: col, radius: 3.4, life: e.windMax, dps: 0 });
+    } else if (e.windKind === 'linear') {
+      this.vfx.linear({ origin: e.pos, dir, color: col, range: 9, width: 0.95, life: e.windMax });
+    } else {
+      this.vfx.cone({ origin: e.pos, dir, color: col, range: 3.2, half: 0.75, life: e.windMax });
+    }
+  }
+
+  resolveEnemyCast(e, dir) {
+    const col = e.boss ? 0xd8433a : 0xc9cedb;
+    if (e.windKind === 'zone') {
+      const mark = this.pos.clone();
+      this.vfx.nova({ origin: mark, color: col, range: 3.4 });
+      if (this.pos.distanceTo(mark) <= 3.4) this.hp -= e.boss ? 18 : 10;
+      this.vfx.zone({
+        origin: mark,
+        color: col,
+        radius: 3.2,
+        life: 4.8,
+        dps: e.boss ? 6 : 3,
+        onTick: (it) => {
+          if (this.pos.distanceTo(mark) <= it.radius + 0.45) this.hp -= it.dps;
+        },
+      });
+    } else if (e.windKind === 'linear') {
+      this.vfx.beam({ origin: e.pos.clone().setY(1.2), dir, color: 0x9b6cf0, range: 9 });
+      this.hitLineFrom(e.pos, dir, 9, 0.7, e.boss ? 14 : 10);
+    } else {
+      this.vfx.slash({ origin: e.pos.clone().setY(1.1), dir, color: col, range: 2.2 });
+      const to = this.pos.clone().sub(e.pos);
+      if (to.length() <= 3.4 && to.normalize().dot(dir) > 0.45) this.hp -= e.boss ? 16 : 8;
+    }
+    this.vfx.shake.add(e.boss ? 0.4 : 0.22);
+  }
+
+  hitLineFrom(origin, dir, range, width, dmg) {
+    const to = this.pos.clone().sub(origin);
+    const along = to.dot(dir);
+    if (along < 0 || along > range) return;
+    const closest = origin.clone().addScaledVector(dir, along);
+    if (closest.distanceTo(this.pos) <= width + 0.4) this.hp -= dmg;
   }
 
   objective() {

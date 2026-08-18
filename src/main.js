@@ -13,7 +13,7 @@
  */
 import * as THREE from 'three';
 import { PlaySession } from './play/index.js';
-import { RACES } from './ssot.js';
+import { DUNGEON_SI, RACES } from './ssot.js';
 
 /* ================================================================
    DUNGEON FORGE — procedural dungeon generator core + showcase
@@ -201,9 +201,9 @@ function tryGenerate(seed, params){
   for(let i=0;i<N;i++){
     const t = rng.raw();
     let w,h,arch;
-    if(t<0.45){ arch='s'; w=rng.i(5,7);  h=rng.i(5,7); }
-    else if(t<0.85){ arch='m'; w=rng.i(8,12); h=rng.i(8,12); }
-    else { arch='l'; w=rng.i(13,18); h=rng.i(13,18); large.push(i); }
+    if(t<0.45){ arch='s'; w=rng.i(7,9);  h=rng.i(7,9); }
+    else if(t<0.85){ arch='m'; w=rng.i(10,14); h=rng.i(10,14); }
+    else { arch='l'; w=rng.i(15,20); h=rng.i(15,20); large.push(i); }
     const st = rng.raw();
     const shape = st<0.60 ? 'rect' : (st<0.82 ? 'ellipse' : 'oct');
     const ang = rng.f(0, Math.PI*2), rad = R*Math.sqrt(rng.raw());
@@ -388,8 +388,8 @@ function tryGenerate(seed, params){
 
   for(const e of edges){
     const A=rooms[e.a], B=rooms[e.b];
-    let w = e.isCritical ? 3 : 2;
-    if(!e.isCritical && (rooms[e.a].type===TYPE.TREASURE || rooms[e.b].type===TYPE.TREASURE) && rng.chance(0.4)) w = 1;
+    let w = e.isCritical ? 3 : 3;
+    if(!e.isCritical && (rooms[e.a].type===TYPE.TREASURE || rooms[e.b].type===TYPE.TREASURE) && rng.chance(0.4)) w = 2;
     const dx = Math.abs(A.cx-B.cx), dy = Math.abs(A.cy-B.cy);
     const ovX = Math.min(A.cx+A.w/2, B.cx+B.w/2) - Math.max(A.cx-A.w/2, B.cx-B.w/2);
     const ovY = Math.min(A.cy+A.h/2, B.cy+B.h/2) - Math.max(A.cy-A.h/2, B.cy-B.h/2);
@@ -1041,7 +1041,13 @@ const TEX = { stone:makeStoneTex(), crack:makeCrackTex(), rune:makeRuneTex(), sw
 /* ================================================================
    MATERIAL KIT — named roles, shared across all instanced sets
    ================================================================ */
-const matStone = new THREE.MeshStandardMaterial({map:TEX.stone, roughness:0.92, metalness:0.02});
+const matStone = new THREE.MeshStandardMaterial({
+  map: TEX.stone,
+  bumpMap: TEX.stone,
+  bumpScale: 0.14,
+  roughness: 0.88,
+  metalness: 0.04,
+});
 const matTrim  = new THREE.MeshStandardMaterial({roughness:0.38, metalness:0.75});
 const matGlow  = new THREE.MeshBasicMaterial({color:0xffffff});
 matGlow.toneMapped = false;
@@ -1500,7 +1506,8 @@ function buildScene(d){
   const W=d.W, H=d.H, grid=d.grid, roomId=d.roomId, corridor=d.corridor,
         doorway=d.doorway, bfs=d.bfs, maxBfs=d.maxBfs, rooms=d.rooms,
         lakeMask=d.lakeMask;
-  const idx=(x,y)=>y*W+x, wx=x=>x-W/2+0.5, wz=y=>y-H/2+0.5;
+  const CELL = DUNGEON_SI.cell;
+  const idx=(x,y)=>y*W+x, wx=x=>(x-W/2+0.5)*CELL, wz=y=>(y-H/2+0.5)*CELL;
   const cellRng = makeRng(d.seed ^ 0x9e3779b9);
   const dStep = 0.016;
 
@@ -1537,7 +1544,7 @@ function buildScene(d){
     floorColorsBase.push(base.getHex());
     const diff = rid>=0 ? rooms[rid].difficulty : (maxBfs ? bfs[c]/maxBfs : 0.5);
     floorColorsHeat.push(heatA.clone().lerp(heatB, Math.min(1,diff)).multiplyScalar(0.55 + 0.45*(1-0.09*Math.min(walls8,4))).getHex());
-    fs.add(wx(x), cellRng.f(-0.02,0.008), wz(y), 1,1,1, 0, floorColorsBase[floorColorsBase.length-1], Math.max(0,bfs[c])*dStep);
+    fs.add(wx(x), cellRng.f(-0.02,0.008), wz(y), CELL,1,CELL, 0, floorColorsBase[floorColorsBase.length-1], Math.max(0,bfs[c])*dStep);
   }
   meshes.floor = buildMesh(fs, GEO.floor, matStone, 'pop', 0.34, 2);
 
@@ -1551,12 +1558,12 @@ function buildScene(d){
   const wcol = new THREE.Color();
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
     if(grid[idx(x,y)]!==WALL) continue;
-    const h = 2.0 + cellRng.f(-0.25,0.25);
+    const h = DUNGEON_SI.wallH + cellRng.f(-0.12,0.18);
     const dl = nearFloorBfs(x,y)*dStep + 0.30;
     wcol.set(TH.wall).multiplyScalar(cellRng.f(0.9,1.08));
-    ws.add(wx(x),0,wz(y), 1,h,1, 0, wcol.getHex(), dl);
+    ws.add(wx(x), h * 0.5, wz(y), CELL, h, CELL, 0, wcol.getHex(), dl);
     wcol.set(TH.cap).multiplyScalar(cellRng.f(0.92,1.1));
-    cs.add(wx(x),h,wz(y), 1,1,1, 0, wcol.getHex(), dl+0.12);
+    cs.add(wx(x), h, wz(y), CELL * 1.04, 1, CELL * 1.04, 0, wcol.getHex(), dl+0.12);
   }
   meshes.wall    = buildMesh(ws, GEO.wall, matStone, 'rise', 0.42, 1);
   meshes.wallCap = buildMesh(cs, GEO.wallCap, matStone, 'pop', 0.3, 1);

@@ -35,14 +35,19 @@ function findAnimRoot(root) {
   return root;
 }
 
+function stripPositionTracks(clip) {
+  clip.tracks = clip.tracks.filter((t) => !/\.position$/.test(t.name));
+  return clip;
+}
+
 function classifyClips(clips) {
   const out = { idle: null, walk: null, run: null, attack: null, cast: null, death: null };
   const hit = (re) => clips.find((c) => re.test(c.name));
-  out.idle   = hit(/idle|stand|breath/i);
-  out.walk   = hit(/walk|locomot/i);
-  out.run    = hit(/run|sprint/i) || out.walk;
-  out.attack = hit(/attack|slash|melee|strike|combat/i);
-  out.cast   = hit(/cast|spell|magic|shoot/i) || out.attack;
+  out.idle   = hit(/idle|stand|breath|gs_idle/i);
+  out.walk   = hit(/walk|locomot|gs_walk|bow_walk|magic_walk/i);
+  out.run    = hit(/run|sprint|gs_run/i) || out.walk;
+  out.attack = hit(/sword_attack|attack|slash|melee|strike|combat/i);
+  out.cast   = hit(/magic_cast|cast|spell|magic|shoot|bow_shot/i) || out.attack;
   out.death  = hit(/death|die|dead/i);
   if (!out.idle && clips[0]) out.idle = clips[0];
   return out;
@@ -190,7 +195,7 @@ export async function spawnActor({ raceId, height = PLAY.playerHeight, role = 'w
 
   const animRoot = findAnimRoot(visual);
   actor.mixer = new THREE.AnimationMixer(animRoot);
-  const clips = await gatherClips(gltf);
+  const clips = (await gatherClips(gltf)).map(stripPositionTracks);
   const classified = classifyClips(clips);
   actor.clips = classified;
   if (!classified.idle) {

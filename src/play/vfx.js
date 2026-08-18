@@ -131,6 +131,93 @@ export class VfxWorld {
     this.items.push({ type: 'fade', root: mesh, life, max: life });
   }
 
+  /** Persistent danger disc (boss puddle / linger AOE). */
+  zone({ origin, color, radius = 2.4, life = 4.2, dps = 0, onTick }) {
+    const disc = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 28),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.32,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    disc.rotation.x = -Math.PI / 2;
+    disc.position.copy(origin);
+    disc.position.y = 0.04;
+    disc.scale.setScalar(radius);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1, 0.035, 6, 28), glowMat(color, 0.75));
+    ring.rotation.x = Math.PI / 2;
+    ring.position.copy(disc.position);
+    ring.scale.setScalar(radius);
+    const root = new THREE.Group();
+    root.add(disc);
+    root.add(ring);
+    this.scene.add(root);
+    this.items.push({
+      type: 'zone',
+      root,
+      disc,
+      ring,
+      life,
+      max: life,
+      radius,
+      dps,
+      onTick,
+      tickAcc: 0,
+    });
+  }
+
+  /** Ground cone telegraph (cleave / boss swipe). */
+  cone({ origin, dir, color, range = 4, half = 0.7, life = 0.55 }) {
+    const steps = 10;
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    for (let i = 0; i <= steps; i++) {
+      const a = -half + (2 * half * i) / steps;
+      shape.lineTo(Math.sin(a) * range, Math.cos(a) * range);
+    }
+    shape.closePath();
+    const mesh = new THREE.Mesh(
+      new THREE.ShapeGeometry(shape),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.38,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.copy(origin);
+    mesh.position.y = 0.05;
+    mesh.rotation.z = -Math.atan2(dir.x, dir.z);
+    this.scene.add(mesh);
+    this.items.push({ type: 'fade', root: mesh, life, max: life });
+  }
+
+  /** Linear charge / beam telegraph on the floor. */
+  linear({ origin, dir, color, range = 10, width = 0.7, life = 0.45 }) {
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(width, range),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.4,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    mesh.rotation.x = -Math.PI / 2;
+    const n = dir.clone().setY(0).normalize();
+    mesh.position.copy(origin).addScaledVector(n, range * 0.5);
+    mesh.position.y = 0.05;
+    mesh.rotation.z = -Math.atan2(n.x, n.z);
+    this.scene.add(mesh);
+    this.items.push({ type: 'fade', root: mesh, life, max: life });
+  }
+
   update(dt, enemies) {
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i];
@@ -156,9 +243,25 @@ export class VfxWorld {
         const s = 0.4 + k * it.range;
         it.root.scale.set(s, s, s);
         it.root.material.opacity = 0.85 * (1 - k);
+      } else if (it.type === 'zone') {
+        const k = it.life / it.max;
+        const pulse = 0.28 + 0.12 * Math.sin(it.life * 6);
+        if (it.disc?.material) it.disc.material.opacity = pulse * Math.min(1, k * 2);
+        if (it.ring?.material) it.ring.material.opacity = 0.55 + 0.25 * Math.sin(it.life * 8);
+        it.tickAcc = (it.tickAcc || 0) + dt;
+        if (it.dps && it.tickAcc >= 0.35) {
+          it.tickAcc = 0;
+          it.onTick?.(it);
+        }
       } else if (it.type === 'fade') {
         const k = it.life / it.max;
-        it.root.material.opacity = Math.max(0, k);
+        const mats = it.root.material
+          ? [it.root.material]
+          : [];
+        it.root.traverse((o) => {
+          if (o.material && o.material.opacity != null) o.material.opacity = Math.max(0, k * 0.85);
+        });
+        for (const m of mats) m.opacity = Math.max(0, k);
         if (it.grow) it.root.scale.setScalar(1 + (1 - k) * it.grow);
         if (it.spin) it.root.rotation.z += it.spin * dt;
       }
