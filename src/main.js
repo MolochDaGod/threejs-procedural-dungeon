@@ -13,11 +13,13 @@
  */
 import * as THREE from 'three';
 import { PlaySession } from './play/index.js';
-import { DUNGEON_SI, RACES } from './ssot.js';
+import { DUNGEON_SI, PIRATE_FACES, RACES, heroOf, portraitFallback, portraitUrl } from './ssot.js';
 import { CELL_M } from './gen/cells.js';
 import { DungeonDressing } from './play/dressing.js';
 import { ForgeCast } from './play/previews.js';
 import { preloadDungeonAssets } from './play/assets.js';
+import { stampBossArena, stampCover } from './grid/cells.js';
+import { loadInteriorKits, plantCoverKits, plantRoomScenes, plantWallTorches } from './props/kitPlant.js';
 
 /* ================================================================
    DUNGEON FORGE — procedural dungeon generator core + showcase
@@ -761,9 +763,14 @@ function tryGenerate(seed, params){
   }
 
   const loops = edges.filter(e=>e.isLoop).length;
+  const flags = new Uint16Array(W*H);
+  const barrierStage = new Uint8Array(W*H);
+  const coverRole = new Uint8Array(W*H);
+  stampBossArena({ W, H, grid, roomId, doorway, rooms, boss, flags }, rng);
+  stampCover({ W, H, grid, roomId, doorway, rooms, flags, barrierStage, coverRole }, rng);
   return {
     valid, params, seed, name:dungeonName(rng, TH),
-    W,H, grid, roomId, corridor, doorway, bfs, maxBfs,
+    W,H, grid, roomId, corridor, doorway, flags, barrierStage, coverRole, bfs, maxBfs,
     rooms, edges, entrance, boss, maxDepth,
     props, spawns, torches, pools, lakeCells, lakeMask, arches,
     stats:{ rooms:N, edges:edges.length, loops, critLen, floorTiles:floorTotal, reach, genMs:0, attempts:1 }
@@ -2043,11 +2050,24 @@ const el = { seed:$('seed'), dice:$('dice'), forge:$('forge'),
 let raceSel = 'human';
 let classSel = 'worge';
 let weaponSel = '1h_tome';
+function paintHeroFace(){
+  const img = document.getElementById('heroFaceImg');
+  const name = document.getElementById('heroFaceName');
+  const title = document.getElementById('heroFaceTitle');
+  const h = heroOf(raceSel, classSel);
+  if (name) name.textContent = h?.name || classSel;
+  if (title) title.textContent = h?.title || '';
+  if (img) {
+    img.src = portraitUrl(raceSel, classSel);
+    img.onerror = () => { img.onerror = null; img.src = portraitFallback(raceSel); };
+  }
+}
 function setRaceSel(id){
   raceSel = RACES[id] ? id : 'human';
   document.querySelectorAll('#racechips .chip').forEach(ch=>{
     ch.classList.toggle('on', ch.dataset.r === raceSel);
   });
+  paintHeroFace();
 }
 function setClassSel(id){
   classSel = id === 'warrior' || id === 'mage' || id === 'ranger' ? id : 'worge';
@@ -2056,6 +2076,7 @@ function setClassSel(id){
   });
   const row = document.getElementById('worge-weapons');
   if (row) row.hidden = classSel !== 'worge';
+  paintHeroFace();
 }
 function setWeaponSel(id){
   weaponSel = id === 'nature_staff' || id === 'arcane_staff' ? id : '1h_tome';
@@ -2072,6 +2093,23 @@ document.querySelectorAll('#classchips .chip').forEach(ch=>{
 document.querySelectorAll('#weapchips .chip').forEach(ch=>{
   ch.addEventListener('click', ()=> setWeaponSel(ch.dataset.w));
 });
+(function mountPirates(){
+  const row = document.getElementById('pirateFaces');
+  if (!row) return;
+  for (const p of PIRATE_FACES) {
+    const img = document.createElement('img');
+    img.alt = p.label;
+    img.title = `${p.label} — ${p.title}`;
+    img.src = p.portrait;
+    img.onerror = () => { img.onerror = null; img.src = p.portraitFallback; };
+    img.addEventListener('click', () => {
+      setRaceSel(p.race);
+      setClassSel(p.classId);
+    });
+    row.appendChild(img);
+  }
+})();
+paintHeroFace();
 
 async function enterDungeon(){
   if(play.active){ play.exit(); return; }
@@ -2173,6 +2211,9 @@ function forge(animate){
   buildScene(d);
   const TH = THEMES[themeKey];
   dressing.apply(d, group, TH).catch((err) => console.warn('[dressing]', err));
+  plantCoverKits(d, group);
+  plantWallTorches(d, group);
+  plantRoomScenes(d, group);
   forgeCast.refresh(d, group).catch((err) => console.warn('[forge-cast]', err));
   applyObjectVis();
   el.vTheme.textContent = themeSel==='auto' ? 'AUTO \u00b7 '+TH.label : TH.label;
@@ -2363,5 +2404,5 @@ addEventListener('resize', ()=>{
 
 /* -------- go -------- */
 preloadDungeonAssets();
-forge(true);
+loadInteriorKits().catch((err) => console.warn('[grudge-dungeon] interior kits miss', err)).then(() => forge(true));
 tick();

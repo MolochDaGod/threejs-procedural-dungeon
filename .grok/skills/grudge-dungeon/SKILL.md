@@ -25,7 +25,7 @@ Then load siblings from the map. **Loaded** = you actually read the file.
 - Characters: `raceCharacterUrl(race)` + `SkeletonUtils.clone` + per-instance mixer. Empty clips are a bug.
 - Loadout is **pre-crawl** (keys 1–6). Do not invent mid-match skill trees.
 - Spells are **linear** (projectile / beam / slash / nova / dash) per `SPELLS` in `src/ssot.js`.
-- Linear crawl = critical path, 16 rooms, 0 loops unless the user asks for the full graph.
+- Linear crawl = critical path, **7 wide rooms**, 0 loops unless the user asks for the full graph. Path is cave/door entrance → combat → mini-boss → **boss arena**.
 - Secrets stay out of the client. `GEMINI_API_KEY` is agent-only.
 - **No new hosts.** Play ships on existing Vercel SPA (`/dungeon` on grudge-builder). Assets go to existing R2 `models/dungeons/warlords-dungeon-kit.json`. Deploy with `grudge-assets-sync` / `npm run upload:warlords-assets` / `agent:deploy --client` — never a new Vercel project.
 
@@ -43,4 +43,4 @@ Gemini image gen is **blocked in this region** (`location_unsupported`). Use CDN
 
 ## Verify
 
-`npm run build`. Play path: Forge → ENTER / `E` → WASD → 1–6 → Esc. Characters must idle, not T-pose.
+`npm run smoke:mechanic` then `npm run build`. Play path: Forge → ENTER / `E` → WASD → 1–6 → Esc. Characters must idle, not T-pose. Collider overlay: **COLLIDERS** chip or `?physicsDebug=1`. Mechanic worker: `GET /api/mechanic` on existing `grudge-dungeons` (after deploy).

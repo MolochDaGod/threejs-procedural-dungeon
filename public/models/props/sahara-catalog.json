@@ -1,0 +1,2704 @@
+{
+  "sahara": {
+    "source": "sahara__pack_of_3d_cartoon_models.glb",
+    "glb": "models/props/sahara-cartoon.glb",
+    "count": 156,
+    "scaleNote": "Author pack is millimetres; runtime \u00d7100 (cm\u2192m) then fit to targetHeightM. Isolate by mesh name \u2014 never load fused.",
+    "items": [
+      {
+        "id": "demo_5_textures_0",
+        "mesh": "Demo 5_Textures_0",
+        "season": "demo",
+        "n": 0,
+        "verts": 41695,
+        "rawM": [
+          0.03225,
+          0.01707,
+          0.04586
+        ],
+        "afterCmToM_h": 1.707,
+        "role": "tree_small",
+        "targetHeightM": 2.6,
+        "biome": "grim"
+      },
+      {
+        "id": "earth_model_textures_0",
+        "mesh": "Earth model_Textures_0",
+        "season": "earth",
+        "n": 0,
+        "verts": 1883,
+        "rawM": [
+          0.11393,
+          0.02481,
+          0.00019
+        ],
+        "afterCmToM_h": 2.481,
+        "role": "tree_small",
+        "targetHeightM": 2.6,
+        "biome": "ancient"
+      },
+      {
+        "id": "spring_model_10_textures_0",
+        "mesh": "Spring model#10_Textures_0",
+        "season": "spring",
+        "n": 10,
+        "verts": 370,
+        "rawM": [
+          0.0021,
+          0.00225,
+          0.00392
+        ],
+        "afterCmToM_h": 0.225,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_11_textures_0",
+        "mesh": "Spring model#11_Textures_0",
+        "season": "spring",
+        "n": 11,
+        "verts": 841,
+        "rawM": [
+          0.00488,
+          0.00209,
+          0.00544
+        ],
+        "afterCmToM_h": 0.209,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_12_textures_0",
+        "mesh": "Spring model#12_Textures_0",
+        "season": "spring",
+        "n": 12,
+        "verts": 394,
+        "rawM": [
+          0.00375,
+          0.00158,
+          0.00447
+        ],
+        "afterCmToM_h": 0.158,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_13_textures_0",
+        "mesh": "Spring model#13_Textures_0",
+        "season": "spring",
+        "n": 13,
+        "verts": 752,
+        "rawM": [
+          0.00562,
+          0.00363,
+          0.00372
+        ],
+        "afterCmToM_h": 0.363,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_14_textures_0",
+        "mesh": "Spring model#14_Textures_0",
+        "season": "spring",
+        "n": 14,
+        "verts": 576,
+        "rawM": [
+          0.00251,
+          0.00333,
+          0.00343
+        ],
+        "afterCmToM_h": 0.333,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_15_textures_0",
+        "mesh": "Spring model#15_Textures_0",
+        "season": "spring",
+        "n": 15,
+        "verts": 402,
+        "rawM": [
+          0.00224,
+          0.00238,
+          0.00218
+        ],
+        "afterCmToM_h": 0.238,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_16_textures_0",
+        "mesh": "Spring model#16_Textures_0",
+        "season": "spring",
+        "n": 16,
+        "verts": 360,
+        "rawM": [
+          0.00247,
+          0.00298,
+          0.00332
+        ],
+        "afterCmToM_h": 0.298,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_17_textures_0",
+        "mesh": "Spring model#17_Textures_0",
+        "season": "spring",
+        "n": 17,
+        "verts": 324,
+        "rawM": [
+          0.00278,
+          0.00237,
+          0.00279
+        ],
+        "afterCmToM_h": 0.237,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_18_textures_0",
+        "mesh": "Spring model#18_Textures_0",
+        "season": "spring",
+        "n": 18,
+        "verts": 750,
+        "rawM": [
+          0.00385,
+          0.00373,
+          0.00384
+        ],
+        "afterCmToM_h": 0.373,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_19_textures_0",
+        "mesh": "Spring model#19_Textures_0",
+        "season": "spring",
+        "n": 19,
+        "verts": 678,
+        "rawM": [
+          0.00335,
+          0.0042,
+          0.00421
+        ],
+        "afterCmToM_h": 0.42,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_1_textures_0",
+        "mesh": "Spring model#1_Textures_0",
+        "season": "spring",
+        "n": 1,
+        "verts": 297,
+        "rawM": [
+          0.00142,
+          0.00137,
+          0.003
+        ],
+        "afterCmToM_h": 0.137,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_20_textures_0",
+        "mesh": "Spring model#20_Textures_0",
+        "season": "spring",
+        "n": 20,
+        "verts": 552,
+        "rawM": [
+          0.00297,
+          0.00382,
+          0.00375
+        ],
+        "afterCmToM_h": 0.382,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_21_textures_0",
+        "mesh": "Spring model#21_Textures_0",
+        "season": "spring",
+        "n": 21,
+        "verts": 1170,
+        "rawM": [
+          0.00416,
+          0.0045,
+          0.00428
+        ],
+        "afterCmToM_h": 0.45,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_22_textures_0",
+        "mesh": "Spring model#22_Textures_0",
+        "season": "spring",
+        "n": 22,
+        "verts": 348,
+        "rawM": [
+          0.0025,
+          0.00215,
+          0.00238
+        ],
+        "afterCmToM_h": 0.215,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_23_textures_0",
+        "mesh": "Spring model#23_Textures_0",
+        "season": "spring",
+        "n": 23,
+        "verts": 438,
+        "rawM": [
+          0.00256,
+          0.00261,
+          0.00262
+        ],
+        "afterCmToM_h": 0.261,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_24_textures_0",
+        "mesh": "Spring model#24_Textures_0",
+        "season": "spring",
+        "n": 24,
+        "verts": 192,
+        "rawM": [
+          0.00129,
+          0.00136,
+          0.00129
+        ],
+        "afterCmToM_h": 0.136,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_25_textures_0",
+        "mesh": "Spring model#25_Textures_0",
+        "season": "spring",
+        "n": 25,
+        "verts": 366,
+        "rawM": [
+          0.00144,
+          0.00141,
+          0.00129
+        ],
+        "afterCmToM_h": 0.141,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_26_textures_0",
+        "mesh": "Spring model#26_Textures_0",
+        "season": "spring",
+        "n": 26,
+        "verts": 252,
+        "rawM": [
+          0.00129,
+          0.00157,
+          0.00155
+        ],
+        "afterCmToM_h": 0.157,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_27_textures_0",
+        "mesh": "Spring model#27_Textures_0",
+        "season": "spring",
+        "n": 27,
+        "verts": 126,
+        "rawM": [
+          0.00136,
+          0.00143,
+          0.00133
+        ],
+        "afterCmToM_h": 0.143,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_28_textures_0",
+        "mesh": "Spring model#28_Textures_0",
+        "season": "spring",
+        "n": 28,
+        "verts": 144,
+        "rawM": [
+          0.00155,
+          0.00164,
+          0.00151
+        ],
+        "afterCmToM_h": 0.164,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_2_textures_0",
+        "mesh": "Spring model#2_Textures_0",
+        "season": "spring",
+        "n": 2,
+        "verts": 369,
+        "rawM": [
+          0.00227,
+          0.00186,
+          0.00338
+        ],
+        "afterCmToM_h": 0.186,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_3_textures_0",
+        "mesh": "Spring model#3_Textures_0",
+        "season": "spring",
+        "n": 3,
+        "verts": 495,
+        "rawM": [
+          0.00369,
+          0.00256,
+          0.00292
+        ],
+        "afterCmToM_h": 0.256,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_4_textures_0",
+        "mesh": "Spring model#4_Textures_0",
+        "season": "spring",
+        "n": 4,
+        "verts": 925,
+        "rawM": [
+          0.00448,
+          0.0028,
+          0.00349
+        ],
+        "afterCmToM_h": 0.28,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_5_textures_0",
+        "mesh": "Spring model#5_Textures_0",
+        "season": "spring",
+        "n": 5,
+        "verts": 1845,
+        "rawM": [
+          0.00488,
+          0.00507,
+          0.00373
+        ],
+        "afterCmToM_h": 0.507,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_6_textures_0",
+        "mesh": "Spring model#6_Textures_0",
+        "season": "spring",
+        "n": 6,
+        "verts": 1166,
+        "rawM": [
+          0.00657,
+          0.00269,
+          0.00447
+        ],
+        "afterCmToM_h": 0.269,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_7_textures_0",
+        "mesh": "Spring model#7_Textures_0",
+        "season": "spring",
+        "n": 7,
+        "verts": 1187,
+        "rawM": [
+          0.00186,
+          0.00263,
+          0.00432
+        ],
+        "afterCmToM_h": 0.263,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_8_textures_0",
+        "mesh": "Spring model#8_Textures_0",
+        "season": "spring",
+        "n": 8,
+        "verts": 236,
+        "rawM": [
+          0.00187,
+          0.00138,
+          0.00312
+        ],
+        "afterCmToM_h": 0.138,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "verdant"
+      },
+      {
+        "id": "spring_model_9_textures_0",
+        "mesh": "Spring model#9_Textures_0",
+        "season": "spring",
+        "n": 9,
+        "verts": 573,
+        "rawM": [
+          0.0047,
+          0.00461,
+          0.00423
+        ],
+        "afterCmToM_h": 0.461,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "verdant"
+      },
+      {
+        "id": "summer_model_10_textures_0",
+        "mesh": "Summer model#10_Textures_0",
+        "season": "summer",
+        "n": 10,
+        "verts": 2020,
+        "rawM": [
+          0.00624,
+          0.00302,
+          0.00453
+        ],
+        "afterCmToM_h": 0.302,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_11_textures_0",
+        "mesh": "Summer model#11_Textures_0",
+        "season": "summer",
+        "n": 11,
+        "verts": 752,
+        "rawM": [
+          0.00562,
+          0.00363,
+          0.00372
+        ],
+        "afterCmToM_h": 0.363,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_12_textures_0",
+        "mesh": "Summer model#12_Textures_0",
+        "season": "summer",
+        "n": 12,
+        "verts": 394,
+        "rawM": [
+          0.00375,
+          0.00158,
+          0.00447
+        ],
+        "afterCmToM_h": 0.158,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_13_textures_0",
+        "mesh": "Summer model#13_Textures_0",
+        "season": "summer",
+        "n": 13,
+        "verts": 882,
+        "rawM": [
+          0.00274,
+          0.00254,
+          0.0035
+        ],
+        "afterCmToM_h": 0.254,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_14_textures_0",
+        "mesh": "Summer model#14_Textures_0",
+        "season": "summer",
+        "n": 14,
+        "verts": 5984,
+        "rawM": [
+          0.00433,
+          0.00433,
+          0.00417
+        ],
+        "afterCmToM_h": 0.433,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_15_textures_0",
+        "mesh": "Summer model#15_Textures_0",
+        "season": "summer",
+        "n": 15,
+        "verts": 841,
+        "rawM": [
+          0.00488,
+          0.00209,
+          0.00544
+        ],
+        "afterCmToM_h": 0.209,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_16_textures_0",
+        "mesh": "Summer model#16_Textures_0",
+        "season": "summer",
+        "n": 16,
+        "verts": 573,
+        "rawM": [
+          0.0047,
+          0.00461,
+          0.00423
+        ],
+        "afterCmToM_h": 0.461,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_17_textures_0",
+        "mesh": "Summer model#17_Textures_0",
+        "season": "summer",
+        "n": 17,
+        "verts": 236,
+        "rawM": [
+          0.00187,
+          0.00138,
+          0.00312
+        ],
+        "afterCmToM_h": 0.138,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_18_textures_0",
+        "mesh": "Summer model#18_Textures_0",
+        "season": "summer",
+        "n": 18,
+        "verts": 369,
+        "rawM": [
+          0.00227,
+          0.00186,
+          0.00338
+        ],
+        "afterCmToM_h": 0.186,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_19_textures_0",
+        "mesh": "Summer model#19_Textures_0",
+        "season": "summer",
+        "n": 19,
+        "verts": 495,
+        "rawM": [
+          0.00369,
+          0.00256,
+          0.00292
+        ],
+        "afterCmToM_h": 0.256,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_1_textures_0",
+        "mesh": "Summer model#1_Textures_0",
+        "season": "summer",
+        "n": 1,
+        "verts": 1552,
+        "rawM": [
+          0.00681,
+          0.00696,
+          0.00644
+        ],
+        "afterCmToM_h": 0.696,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_20_textures_0",
+        "mesh": "Summer model#20_Textures_0",
+        "season": "summer",
+        "n": 20,
+        "verts": 925,
+        "rawM": [
+          0.00448,
+          0.0028,
+          0.00349
+        ],
+        "afterCmToM_h": 0.28,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_21_textures_0",
+        "mesh": "Summer model#21_Textures_0",
+        "season": "summer",
+        "n": 21,
+        "verts": 3258,
+        "rawM": [
+          0.00378,
+          0.00378,
+          0.00537
+        ],
+        "afterCmToM_h": 0.378,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_22_textures_0",
+        "mesh": "Summer model#22_Textures_0",
+        "season": "summer",
+        "n": 22,
+        "verts": 859,
+        "rawM": [
+          0.00279,
+          0.0028,
+          0.00481
+        ],
+        "afterCmToM_h": 0.28,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_23_textures_0",
+        "mesh": "Summer model#23_Textures_0",
+        "season": "summer",
+        "n": 23,
+        "verts": 657,
+        "rawM": [
+          0.00362,
+          0.00393,
+          0.00307
+        ],
+        "afterCmToM_h": 0.393,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_24_textures_0",
+        "mesh": "Summer model#24_Textures_0",
+        "season": "summer",
+        "n": 24,
+        "verts": 656,
+        "rawM": [
+          0.00122,
+          0.00131,
+          0.00438
+        ],
+        "afterCmToM_h": 0.131,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_25_textures_0",
+        "mesh": "Summer model#25_Textures_0",
+        "season": "summer",
+        "n": 25,
+        "verts": 7164,
+        "rawM": [
+          0.00775,
+          0.006,
+          0.0057
+        ],
+        "afterCmToM_h": 0.6,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_26_textures_0",
+        "mesh": "Summer model#26_Textures_0",
+        "season": "summer",
+        "n": 26,
+        "verts": 333,
+        "rawM": [
+          0.00195,
+          0.00065,
+          0.00035
+        ],
+        "afterCmToM_h": 0.065,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_27_textures_0",
+        "mesh": "Summer model#27_Textures_0",
+        "season": "summer",
+        "n": 27,
+        "verts": 2143,
+        "rawM": [
+          0.00164,
+          0.00053,
+          0.00045
+        ],
+        "afterCmToM_h": 0.053,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_28_textures_0",
+        "mesh": "Summer model#28_Textures_0",
+        "season": "summer",
+        "n": 28,
+        "verts": 362,
+        "rawM": [
+          0.00186,
+          0.00035,
+          0.00031
+        ],
+        "afterCmToM_h": 0.035,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_29_textures_0",
+        "mesh": "Summer model#29_Textures_0",
+        "season": "summer",
+        "n": 29,
+        "verts": 512,
+        "rawM": [
+          0.00151,
+          0.00042,
+          0.00041
+        ],
+        "afterCmToM_h": 0.042,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_2_textures_0",
+        "mesh": "Summer model#2_Textures_0",
+        "season": "summer",
+        "n": 2,
+        "verts": 1845,
+        "rawM": [
+          0.00488,
+          0.00507,
+          0.00373
+        ],
+        "afterCmToM_h": 0.507,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_30_textures_0",
+        "mesh": "Summer model#30_Textures_0",
+        "season": "summer",
+        "n": 30,
+        "verts": 819,
+        "rawM": [
+          0.00317,
+          0.00313,
+          0.00201
+        ],
+        "afterCmToM_h": 0.313,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_31_textures_0",
+        "mesh": "Summer model#31_Textures_0",
+        "season": "summer",
+        "n": 31,
+        "verts": 732,
+        "rawM": [
+          0.00046,
+          0.00047,
+          0.00037
+        ],
+        "afterCmToM_h": 0.047,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_32_textures_0",
+        "mesh": "Summer model#32_Textures_0",
+        "season": "summer",
+        "n": 32,
+        "verts": 565,
+        "rawM": [
+          0.00102,
+          0.00085,
+          0.001
+        ],
+        "afterCmToM_h": 0.085,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_33_textures_0",
+        "mesh": "Summer model#33_Textures_0",
+        "season": "summer",
+        "n": 33,
+        "verts": 276,
+        "rawM": [
+          0.00033,
+          0.00037,
+          0.0002
+        ],
+        "afterCmToM_h": 0.037,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_34_textures_0",
+        "mesh": "Summer model#34_Textures_0",
+        "season": "summer",
+        "n": 34,
+        "verts": 618,
+        "rawM": [
+          0.00049,
+          0.00079,
+          0.00116
+        ],
+        "afterCmToM_h": 0.079,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_35_textures_0",
+        "mesh": "Summer model#35_Textures_0",
+        "season": "summer",
+        "n": 35,
+        "verts": 380,
+        "rawM": [
+          0.00062,
+          0.00064,
+          0.00049
+        ],
+        "afterCmToM_h": 0.064,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_36_textures_0",
+        "mesh": "Summer model#36_Textures_0",
+        "season": "summer",
+        "n": 36,
+        "verts": 2134,
+        "rawM": [
+          0.00353,
+          0.00387,
+          0.0039
+        ],
+        "afterCmToM_h": 0.387,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_37_textures_0",
+        "mesh": "Summer model#37_Textures_0",
+        "season": "summer",
+        "n": 37,
+        "verts": 754,
+        "rawM": [
+          0.0036,
+          0.00149,
+          0.0033
+        ],
+        "afterCmToM_h": 0.149,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_38_textures_0",
+        "mesh": "Summer model#38_Textures_0",
+        "season": "summer",
+        "n": 38,
+        "verts": 1670,
+        "rawM": [
+          0.00386,
+          0.00386,
+          0.00357
+        ],
+        "afterCmToM_h": 0.386,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_39_textures_0",
+        "mesh": "Summer model#39_Textures_0",
+        "season": "summer",
+        "n": 39,
+        "verts": 524,
+        "rawM": [
+          0.00083,
+          0.00162,
+          0.00157
+        ],
+        "afterCmToM_h": 0.162,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_3_textures_0",
+        "mesh": "Summer model#3_Textures_0",
+        "season": "summer",
+        "n": 3,
+        "verts": 314,
+        "rawM": [
+          0.00131,
+          0.00092,
+          0.00443
+        ],
+        "afterCmToM_h": 0.092,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_40_textures_0",
+        "mesh": "Summer model#40_Textures_0",
+        "season": "summer",
+        "n": 40,
+        "verts": 198,
+        "rawM": [
+          0.00168,
+          0.00056,
+          0.00377
+        ],
+        "afterCmToM_h": 0.056,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_41_textures_0",
+        "mesh": "Summer model#41_Textures_0",
+        "season": "summer",
+        "n": 41,
+        "verts": 1770,
+        "rawM": [
+          0.00359,
+          0.0027,
+          0.00382
+        ],
+        "afterCmToM_h": 0.27,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_42_textures_0",
+        "mesh": "Summer model#42_Textures_0",
+        "season": "summer",
+        "n": 42,
+        "verts": 1775,
+        "rawM": [
+          0.00281,
+          0.00332,
+          0.00355
+        ],
+        "afterCmToM_h": 0.332,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_43_textures_0",
+        "mesh": "Summer model#43_Textures_0",
+        "season": "summer",
+        "n": 43,
+        "verts": 246,
+        "rawM": [
+          0.00254,
+          0.00206,
+          0.00279
+        ],
+        "afterCmToM_h": 0.206,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_44_textures_0",
+        "mesh": "Summer model#44_Textures_0",
+        "season": "summer",
+        "n": 44,
+        "verts": 606,
+        "rawM": [
+          0.00351,
+          0.00295,
+          0.00383
+        ],
+        "afterCmToM_h": 0.295,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_45_textures_0",
+        "mesh": "Summer model#45_Textures_0",
+        "season": "summer",
+        "n": 45,
+        "verts": 474,
+        "rawM": [
+          0.00376,
+          0.00351,
+          0.0042
+        ],
+        "afterCmToM_h": 0.351,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_46_textures_0",
+        "mesh": "Summer model#46_Textures_0",
+        "season": "summer",
+        "n": 46,
+        "verts": 426,
+        "rawM": [
+          0.00339,
+          0.00272,
+          0.00374
+        ],
+        "afterCmToM_h": 0.272,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_47_textures_0",
+        "mesh": "Summer model#47_Textures_0",
+        "season": "summer",
+        "n": 47,
+        "verts": 1002,
+        "rawM": [
+          0.00378,
+          0.00359,
+          0.00427
+        ],
+        "afterCmToM_h": 0.359,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_48_textures_0",
+        "mesh": "Summer model#48_Textures_0",
+        "season": "summer",
+        "n": 48,
+        "verts": 8947,
+        "rawM": [
+          0.00095,
+          0.0006,
+          0.00101
+        ],
+        "afterCmToM_h": 0.06,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_49_textures_0",
+        "mesh": "Summer model#49_Textures_0",
+        "season": "summer",
+        "n": 49,
+        "verts": 576,
+        "rawM": [
+          0.00134,
+          0.00131,
+          0.00053
+        ],
+        "afterCmToM_h": 0.131,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_4_textures_0",
+        "mesh": "Summer model#4_Textures_0",
+        "season": "summer",
+        "n": 4,
+        "verts": 3777,
+        "rawM": [
+          0.00541,
+          0.00541,
+          0.00529
+        ],
+        "afterCmToM_h": 0.541,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_50_textures_0",
+        "mesh": "Summer model#50_Textures_0",
+        "season": "summer",
+        "n": 50,
+        "verts": 4272,
+        "rawM": [
+          0.00034,
+          0.00048,
+          0.00115
+        ],
+        "afterCmToM_h": 0.048,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_51_textures_0",
+        "mesh": "Summer model#51_Textures_0",
+        "season": "summer",
+        "n": 51,
+        "verts": 1227,
+        "rawM": [
+          0.0008,
+          0.00064,
+          0.00097
+        ],
+        "afterCmToM_h": 0.064,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_52_textures_0",
+        "mesh": "Summer model#52_Textures_0",
+        "season": "summer",
+        "n": 52,
+        "verts": 691,
+        "rawM": [
+          0.00061,
+          0.00089,
+          0.00101
+        ],
+        "afterCmToM_h": 0.089,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_53_textures_0",
+        "mesh": "Summer model#53_Textures_0",
+        "season": "summer",
+        "n": 53,
+        "verts": 1152,
+        "rawM": [
+          0.00111,
+          0.00043,
+          0.00111
+        ],
+        "afterCmToM_h": 0.043,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_54_textures_0",
+        "mesh": "Summer model#54_Textures_0",
+        "season": "summer",
+        "n": 54,
+        "verts": 780,
+        "rawM": [
+          0.00084,
+          0.0003,
+          0.00112
+        ],
+        "afterCmToM_h": 0.03,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_55_textures_0",
+        "mesh": "Summer model#55_Textures_0",
+        "season": "summer",
+        "n": 55,
+        "verts": 1958,
+        "rawM": [
+          0.00061,
+          0.00064,
+          0.00103
+        ],
+        "afterCmToM_h": 0.064,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_56_textures_0",
+        "mesh": "Summer model#56_Textures_0",
+        "season": "summer",
+        "n": 56,
+        "verts": 702,
+        "rawM": [
+          0.00103,
+          0.00053,
+          0.00083
+        ],
+        "afterCmToM_h": 0.053,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_57_textures_0",
+        "mesh": "Summer model#57_Textures_0",
+        "season": "summer",
+        "n": 57,
+        "verts": 3705,
+        "rawM": [
+          0.00125,
+          0.00129,
+          0.00147
+        ],
+        "afterCmToM_h": 0.129,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_58_textures_0",
+        "mesh": "Summer model#58_Textures_0",
+        "season": "summer",
+        "n": 58,
+        "verts": 1284,
+        "rawM": [
+          0.00052,
+          0.00052,
+          0.00083
+        ],
+        "afterCmToM_h": 0.052,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_59_textures_0",
+        "mesh": "Summer model#59_Textures_0",
+        "season": "summer",
+        "n": 59,
+        "verts": 672,
+        "rawM": [
+          0.00047,
+          0.00043,
+          0.00083
+        ],
+        "afterCmToM_h": 0.043,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_5_textures_0",
+        "mesh": "Summer model#5_Textures_0",
+        "season": "summer",
+        "n": 5,
+        "verts": 1187,
+        "rawM": [
+          0.00186,
+          0.00263,
+          0.00432
+        ],
+        "afterCmToM_h": 0.263,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_60_textures_0",
+        "mesh": "Summer model#60_Textures_0",
+        "season": "summer",
+        "n": 60,
+        "verts": 590,
+        "rawM": [
+          0.00028,
+          0.00018,
+          0.00039
+        ],
+        "afterCmToM_h": 0.018,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_61_textures_0",
+        "mesh": "Summer model#61_Textures_0",
+        "season": "summer",
+        "n": 61,
+        "verts": 263,
+        "rawM": [
+          0.00023,
+          0.0003,
+          0.00031
+        ],
+        "afterCmToM_h": 0.03,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_62_textures_0",
+        "mesh": "Summer model#62_Textures_0",
+        "season": "summer",
+        "n": 62,
+        "verts": 270,
+        "rawM": [
+          0.00201,
+          0.00199,
+          0.00237
+        ],
+        "afterCmToM_h": 0.199,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_63_textures_0",
+        "mesh": "Summer model#63_Textures_0",
+        "season": "summer",
+        "n": 63,
+        "verts": 366,
+        "rawM": [
+          0.00222,
+          0.0023,
+          0.00262
+        ],
+        "afterCmToM_h": 0.23,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_64_textures_0",
+        "mesh": "Summer model#64_Textures_0",
+        "season": "summer",
+        "n": 64,
+        "verts": 468,
+        "rawM": [
+          0.00309,
+          0.00268,
+          0.00341
+        ],
+        "afterCmToM_h": 0.268,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_65_textures_0",
+        "mesh": "Summer model#65_Textures_0",
+        "season": "summer",
+        "n": 65,
+        "verts": 318,
+        "rawM": [
+          0.0019,
+          0.00203,
+          0.00217
+        ],
+        "afterCmToM_h": 0.203,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_66_textures_0",
+        "mesh": "Summer model#66_Textures_0",
+        "season": "summer",
+        "n": 66,
+        "verts": 210,
+        "rawM": [
+          0.00302,
+          0.00248,
+          0.00331
+        ],
+        "afterCmToM_h": 0.248,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_67_textures_0",
+        "mesh": "Summer model#67_Textures_0",
+        "season": "summer",
+        "n": 67,
+        "verts": 168,
+        "rawM": [
+          0.00112,
+          0.00118,
+          0.00129
+        ],
+        "afterCmToM_h": 0.118,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_68_textures_0",
+        "mesh": "Summer model#68_Textures_0",
+        "season": "summer",
+        "n": 68,
+        "verts": 330,
+        "rawM": [
+          0.00107,
+          0.00128,
+          0.00129
+        ],
+        "afterCmToM_h": 0.128,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_69_textures_0",
+        "mesh": "Summer model#69_Textures_0",
+        "season": "summer",
+        "n": 69,
+        "verts": 210,
+        "rawM": [
+          0.0014,
+          0.00122,
+          0.00155
+        ],
+        "afterCmToM_h": 0.122,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_6_textures_0",
+        "mesh": "Summer model#6_Textures_0",
+        "season": "summer",
+        "n": 6,
+        "verts": 370,
+        "rawM": [
+          0.0021,
+          0.00225,
+          0.00392
+        ],
+        "afterCmToM_h": 0.225,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_70_textures_0",
+        "mesh": "Summer model#70_Textures_0",
+        "season": "summer",
+        "n": 70,
+        "verts": 84,
+        "rawM": [
+          0.00114,
+          0.00122,
+          0.00131
+        ],
+        "afterCmToM_h": 0.122,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_71_textures_0",
+        "mesh": "Summer model#71_Textures_0",
+        "season": "summer",
+        "n": 71,
+        "verts": 96,
+        "rawM": [
+          0.00128,
+          0.0014,
+          0.0015
+        ],
+        "afterCmToM_h": 0.14,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_72_textures_0",
+        "mesh": "Summer model#72_Textures_0",
+        "season": "summer",
+        "n": 72,
+        "verts": 190,
+        "rawM": [
+          0.00018,
+          0.0002,
+          0.00019
+        ],
+        "afterCmToM_h": 0.02,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "molten"
+      },
+      {
+        "id": "summer_model_7_textures_0",
+        "mesh": "Summer model#7_Textures_0",
+        "season": "summer",
+        "n": 7,
+        "verts": 297,
+        "rawM": [
+          0.00142,
+          0.00137,
+          0.003
+        ],
+        "afterCmToM_h": 0.137,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_8_textures_0",
+        "mesh": "Summer model#8_Textures_0",
+        "season": "summer",
+        "n": 8,
+        "verts": 1166,
+        "rawM": [
+          0.00657,
+          0.00269,
+          0.00447
+        ],
+        "afterCmToM_h": 0.269,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "ancient"
+      },
+      {
+        "id": "summer_model_9_textures_0",
+        "mesh": "Summer model#9_Textures_0",
+        "season": "summer",
+        "n": 9,
+        "verts": 710,
+        "rawM": [
+          0.0041,
+          0.00396,
+          0.00399
+        ],
+        "afterCmToM_h": 0.396,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "ancient"
+      },
+      {
+        "id": "winter_model_10_textures_0",
+        "mesh": "Winter model#10_Textures_0",
+        "season": "winter",
+        "n": 10,
+        "verts": 1321,
+        "rawM": [
+          0.00279,
+          0.0028,
+          0.00486
+        ],
+        "afterCmToM_h": 0.28,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_11_textures_0",
+        "mesh": "Winter model#11_Textures_0",
+        "season": "winter",
+        "n": 11,
+        "verts": 1224,
+        "rawM": [
+          0.00362,
+          0.00393,
+          0.00315
+        ],
+        "afterCmToM_h": 0.393,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_12_textures_0",
+        "mesh": "Winter model#12_Textures_0",
+        "season": "winter",
+        "n": 12,
+        "verts": 2139,
+        "rawM": [
+          0.00494,
+          0.00513,
+          0.00377
+        ],
+        "afterCmToM_h": 0.513,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_13_textures_0",
+        "mesh": "Winter model#13_Textures_0",
+        "season": "winter",
+        "n": 13,
+        "verts": 1170,
+        "rawM": [
+          0.00657,
+          0.00269,
+          0.00447
+        ],
+        "afterCmToM_h": 0.269,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_14_textures_0",
+        "mesh": "Winter model#14_Textures_0",
+        "season": "winter",
+        "n": 14,
+        "verts": 369,
+        "rawM": [
+          0.00142,
+          0.00139,
+          0.00307
+        ],
+        "afterCmToM_h": 0.139,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_15_textures_0",
+        "mesh": "Winter model#15_Textures_0",
+        "season": "winter",
+        "n": 15,
+        "verts": 328,
+        "rawM": [
+          0.00194,
+          0.00144,
+          0.00316
+        ],
+        "afterCmToM_h": 0.144,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_16_textures_0",
+        "mesh": "Winter model#16_Textures_0",
+        "season": "winter",
+        "n": 16,
+        "verts": 504,
+        "rawM": [
+          0.00233,
+          0.00191,
+          0.00341
+        ],
+        "afterCmToM_h": 0.191,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_17_textures_0",
+        "mesh": "Winter model#17_Textures_0",
+        "season": "winter",
+        "n": 17,
+        "verts": 705,
+        "rawM": [
+          0.00373,
+          0.00258,
+          0.00295
+        ],
+        "afterCmToM_h": 0.258,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_18_textures_0",
+        "mesh": "Winter model#18_Textures_0",
+        "season": "winter",
+        "n": 18,
+        "verts": 380,
+        "rawM": [
+          0.00062,
+          0.00064,
+          0.00049
+        ],
+        "afterCmToM_h": 0.064,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_19_textures_0",
+        "mesh": "Winter model#19_Textures_0",
+        "season": "winter",
+        "n": 19,
+        "verts": 2944,
+        "rawM": [
+          0.00353,
+          0.00387,
+          0.0039
+        ],
+        "afterCmToM_h": 0.387,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_1_textures_0",
+        "mesh": "Winter model#1_Textures_0",
+        "season": "winter",
+        "n": 1,
+        "verts": 1358,
+        "rawM": [
+          0.0041,
+          0.00396,
+          0.00404
+        ],
+        "afterCmToM_h": 0.396,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_20_textures_0",
+        "mesh": "Winter model#20_Textures_0",
+        "season": "winter",
+        "n": 20,
+        "verts": 1233,
+        "rawM": [
+          0.00361,
+          0.00149,
+          0.00331
+        ],
+        "afterCmToM_h": 0.149,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_21_textures_0",
+        "mesh": "Winter model#21_Textures_0",
+        "season": "winter",
+        "n": 21,
+        "verts": 2668,
+        "rawM": [
+          0.00386,
+          0.00386,
+          0.00358
+        ],
+        "afterCmToM_h": 0.386,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_22_textures_0",
+        "mesh": "Winter model#22_Textures_0",
+        "season": "winter",
+        "n": 22,
+        "verts": 524,
+        "rawM": [
+          0.00083,
+          0.00162,
+          0.00157
+        ],
+        "afterCmToM_h": 0.162,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_23_textures_0",
+        "mesh": "Winter model#23_Textures_0",
+        "season": "winter",
+        "n": 23,
+        "verts": 270,
+        "rawM": [
+          0.00168,
+          0.00056,
+          0.00382
+        ],
+        "afterCmToM_h": 0.056,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_24_textures_0",
+        "mesh": "Winter model#24_Textures_0",
+        "season": "winter",
+        "n": 24,
+        "verts": 2416,
+        "rawM": [
+          0.00359,
+          0.0027,
+          0.00383
+        ],
+        "afterCmToM_h": 0.27,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_25_textures_0",
+        "mesh": "Winter model#25_Textures_0",
+        "season": "winter",
+        "n": 25,
+        "verts": 2401,
+        "rawM": [
+          0.00281,
+          0.00332,
+          0.00356
+        ],
+        "afterCmToM_h": 0.332,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_26_textures_0",
+        "mesh": "Winter model#26_Textures_0",
+        "season": "winter",
+        "n": 26,
+        "verts": 377,
+        "rawM": [
+          0.00186,
+          0.00035,
+          0.00031
+        ],
+        "afterCmToM_h": 0.035,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_27_textures_0",
+        "mesh": "Winter model#27_Textures_0",
+        "season": "winter",
+        "n": 27,
+        "verts": 340,
+        "rawM": [
+          0.00195,
+          0.00065,
+          0.00035
+        ],
+        "afterCmToM_h": 0.065,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_28_textures_0",
+        "mesh": "Winter model#28_Textures_0",
+        "season": "winter",
+        "n": 28,
+        "verts": 2143,
+        "rawM": [
+          0.00164,
+          0.00053,
+          0.00045
+        ],
+        "afterCmToM_h": 0.053,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_29_textures_0",
+        "mesh": "Winter model#29_Textures_0",
+        "season": "winter",
+        "n": 29,
+        "verts": 512,
+        "rawM": [
+          0.00151,
+          0.00042,
+          0.00041
+        ],
+        "afterCmToM_h": 0.042,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_2_textures_0",
+        "mesh": "Winter model#2_Textures_0",
+        "season": "winter",
+        "n": 2,
+        "verts": 1188,
+        "rawM": [
+          0.00186,
+          0.00263,
+          0.00432
+        ],
+        "afterCmToM_h": 0.263,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_30_textures_0",
+        "mesh": "Winter model#30_Textures_0",
+        "season": "winter",
+        "n": 30,
+        "verts": 825,
+        "rawM": [
+          0.00317,
+          0.00313,
+          0.00201
+        ],
+        "afterCmToM_h": 0.313,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_31_textures_0",
+        "mesh": "Winter model#31_Textures_0",
+        "season": "winter",
+        "n": 31,
+        "verts": 324,
+        "rawM": [
+          0.00203,
+          0.0028,
+          0.00279
+        ],
+        "afterCmToM_h": 0.28,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_32_textures_0",
+        "mesh": "Winter model#32_Textures_0",
+        "season": "winter",
+        "n": 32,
+        "verts": 750,
+        "rawM": [
+          0.00333,
+          0.00397,
+          0.00384
+        ],
+        "afterCmToM_h": 0.397,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_33_textures_0",
+        "mesh": "Winter model#33_Textures_0",
+        "season": "winter",
+        "n": 33,
+        "verts": 678,
+        "rawM": [
+          0.00369,
+          0.00433,
+          0.00421
+        ],
+        "afterCmToM_h": 0.433,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_34_textures_0",
+        "mesh": "Winter model#34_Textures_0",
+        "season": "winter",
+        "n": 34,
+        "verts": 552,
+        "rawM": [
+          0.00269,
+          0.00345,
+          0.00375
+        ],
+        "afterCmToM_h": 0.345,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_35_textures_0",
+        "mesh": "Winter model#35_Textures_0",
+        "season": "winter",
+        "n": 35,
+        "verts": 1170,
+        "rawM": [
+          0.00364,
+          0.00429,
+          0.00428
+        ],
+        "afterCmToM_h": 0.429,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_36_textures_0",
+        "mesh": "Winter model#36_Textures_0",
+        "season": "winter",
+        "n": 36,
+        "verts": 348,
+        "rawM": [
+          0.00202,
+          0.00199,
+          0.00238
+        ],
+        "afterCmToM_h": 0.199,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_37_textures_0",
+        "mesh": "Winter model#37_Textures_0",
+        "season": "winter",
+        "n": 37,
+        "verts": 438,
+        "rawM": [
+          0.00237,
+          0.00229,
+          0.00262
+        ],
+        "afterCmToM_h": 0.229,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_38_textures_0",
+        "mesh": "Winter model#38_Textures_0",
+        "season": "winter",
+        "n": 38,
+        "verts": 576,
+        "rawM": [
+          0.0035,
+          0.00303,
+          0.00343
+        ],
+        "afterCmToM_h": 0.303,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_39_textures_0",
+        "mesh": "Winter model#39_Textures_0",
+        "season": "winter",
+        "n": 39,
+        "verts": 402,
+        "rawM": [
+          0.00206,
+          0.00225,
+          0.00218
+        ],
+        "afterCmToM_h": 0.225,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_3_textures_0",
+        "mesh": "Winter model#3_Textures_0",
+        "season": "winter",
+        "n": 3,
+        "verts": 645,
+        "rawM": [
+          0.00479,
+          0.00471,
+          0.00425
+        ],
+        "afterCmToM_h": 0.471,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_40_textures_0",
+        "mesh": "Winter model#40_Textures_0",
+        "season": "winter",
+        "n": 40,
+        "verts": 360,
+        "rawM": [
+          0.00299,
+          0.00248,
+          0.00332
+        ],
+        "afterCmToM_h": 0.248,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_41_textures_0",
+        "mesh": "Winter model#41_Textures_0",
+        "season": "winter",
+        "n": 41,
+        "verts": 192,
+        "rawM": [
+          0.00118,
+          0.00109,
+          0.00129
+        ],
+        "afterCmToM_h": 0.109,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_42_textures_0",
+        "mesh": "Winter model#42_Textures_0",
+        "season": "winter",
+        "n": 42,
+        "verts": 366,
+        "rawM": [
+          0.00127,
+          0.00134,
+          0.00129
+        ],
+        "afterCmToM_h": 0.134,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_43_textures_0",
+        "mesh": "Winter model#43_Textures_0",
+        "season": "winter",
+        "n": 43,
+        "verts": 252,
+        "rawM": [
+          0.00156,
+          0.00154,
+          0.00155
+        ],
+        "afterCmToM_h": 0.154,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_44_textures_0",
+        "mesh": "Winter model#44_Textures_0",
+        "season": "winter",
+        "n": 44,
+        "verts": 126,
+        "rawM": [
+          0.0014,
+          0.00143,
+          0.00133
+        ],
+        "afterCmToM_h": 0.143,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_45_textures_0",
+        "mesh": "Winter model#45_Textures_0",
+        "season": "winter",
+        "n": 45,
+        "verts": 144,
+        "rawM": [
+          0.00157,
+          0.00153,
+          0.00151
+        ],
+        "afterCmToM_h": 0.153,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_46_textures_0",
+        "mesh": "Winter model#46_Textures_0",
+        "season": "winter",
+        "n": 46,
+        "verts": 588,
+        "rawM": [
+          0.00115,
+          0.00113,
+          0.00053
+        ],
+        "afterCmToM_h": 0.113,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_47_textures_0",
+        "mesh": "Winter model#47_Textures_0",
+        "season": "winter",
+        "n": 47,
+        "verts": 739,
+        "rawM": [
+          0.00043,
+          0.0005,
+          0.0008
+        ],
+        "afterCmToM_h": 0.05,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_48_textures_0",
+        "mesh": "Winter model#48_Textures_0",
+        "season": "winter",
+        "n": 48,
+        "verts": 1152,
+        "rawM": [
+          0.00044,
+          0.00016,
+          0.00107
+        ],
+        "afterCmToM_h": 0.016,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_49_textures_0",
+        "mesh": "Winter model#49_Textures_0",
+        "season": "winter",
+        "n": 49,
+        "verts": 780,
+        "rawM": [
+          0.00082,
+          0.00021,
+          0.00112
+        ],
+        "afterCmToM_h": 0.021,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_4_textures_0",
+        "mesh": "Winter model#4_Textures_0",
+        "season": "winter",
+        "n": 4,
+        "verts": 370,
+        "rawM": [
+          0.0021,
+          0.00225,
+          0.00392
+        ],
+        "afterCmToM_h": 0.225,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_50_textures_0",
+        "mesh": "Winter model#50_Textures_0",
+        "season": "winter",
+        "n": 50,
+        "verts": 816,
+        "rawM": [
+          0.00103,
+          0.00053,
+          0.00083
+        ],
+        "afterCmToM_h": 0.053,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_51_textures_0",
+        "mesh": "Winter model#51_Textures_0",
+        "season": "winter",
+        "n": 51,
+        "verts": 732,
+        "rawM": [
+          0.00046,
+          0.00047,
+          0.00037
+        ],
+        "afterCmToM_h": 0.047,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_52_textures_0",
+        "mesh": "Winter model#52_Textures_0",
+        "season": "winter",
+        "n": 52,
+        "verts": 565,
+        "rawM": [
+          0.00102,
+          0.00085,
+          0.001
+        ],
+        "afterCmToM_h": 0.085,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_53_textures_0",
+        "mesh": "Winter model#53_Textures_0",
+        "season": "winter",
+        "n": 53,
+        "verts": 618,
+        "rawM": [
+          0.00049,
+          0.00079,
+          0.00116
+        ],
+        "afterCmToM_h": 0.079,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_54_textures_0",
+        "mesh": "Winter model#54_Textures_0",
+        "season": "winter",
+        "n": 54,
+        "verts": 276,
+        "rawM": [
+          0.00033,
+          0.00037,
+          0.0002
+        ],
+        "afterCmToM_h": 0.037,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "grim"
+      },
+      {
+        "id": "winter_model_5_textures_0",
+        "mesh": "Winter model#5_Textures_0",
+        "season": "winter",
+        "n": 5,
+        "verts": 841,
+        "rawM": [
+          0.00488,
+          0.00209,
+          0.00544
+        ],
+        "afterCmToM_h": 0.209,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_6_textures_0",
+        "mesh": "Winter model#6_Textures_0",
+        "season": "winter",
+        "n": 6,
+        "verts": 394,
+        "rawM": [
+          0.00375,
+          0.00158,
+          0.00447
+        ],
+        "afterCmToM_h": 0.158,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_7_textures_0",
+        "mesh": "Winter model#7_Textures_0",
+        "season": "winter",
+        "n": 7,
+        "verts": 752,
+        "rawM": [
+          0.00562,
+          0.00363,
+          0.00372
+        ],
+        "afterCmToM_h": 0.363,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_8_textures_0",
+        "mesh": "Winter model#8_Textures_0",
+        "season": "winter",
+        "n": 8,
+        "verts": 1207,
+        "rawM": [
+          0.00453,
+          0.00285,
+          0.00351
+        ],
+        "afterCmToM_h": 0.285,
+        "role": "clutter",
+        "targetHeightM": 0.42,
+        "biome": "frost"
+      },
+      {
+        "id": "winter_model_9_textures_0",
+        "mesh": "Winter model#9_Textures_0",
+        "season": "winter",
+        "n": 9,
+        "verts": 6470,
+        "rawM": [
+          0.00378,
+          0.00378,
+          0.00537
+        ],
+        "afterCmToM_h": 0.378,
+        "role": "rock",
+        "targetHeightM": 0.85,
+        "biome": "frost"
+      }
+    ]
+  },
+  "matlib": {
+    "source": "material_library_showcase_only_free.glb",
+    "glb": "models/props/matlib-showcase.glb",
+    "images": [
+      {
+        "file": "img_00_1024.png",
+        "name": "Image_0",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_01_1024.png",
+        "name": "Image_1",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_02_1024.png",
+        "name": "Image_10",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_03_1024.png",
+        "name": "Image_11",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_04_1024.png",
+        "name": "Image_12",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_05_1024.png",
+        "name": "Image_13",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_06_1024.png",
+        "name": "Image_14",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_07_1024.png",
+        "name": "Image_2",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_08_1024.png",
+        "name": "Image_3",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_09_1024.png",
+        "name": "Image_4",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_10_1024.png",
+        "name": "Image_5",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_11_1024.png",
+        "name": "Image_6",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_12_1024.png",
+        "name": "Image_7",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_13_1024.png",
+        "name": "Image_8",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "file": "img_14_1024.png",
+        "name": "Image_9",
+        "size": [
+          1024,
+          1024
+        ]
+      }
+    ],
+    "materials": [
+      {
+        "id": "matlib-1",
+        "blender": "Material-1",
+        "maps": {
+          "albedo": "Image_5",
+          "normal": null,
+          "orm": null,
+          "all": [
+            "Image_3",
+            "Image_4",
+            "Image_5"
+          ]
+        }
+      },
+      {
+        "id": "matlib-2",
+        "blender": "Material-2",
+        "maps": {
+          "albedo": "Image_8",
+          "normal": null,
+          "orm": null,
+          "all": [
+            "Image_6",
+            "Image_7",
+            "Image_8"
+          ]
+        }
+      },
+      {
+        "id": "matlib-3",
+        "blender": "Material-3",
+        "maps": {
+          "albedo": "Image_2",
+          "normal": null,
+          "orm": null,
+          "all": [
+            "Image_0",
+            "Image_1",
+            "Image_2"
+          ]
+        }
+      },
+      {
+        "id": "matlib-4",
+        "blender": "Material-4",
+        "maps": {
+          "albedo": "Image_11",
+          "normal": null,
+          "orm": null,
+          "all": [
+            "Image_9",
+            "Image_10",
+            "Image_11"
+          ]
+        }
+      },
+      {
+        "id": "matlib-5",
+        "blender": "Material-5",
+        "maps": {
+          "albedo": "Image_14",
+          "normal": null,
+          "orm": null,
+          "all": [
+            "Image_12",
+            "Image_13",
+            "Image_14"
+          ]
+        }
+      }
+    ]
+  }
+}

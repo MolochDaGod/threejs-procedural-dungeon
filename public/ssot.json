@@ -21,6 +21,27 @@
     "death": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/anim_death.glb"
   },
   "races": ["human", "barbarian", "elf", "dwarf", "orc", "undead"],
+  "classes": ["worge", "warrior", "mage", "ranger"],
   "spells": ["cleave", "fireball", "frostlance", "thunder", "holy_nova", "void_dash"],
+  "layout": { "linearRooms": 7, "graphRooms": 8, "cellM": 2.55, "wallHM": 6.4, "groundY": 0, "floorHM": 0.22 },
+  "physics": {
+    "capsuleR": 0.32,
+    "layers": ["Default", "Terrain", "Player", "NPC", "Item", "Projectile", "Trigger", "Water", "IgnoreRaycast", "UI3D"],
+    "colliders": "src/physics/colliders.js"
+  },
+  "envLayers": ["structure", "props", "torches", "particles", "liquids", "lights", "colliders"],
+  "ruleset": "grudge.dungeon.ruleset/v1",
+  "mechanicWorker": "/api/mechanic",
+  "combat": "src/combat",
+  "characterEntry": "src/character/entry.js",
+  "content": {
+    "era": "src/content/era/warlords.js",
+    "biomes": "src/content/biomes",
+    "items": "src/content/items",
+    "monsters": "src/content/monsters",
+    "bosses": "src/content/bosses"
+  },
+  "physicsEngine": "@dimforge/rapier3d-compat",
+  "d1": { "kit": "models/dungeons/warlords-dungeon-kit.json", "tables": ["gn_assets", "world_dungeons", "dungeon_kit_pieces"] },
   "note": "Production SSOT. Do not vendor Unity FBX. Do not put GEMINI keys in this client."
 }

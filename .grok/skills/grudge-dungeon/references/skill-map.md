@@ -25,5 +25,13 @@ User pack: `~/.grok/skills/` (synced from https://github.com/MolochDaGod/threejs
 | Crawl + cast + feel | `src/play/index.js` |
 | HUD | `src/play/hud.js` + `src/ui/styles.css` |
 | Forge pipeline | `src/main.js` |
+| Collider cuboids | `src/physics/colliders.js` |
+| Env + physics layers | `src/env/layers.js` |
+| Crawl ruleset | `src/ruleset.js` |
+| Mechanic compile / worker | `src/mechanic/compile.js` · `api/mechanic.js` |
+| Terrain / nav / foot plant | `src/terrain/ground.js` · `navmesh.js` · `motion.js` · `footPlant.js` |
+| Era / biomes / items / monsters / bosses | `src/content/` |
+| combat.* | `src/combat/` |
+| Character entry | `src/character/entry.js` |
 
 Do not duplicate those tables into other skills. Point here.

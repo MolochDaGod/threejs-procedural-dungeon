@@ -3,7 +3,8 @@
  * Entrance → combat/elite rooms → boss. 6-slot pre-match loadout. Linear casts.
  */
 import * as THREE from 'three';
-import { PLAY, RACES, loadoutFor, spellById } from '../ssot.js';
+import { CLASSES, PLAY, RACES, loadoutFor, spellById } from '../ssot.js';
+import { allyRaces, makeAlly, otherClasses, tickAlly } from './party.js';
 import { prefabFor, playerPrefab } from './prefabs.js';
 import { worldOf, cellOf, walkableWorld } from '../gen/cells.js';
 import { buildNavMesh } from '../gen/navmesh.js';
@@ -42,6 +43,11 @@ export class PlaySession {
     this.weaponId = '1h_tome';
     this.sheet = fallbackSheet('human', 'worge');
     this.stamina = this.sheet.staminaMax;
+    this.allies = [];
+    this.iframes = 0;
+    this.parryT = 0;
+    this.dodgeCd = 0;
+    this.parryCd = 0;
     this.hud = mountHud();
     bindHud(this.hud, {
       onCast: (slot) => this.castSlot(slot),
@@ -58,6 +64,8 @@ export class PlaySession {
           this.castSlot(n);
         }
       }
+      if (e.code === PLAY.dodge.key) { e.preventDefault(); this.tryDodge(); }
+      if (e.code === PLAY.parry.key) { e.preventDefault(); this.tryParry(); }
       if (e.code === 'Escape') this.exit();
       if (e.code === 'Tab') {
         e.preventDefault();
@@ -178,6 +186,18 @@ export class PlaySession {
     this.player.root.position.copy(this.pos);
     this.group.add(this.player.root);
 
+    const fill = otherClasses(this.classId);
+    const races = allyRaces(this.raceId);
+    this.allies = await Promise.all(fill.map(async (cid, i) => {
+      const actor = await spawnActor({ prefab: playerPrefab(races[i % races.length], cid, '1h_tome'), equipped: true });
+      const ang = (-0.7 + i * 0.7);
+      const pos = this.pos.clone().add(new THREE.Vector3(Math.sin(ang) * 1.8, 0, Math.cos(ang) * 1.8));
+      const a = makeAlly(actor, { classId: cid, raceId: races[i % races.length], pos });
+      actor.root.position.copy(a.pos);
+      this.group.add(actor.root);
+      return a;
+    }));
+
     const theme = dungeon.params.themeKey;
     const rooms = linear ? this.path : dungeon.rooms;
     const jobs = [];
@@ -251,6 +271,8 @@ export class PlaySession {
     this.nav = null;
     this.instance = null;
     this.player?.dispose();
+    for (const a of this.allies) a.actor.dispose();
+    this.allies = [];
     for (const e of this.enemies) e.actor.dispose();
     this.enemies = [];
     this.player = null;
@@ -311,6 +333,82 @@ export class PlaySession {
       this.player.setGait(moving, sprint);
       this.player.update(dt);
     }
+    this.tickAllies(dt);
+  }
+
+  tickAllies(dt) {
+    if (!this.allies?.length) return;
+    const host = {
+      playerPos: this.pos,
+      playerHp: this.hp,
+      playerHpMax: this.sheet?.hpMax || PLAY.hp,
+      walkable: (x, z) => this.walkable(this.d, x, z),
+      nearestFoe: (pos, range) => {
+        let best = null, d0 = range;
+        for (const e of this.enemies) {
+          if (!e.alive) continue;
+          const d = pos.distanceTo(e.pos);
+          if (d < d0) { d0 = d; best = e; }
+        }
+        return best;
+      },
+      castFrom: (a, spell, foe) => {
+        if (spell.kind === 'slash') this.hitRadius(a.pos, spell.range + 0.5, spell.damage);
+        else if (spell.kind === 'nova' || spell.kind === 'zone') this.hitRadius(a.pos, spell.range, spell.damage);
+        else this.hurt(foe, spell.damage);
+        this.vfx.impact({ origin: foe.pos.clone().setY(1.1), color: spell.color || 0xe8e0c8 });
+      },
+      taunt: (ally, range) => {
+        toast(`${CLASSES[ally.classId]?.label || ally.classId} taunts`);
+        for (const e of this.enemies) {
+          if (!e.alive) continue;
+          if (e.pos.distanceTo(ally.pos) <= range) e.aggro = 8;
+        }
+      },
+      utility: (ally) => toast(`${CLASSES[ally.classId]?.label || 'Worge'} utility`),
+      partyHurtRatio: () => {
+        const hp = this.hp + this.allies.reduce((s, a) => s + (a.alive ? a.hp : 0), 0);
+        const max = (this.sheet?.hpMax || PLAY.hp) + this.allies.reduce((s, a) => s + a.hpMax, 0);
+        return max ? hp / max : 1;
+      },
+    };
+    for (const a of this.allies) tickAlly(a, dt, host);
+  }
+
+  tryDodge() {
+    if (!this.active || this.ended || this.dodgeCd > 0) return;
+    const spec = PLAY.dodge;
+    const cost = spec.stam;
+    if ((this.stamina || 0) < cost * 0.35) { toast('Winded'); return; }
+    this.stamina = Math.max(0, (this.stamina || 0) - cost);
+    this.dodgeCd = spec.cd;
+    this.iframes = spec.iframeEnd;
+    this.dashAlong(this.aim.lengthSq() ? this.aim.clone().normalize() : new THREE.Vector3(0, 0, 1), spec.maxDistance * 0.7);
+    this.player?.requestOneShot?.('dodge', spec.duration);
+    toast('Dodge');
+  }
+
+  tryParry() {
+    if (!this.active || this.ended || this.parryCd > 0) return;
+    const cost = PLAY.parry.stam;
+    if ((this.stamina || 0) < cost * 0.35) return;
+    this.stamina = Math.max(0, (this.stamina || 0) - cost);
+    this.parryCd = PLAY.parry.cd;
+    this.parryT = PLAY.parry.window;
+    this.player?.requestOneShot?.('attack', 0.24);
+    toast('Parry');
+  }
+
+  takeDamage(incoming, attacker, kind = 'hit') {
+    if (this.iframes > 0) { toast('Dodged'); return 0; }
+    if (this.parryT > 0 && (kind === 'cone' || kind === 'slash' || kind === 'swipe')) {
+      this.parryT = 0;
+      toast('Parry');
+      return 0;
+    }
+    const dmg = resolveHit(incoming, attacker, this.sheet);
+    this.hp -= dmg;
+    return dmg;
   }
 
   dashAlong(dir, range) {
@@ -532,7 +630,7 @@ export class PlaySession {
     if (e.windKind === 'zone') {
       const mark = this.pos.clone();
       this.vfx.nova({ origin: mark, color: col, range: 3.4 });
-      if (this.pos.distanceTo(mark) <= 3.4) this.hp -= resolveHit(e.boss ? 18 : 10, { damage: e.boss ? 40 : 16, crit: 0.06, critFactor: 1.5 }, this.sheet);
+      if (this.pos.distanceTo(mark) <= 3.4) this.takeDamage(e.boss ? 18 : 10, { damage: e.boss ? 40 : 16, crit: 0.06, critFactor: 1.5 }, 'aoe');
       this.vfx.zone({
         origin: mark,
         color: col,
@@ -540,7 +638,7 @@ export class PlaySession {
         life: 4.8,
         dps: e.boss ? 6 : 3,
         onTick: (it) => {
-          if (this.pos.distanceTo(mark) <= it.radius + 0.45) this.hp -= resolveHit(it.dps, { damage: 8 }, this.sheet);
+          if (this.pos.distanceTo(mark) <= it.radius + 0.45) this.takeDamage(it.dps, { damage: 8 }, 'aoe');
         },
       });
     } else if (e.windKind === 'linear') {
@@ -549,7 +647,7 @@ export class PlaySession {
     } else {
       this.vfx.slash({ origin: e.pos.clone().setY(1.1), dir, color: col, range: 2.2 });
       const to = this.pos.clone().sub(e.pos);
-      if (to.length() <= 3.4 && to.normalize().dot(dir) > 0.45) this.hp -= resolveHit(e.boss ? 16 : 8, { damage: e.boss ? 36 : 14, crit: 0.05, critFactor: 1.5 }, this.sheet);
+      if (to.length() <= 3.4 && to.normalize().dot(dir) > 0.45) this.takeDamage(e.boss ? 16 : 8, { damage: e.boss ? 36 : 14, crit: 0.05, critFactor: 1.5 }, 'cone');
     }
     this.vfx.shake.add(e.boss ? 0.4 : 0.22);
   }
@@ -559,7 +657,7 @@ export class PlaySession {
     const along = to.dot(dir);
     if (along < 0 || along > range) return;
     const closest = origin.clone().addScaledVector(dir, along);
-    if (closest.distanceTo(this.pos) <= width + 0.4) this.hp -= resolveHit(dmg, { damage: 14, crit: 0.05, critFactor: 1.5 }, this.sheet);
+    if (closest.distanceTo(this.pos) <= width + 0.4) this.takeDamage(dmg, { damage: 14, crit: 0.05, critFactor: 1.5 }, 'line');
   }
 
   objective() {
@@ -585,6 +683,10 @@ export class PlaySession {
     }
     for (const k of Object.keys(this.cds)) this.cds[k] = Math.max(0, this.cds[k] - gdt);
     this.casting = Math.max(0, this.casting - gdt);
+    this.iframes = Math.max(0, (this.iframes || 0) - gdt);
+    this.parryT = Math.max(0, (this.parryT || 0) - gdt);
+    this.dodgeCd = Math.max(0, (this.dodgeCd || 0) - gdt);
+    this.parryCd = Math.max(0, (this.parryCd || 0) - gdt);
     const sheet = this.sheet || fallbackSheet(this.raceId, this.classId);
     this.mana = Math.min(sheet.manaMax, this.mana + sheet.manaRegen * gdt);
     this.hp = Math.min(sheet.hpMax, this.hp + sheet.hpRegen * gdt);

@@ -101,6 +101,10 @@ export const THEME_ENEMY = {
 export const DUNGEON_SI = {
   cell: 2.15,
   wallH: 3.85,
+  groundY: 0,
+  floorH: 0.28,
+  gravity: -30,
+  capsuleHalfH: 0.55,
 };
 
 /** Kit meshes used by forge dressing (KayKit on CDN). */
@@ -125,6 +129,27 @@ export const PLAY = {
   hpRegen: 1.4,
   staminaRegen: 14,
   sprintStamina: 18,
+  party: 4,
+  allyHp: 110,
+  dodge: {
+    key: 'KeyX',
+    duration: 0.72,
+    iframeStart: 0.06,
+    iframeEnd: 0.56,
+    maxDistance: 4.9,
+    minDistance: 0.5,
+    cd: 0.78,
+    stam: 18,
+  },
+  parry: { key: 'KeyC', window: 0.30, cd: 1.35, stam: 12, invuln: 0.22 },
+};
+
+/** Indoor override of open-world AGGRO_CONFIG (rooms are tight). */
+export const AGGRO = {
+  detection: 14,
+  aggro: 11,
+  assist: 16,
+  leash: 22,
 };
 
 /** Physics + nav for generated instances (matches Rapier fleet SSOT). */
@@ -141,3 +166,20 @@ export const INSTANCE = {
 export function spellById(id) {
   return skillById(id);
 }
+
+export { CREATURES, creatureOf, creaturesForBiome } from './content/creatures/index.js';
+export { PROP_KITS } from './content/props/kits.js';
+export { DUNGEON_KINDS, DUNGEON_KIND_IDS, enemyFactionRaces } from './content/kinds.js';
+export { HERO_24, PIRATE_FACES, portraitUrl, heroOf, portraitFallback } from './content/era/heroes24.js';
+export { CLASSES, CLASS_IDS } from './content/era/warlords.js';
+export { THEME_BIOME, POOL_RULES, biomeOf } from './content/biomes/index.js';
+export { ENEMY_ATTACKS, ROLE_ATTACKS } from './combat/attacks.js';
+
+export const DUNGEON_LAYOUT = {
+  linearRooms: 7,
+  graphRooms: 8,
+  roomsMin: 6,
+  roomsMax: 20,
+  loopLinear: 0,
+  loopGraph: 0.12,
+};

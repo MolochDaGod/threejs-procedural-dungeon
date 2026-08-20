@@ -17,3 +17,7 @@ pnpm-debug.log*
 .vscode/
 *.local
 .vercel
+.env*
+
+# unused fused showcase (atlases live in public/textures/matlib)
+public/models/props/matlib-showcase.glb

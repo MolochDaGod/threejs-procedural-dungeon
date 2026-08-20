@@ -1,0 +1,24 @@
+{
+  "schema": "grudge.dungeon.play/v1",
+  "host": "grudge-dungeons",
+  "live": "https://grudge-dungeons.vercel.app/",
+  "kinds": {
+    "biome": "Theme roster + authored creatures (rock, berserk, troll, cave dino). Telegraphs cone / incoming / aoe.",
+    "faction": "Hostile Warlords faction Toon kits at 1.5× with boss-like attacks.",
+    "boss": "Empty halls. One warlord arena."
+  },
+  "loads": {
+    "player": "CDN Toon {race}.glb, one mixer, Bip001 clips",
+    "creatures": "/models/creatures/{id}.glb native clips + embedded textures",
+    "entrance": "KayKit door/gate on the wall — not 2cave.glb",
+    "physics": "Rapier CCT lazy on ENTER; BVH sampler at groundY=0",
+    "cover": "pillars / interior walls / debris BLOCK + halloween staged BARRIER",
+    "allies": "tank taunt/parry · priest heal · ranger DPS · worge utility"
+  },
+  "telegraphs": ["cone", "linear", "incoming", "aoe", "column", "charge"],
+  "hud": {
+    "portraits": "24 lore heroes + Racalvin, John Wayne, Scoujge Faithbear",
+    "objective": "START at entrance · COMPLETE on warlord slain"
+  },
+  "note": "One generateDungeon. kind only changes planEncounters. Enemies may spawn in more than one biome."
+}
