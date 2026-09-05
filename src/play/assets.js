@@ -3,23 +3,14 @@
  * Preload races + clips + kit so instance enter does not hitch.
  */
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ANIM_URLS, CLIP_DONOR, DRESSING, RACE_IDS, raceCharacterUrl } from '../ssot.js';
 import { CELL_M } from '../gen/cells.js';
+import { loadPlayGltf } from '../loaders/gltfPlay.js';
 
-const loader = new GLTFLoader();
-const cache = new Map();
+const cache = loadPlayGltf._cache;
 
 export function loadGltf(url) {
-  if (cache.has(url)) return cache.get(url);
-  const p = new Promise((resolve, reject) => {
-    loader.load(url, resolve, undefined, (err) => {
-      cache.delete(url);
-      reject(err);
-    });
-  });
-  cache.set(url, p);
-  return p;
+  return loadPlayGltf(url, cache);
 }
 
 export function bakedUrls() {

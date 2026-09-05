@@ -1,5 +1,5 @@
 {
-  "version": "1.2.5",
+  "version": "1.2.6",
   "product": "warlords",
   "era": "warlords",
   "cdn": "https://assets.grudge-studio.com",
@@ -10,7 +10,7 @@
   "kit": "https://assets.grudge-studio.com/models/dungeons/warlords-dungeon-kit.json",
   "kitLocal": "./warlords-dungeon-kit.json",
   "nav": "grid-8",
-  "cellM": 2,
+  "cellM": 2.15,
   "physics": "@dimforge/rapier3d-compat@^0.19.3",
   "instance": "src/gen/instance.js",
   "characters": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb",
@@ -23,7 +23,7 @@
   "races": ["human", "barbarian", "elf", "dwarf", "orc", "undead"],
   "classes": ["worge", "warrior", "mage", "ranger"],
   "spells": ["cleave", "fireball", "frostlance", "thunder", "holy_nova", "void_dash"],
-  "layout": { "linearRooms": 7, "graphRooms": 8, "cellM": 2.55, "wallHM": 6.4, "groundY": 0, "floorHM": 0.22 },
+  "layout": { "linearRooms": 7, "graphRooms": 42, "roomsMin": 7, "roomsMax": 80, "cellM": 2.15, "wallHM": 3.85, "groundY": 0, "floorHM": 0.28 },
   "physics": {
     "capsuleR": 0.32,
     "layers": ["Default", "Terrain", "Player", "NPC", "Item", "Projectile", "Trigger", "Water", "IgnoreRaycast", "UI3D"],
@@ -31,7 +31,21 @@
   },
   "envLayers": ["structure", "props", "torches", "particles", "liquids", "lights", "colliders"],
   "ruleset": "grudge.dungeon.ruleset/v1",
+  "defaults": {
+    "linear": true,
+    "rooms": 7,
+    "loops": 0,
+    "kind": "biome",
+    "yuka": true,
+    "race": "human",
+    "classId": "worge"
+  },
+  "combatHost": "https://combat.grudge-studio.com",
+  "combatEnemies": "toon-rts race kits + combat clip donor (not FBX minions)",
   "mechanicWorker": "/api/mechanic",
+  "scriptWorker": "/api/dungeon/script",
+  "completeWorker": "/api/dungeon/complete",
+  "node": "server/index.mjs",
   "combat": "src/combat",
   "characterEntry": "src/character/entry.js",
   "content": {

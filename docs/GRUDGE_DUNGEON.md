@@ -22,7 +22,7 @@ Do **not** vendor Unity FBX into this repo. Do **not** put API keys in the clien
 
 ## Play contract
 
-1. Forge a dungeon (or check **Linear crawl** — 16 rooms, 0 loops).
+1. Forge a dungeon (or check **Linear crawl** — **7 rooms**, 0 loops). See `docs/CUSTOM_GRUDGE.md`.
 2. Pick a Warlords Era race.
 3. **ENTER DUNGEON** / `E`.
 4. Walk the **critical path** (entrance → combat/elite → boss).
@@ -55,7 +55,8 @@ Race GLBs are full wardrobes. Apply Gladiators class visibility (one body / head
 
 - Nav: `grid-8` + string-pull (`src/gen/navmesh.js`)
 - Physics: `@dimforge/rapier3d-compat` (`src/play/physics.js`)
-- Cell size: 2 m
+- Cell size: **2.15 m** (`DUNGEON_SI.cell`). Forge `group.scale = CELL_M`; plant in **cell units**, never `wx * CELL` again (that was 2.15²).
+- Fire: instanced volumetric THREE.Fire (`src/vfx/instancedFire.js`, tex `/textures/firetex.png`). Torches = ~0.55 m volumes. Boss/molten = **grid-cell AoE** (`gridFireCells`, ~2.15 m each). One InstancedMesh, frustum LOD, no PointLight per flame.
 
 ## Deploy
 
@@ -67,3 +68,12 @@ npm run deploy     # existing Vercel project + existing R2 kit only
 ```
 
 No new hosts. Play stays on `grudgenexus/grudge-dungeons`. Assets stay on `assets.grudge-studio.com` and `combat.grudge-studio.com`.
+
+### Node (same app)
+
+```bash
+npm run build
+npm start          # PORT=8788 — dist + /api/mechanic + /api/dungeon/script + /api/dungeon/complete
+```
+
+Completion rule: **boss slain** (`dungeon-complete`). Gated rooms awaken on enter; deeper halls stay shut until the current hall is cleared. Script compile is isomorphic (browser + Node). Warlords `/home` records the run on Railway `dungeon_runs` after return (`?dungeonComplete=1&characterId=`).

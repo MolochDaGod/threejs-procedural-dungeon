@@ -43,4 +43,4 @@ Gemini image gen is **blocked in this region** (`location_unsupported`). Use CDN
 
 ## Verify
 
-`npm run smoke:mechanic` then `npm run build`. Play path: Forge → ENTER / `E` → WASD → 1–6 → Esc. Characters must idle, not T-pose. Collider overlay: **COLLIDERS** chip or `?physicsDebug=1`. Mechanic worker: `GET /api/mechanic` on existing `grudge-dungeons` (after deploy).
+`npm run smoke:mechanic` then `npm run build`. Node: `npm start` then `GET /api/health`. Play path: Forge → ENTER / `E` → WASD → 1–6 → Esc. Complete on **boss slain**. Characters must idle, not T-pose. Collider overlay: **COLLIDERS** chip or `?physicsDebug=1`. Mechanic worker: `GET /api/mechanic`. Script: `POST /api/dungeon/script`. Complete: `POST /api/dungeon/complete`. Home return records Railway `dungeon_runs`.

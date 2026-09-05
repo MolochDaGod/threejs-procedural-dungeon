@@ -13,13 +13,22 @@
  */
 import * as THREE from 'three';
 import { PlaySession } from './play/index.js';
-import { DUNGEON_SI, PIRATE_FACES, RACES, heroOf, portraitFallback, portraitUrl } from './ssot.js';
+import {
+  CLASS_IDS, CLASS_WEAPON_SETS, CLASSES, DUNGEON_KIND_IDS, DUNGEON_KINDS, DUNGEON_LAYOUT, DUNGEON_SI,
+  PIRATE_FACES, PLAY, PLAY_DEFAULTS, RACES,
+  dungeonFill, heroOf, portraitFallback, portraitUrl,
+} from './ssot.js';
+import { customGrudgeFromDungeon, downloadCustomGrudge } from './gen/customGrudge.js';
+import { attachDungeonTerrain } from './terrain/navmesh.js';
+import { plantObjectOnTerrain } from './terrain/footPlant.js';
 import { CELL_M } from './gen/cells.js';
 import { DungeonDressing } from './play/dressing.js';
 import { ForgeCast } from './play/previews.js';
 import { preloadDungeonAssets } from './play/assets.js';
 import { stampBossArena, stampCover } from './grid/cells.js';
-import { loadInteriorKits, plantCoverKits, plantRoomScenes, plantWallTorches } from './props/kitPlant.js';
+import { stampEventPlatformRoom } from './grid/eventPlatform.js';
+import { loadInteriorKits, plantCoverKits, plantRoomScenes, plantWallTorches, plantMagicRocks } from './props/kitPlant.js';
+import { InstancedFire, gridFireCells } from './vfx/instancedFire.js';
 
 /* ================================================================
    DUNGEON FORGE — procedural dungeon generator core + showcase
@@ -53,8 +62,8 @@ function makeRng(seed){
 
 /* ---------------- constants ---------------- */
 const VOID=0, FLOOR=1, WALL=2, POOL=3;
-const TYPE = { ENTRANCE:'entrance', COMBAT:'combat', ELITE:'elite', TREASURE:'treasure', SHRINE:'shrine', BOSS:'boss' };
-const TINT = { entrance:0x3fd0bb, combat:0x8f95a3, elite:0x9b6cf0, treasure:0xd9a441, shrine:0x5a8fe8, boss:0xd8433a };
+const TYPE = { ENTRANCE:'entrance', COMBAT:'combat', ELITE:'elite', TREASURE:'treasure', SHRINE:'shrine', BOSS:'boss', EVENT:'event' };
+const TINT = { entrance:0x3fd0bb, combat:0x8f95a3, elite:0x9b6cf0, treasure:0xd9a441, shrine:0x5a8fe8, boss:0xd8433a, event:0xff7a33 };
 
 /* ---------------- theme specs ----------------
    Each theme is one data object: palette, lighting rig, liquid shader
@@ -64,7 +73,7 @@ const THEMES = {
   ancient: {
     label:'ANCIENT', accent:'#e8973f',
     bg:0x07080d, fog:0x07080d, fogD:0.0021,
-    hemi:[0x2e3a52, 0x0a0b10, 0.55], dir:[0xffe8c8, 0.85],
+    hemi:[0x2e3a52, 0x0a0b10, 0.72], dir:[0xffe8c8, 1.05],
     floor:0x8a8f9c, corridor:0x6d7380, wall:0x5c626e, cap:0x757b88,
     pillar:0x6a707e, debris:[0x4c515e, 0x60584a],
     flame:0xffa640, flameCore:0xfff3c8, torchLight:[0xff9a48, 2.05, 12.5],
@@ -76,7 +85,7 @@ const THEMES = {
   molten: {
     label:'MOLTEN', accent:'#ff8642',
     bg:0x0c0605, fog:0x1a0b04, fogD:0.0028,
-    hemi:[0x6b3419, 0x160503, 0.55], dir:[0xffd9b0, 0.5],
+    hemi:[0x6b3419, 0x160503, 0.78], dir:[0xffd9b0, 0.85],
     floor:0x7a685c, corridor:0x614f44, wall:0x503e34, cap:0x6b5546,
     pillar:0x5e4a3e, debris:[0x4a382e, 0x60462f],
     flame:0xff8c26, flameCore:0xffe9b0, torchLight:[0xff7a28, 2.25, 13],
@@ -89,7 +98,7 @@ const THEMES = {
   frost: {
     label:'FROST', accent:'#7fd4ff',
     bg:0x060a12, fog:0x0b1522, fogD:0.0024,
-    hemi:[0x3a5a80, 0x0a0e18, 0.5], dir:[0xcfe4ff, 0.82],
+    hemi:[0x3a5a80, 0x0a0e18, 0.7], dir:[0xcfe4ff, 1.0],
     floor:0x93a0b2, corridor:0x78848f, wall:0x60708a, cap:0x8194ac,
     pillar:0x70809a, debris:[0x55617a, 0x6d7a90],
     flame:0x86d9ff, flameCore:0xe8f7ff, torchLight:[0x8fd4ff, 1.85, 12],
@@ -102,7 +111,7 @@ const THEMES = {
   grim: {
     label:'GRIM', accent:'#9fe66a',
     bg:0x070a07, fog:0x0a130a, fogD:0.0030,
-    hemi:[0x2c4030, 0x070a06, 0.52], dir:[0xbfd8b0, 0.45],
+    hemi:[0x2c4030, 0x070a06, 0.7], dir:[0xbfd8b0, 0.8],
     floor:0x7c8276, corridor:0x62685c, wall:0x4f5549, cap:0x666c5e,
     pillar:0x5c6254, debris:[0x4a4f44, 0x5e5c48],
     flame:0x8fe05a, flameCore:0xe9ffd0, torchLight:[0x88e05a, 1.85, 11.5],
@@ -115,7 +124,7 @@ const THEMES = {
   verdant: {
     label:'VERDANT', accent:'#59d68f',
     bg:0x060c09, fog:0x091510, fogD:0.0023,
-    hemi:[0x2f5a46, 0x08120c, 0.6], dir:[0xd8f0c8, 0.8],
+    hemi:[0x2f5a46, 0x08120c, 0.75], dir:[0xd8f0c8, 1.0],
     floor:0x848e7e, corridor:0x6a7560, wall:0x556050, cap:0x6e7a66,
     pillar:0x606c5c, debris:[0x49543f, 0x5c644c],
     flame:0x62e0a8, flameCore:0xe6fff0, torchLight:[0x5ae09a, 1.8, 11.5],
@@ -768,11 +777,20 @@ function tryGenerate(seed, params){
   const coverRole = new Uint8Array(W*H);
   stampBossArena({ W, H, grid, roomId, doorway, rooms, boss, flags }, rng);
   stampCover({ W, H, grid, roomId, doorway, rooms, flags, barrierStage, coverRole }, rng);
+  const dungeonDoc = {
+    valid, params, seed, name:dungeonName(rng, TH),
+    W,H, grid, roomId, corridor, doorway, flags, barrierStage, coverRole,
+    rooms, edges, entrance, boss,
+  };
+  stampEventPlatformRoom(dungeonDoc, rng);
   return {
     valid, params, seed, name:dungeonName(rng, TH),
     W,H, grid, roomId, corridor, doorway, flags, barrierStage, coverRole, bfs, maxBfs,
     rooms, edges, entrance, boss, maxDepth,
     props, spawns, torches, pools, lakeCells, lakeMask, arches,
+    cellRole: dungeonDoc.cellRole || null,
+    platforms: dungeonDoc.platforms || [],
+    eventRoom: dungeonDoc.eventRoom || null,
     stats:{ rooms:N, edges:edges.length, loops, critLen, floorTiles:floorTotal, reach, genMs:0, attempts:1 }
   };
 }
@@ -813,6 +831,7 @@ updateCam();
 const play = new PlaySession({
   scene, cam, camTarget, updateCam, renderer,
   get yaw(){ return yaw; },
+  setView(y, p){ yaw = y; pitch = p; updateCam(); },
   onExitPlay(){ cam.zoom = 1; cam.updateProjectionMatrix(); }
 });
 window.__GRUDGE_PLAY__ = play;
@@ -898,9 +917,9 @@ const POST = (()=>{
       col = mix(vec3(lum), col, 1.09);
       col = (col - 0.5) * 1.05 + 0.5;
       float vg = smoothstep(1.35, 0.5, length(vUv - 0.5) * 1.55);
-      col *= mix(0.78, 1.02, vg);
+      col *= mix(0.90, 1.04, vg);
       float gr = fract(sin(dot(gl_FragCoord.xy + mod(uTime,10.0)*37.0, vec2(12.9898,78.233))) * 43758.5453);
-      col += (gr - 0.5) * 0.02;
+      col += (gr - 0.5) * 0.008;
       col = pow(max(col, 0.0), vec3(0.4545));
       gl_FragColor = vec4(col, 1.0);
     }`, depthTest:false, depthWrite:false });
@@ -1456,7 +1475,7 @@ let overlay = null;
 let lights = [];
 let floorColorsBase = null, floorColorsHeat = null;
 let animT = Infinity, animEnd = 0, animating = false;
-let fx = { liquids:[], shafts:[], spinners:[], parts:null };
+let fx = { liquids:[], shafts:[], spinners:[], parts:null, fire:null };
 let levelGeos = [];
 const dressing = new DungeonDressing();
 const forgeCast = new ForgeCast();
@@ -1475,7 +1494,8 @@ function disposeLevel(){
   levelGeos = [];
   group = null; meshes = {}; overlay = null;
   lights = [];
-  fx = { liquids:[], shafts:[], spinners:[], parts:null };
+  fx.fire?.dispose();
+  fx = { liquids:[], shafts:[], spinners:[], parts:null, fire:null };
 }
 
 function applyThemeEnv(TH){
@@ -1519,12 +1539,13 @@ function buildScene(d){
   applyThemeEnv(TH);
   group = new THREE.Group();
   group.scale.setScalar(CELL_M);
+  group.userData.sampler = d.terrain?.sample || null;
   scene.add(group);
   const W=d.W, H=d.H, grid=d.grid, roomId=d.roomId, corridor=d.corridor,
         doorway=d.doorway, bfs=d.bfs, maxBfs=d.maxBfs, rooms=d.rooms,
         lakeMask=d.lakeMask;
-  const CELL = DUNGEON_SI.cell;
-  const idx=(x,y)=>y*W+x, wx=x=>(x-W/2+0.5)*CELL, wz=y=>(y-H/2+0.5)*CELL;
+  /* Local cell units — group.scale is CELL_M. Do not multiply wx by CELL again (2.15²). */
+  const idx=(x,y)=>y*W+x, wx=x=>(x-W/2+0.5), wz=y=>(y-H/2+0.5);
   const cellRng = makeRng(d.seed ^ 0x9e3779b9);
   const dStep = 0.016;
 
@@ -1561,7 +1582,7 @@ function buildScene(d){
     floorColorsBase.push(base.getHex());
     const diff = rid>=0 ? rooms[rid].difficulty : (maxBfs ? bfs[c]/maxBfs : 0.5);
     floorColorsHeat.push(heatA.clone().lerp(heatB, Math.min(1,diff)).multiplyScalar(0.55 + 0.45*(1-0.09*Math.min(walls8,4))).getHex());
-    fs.add(wx(x), cellRng.f(-0.02,0.008), wz(y), CELL,1,CELL, 0, floorColorsBase[floorColorsBase.length-1], Math.max(0,bfs[c])*dStep);
+    fs.add(wx(x), cellRng.f(-0.02,0.008), wz(y), 1, 1, 1, 0, floorColorsBase[floorColorsBase.length-1], Math.max(0,bfs[c])*dStep);
   }
   meshes.floor = buildMesh(fs, GEO.floor, matStone, 'pop', 0.34, 2);
 
@@ -1575,12 +1596,12 @@ function buildScene(d){
   const wcol = new THREE.Color();
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
     if(grid[idx(x,y)]!==WALL) continue;
-    const h = DUNGEON_SI.wallH + cellRng.f(-0.12,0.18);
+    const h = DUNGEON_SI.wallH / CELL_M + cellRng.f(-0.05, 0.08);
     const dl = nearFloorBfs(x,y)*dStep + 0.30;
     wcol.set(TH.wall).multiplyScalar(cellRng.f(0.9,1.08));
-    ws.add(wx(x), h * 0.5, wz(y), CELL, h, CELL, 0, wcol.getHex(), dl);
+    ws.add(wx(x), h * 0.5, wz(y), 1, h, 1, 0, wcol.getHex(), dl);
     wcol.set(TH.cap).multiplyScalar(cellRng.f(0.92,1.1));
-    cs.add(wx(x), h, wz(y), CELL * 1.04, 1, CELL * 1.04, 0, wcol.getHex(), dl+0.12);
+    cs.add(wx(x), h, wz(y), 1.04, 0.08, 1.04, 0, wcol.getHex(), dl+0.12);
   }
   meshes.wall    = buildMesh(ws, GEO.wall, matStone, 'rise', 0.42, 1);
   meshes.wallCap = buildMesh(cs, GEO.wallCap, matStone, 'pop', 0.3, 1);
@@ -1692,13 +1713,24 @@ function buildScene(d){
     }
   }
 
+  for (const p of d.platforms || []) {
+    const sx = (p.hx * 2) / 2.35;
+    const sy = Math.max(0.4, (p.hy * 2) / 0.14);
+    const sz = (p.hz * 2) / 2.35;
+    const col = p.role === 'pong' ? 0xffc14a
+      : p.role === 'entrance' ? 0x3fd0bb
+      : p.role === 'exit' ? 0xd9a441
+      : lerpC(TH.floor, 0xffffff, 0.08);
+    S.platform.add(p.x, p.y, p.z, sx, sy, sz, 0, col, 0.2);
+    if (p.role === 'entrance') S.ring.add(p.x, p.y + 0.18, p.z, 0.7, 0.7, 0.7, 0, 0x3fd0bb, 0.3);
+    if (p.role === 'exit') S.ring.add(p.x, p.y + 0.18, p.z, 0.7, 0.7, 0.7, 0, 0xd9a441, 0.3);
+  }
+
   /* torches */
   for(const t of d.torches){
     const ry = Math.atan2(t.dx, t.dy);
     const X = wx(t.x)+t.dx*0.5, Z = wz(t.y)+t.dy*0.5, dl = nearFloorBfs(t.x,t.y)*dStep + 0.66;
-    S.torchArm.add(X, 1.02, Z, 1,1,1, ry, 0x4a4038, dl);
-    S.flame.add(X+t.dx*0.16, 1.5, Z+t.dy*0.16, 1.2,1.2,1.2, 0, TH.flame, dl+0.08);
-    S.flameCore.add(X+t.dx*0.16, 1.53, Z+t.dy*0.16, 1.2,1.2,1.2, 0, TH.flameCore, dl+0.08);
+    S.torchArm.add(X, 1.02 / CELL_M, Z, 1 / CELL_M, 1 / CELL_M, 1 / CELL_M, ry, 0x4a4038, dl);
   }
 
   /* spawn markers: three authored tiers */
@@ -1761,8 +1793,6 @@ function buildScene(d){
     ['arch',     GEO.archPost,  matStone,  'rise', 0.45, 1],
     ['archL',    GEO.archLintel,matStone,  'pop',  0.35, 1],
     ['torchArm', GEO.torch,     matTrim,   'pop',  0.3,  0],
-    ['flame',    GEO.flame,     matGlow,   'pop',  0.3,  0],
-    ['flameCore',GEO.flameCore, matGlow,   'pop',  0.3,  0],
     ['debrisA',  GEO.debrisA,   matStone,  'pop',  0.3,  2],
     ['debrisB',  GEO.debrisB,   matStone,  'pop',  0.3,  2],
     ['debrisC',  GEO.debrisC,   matStone,  'pop',  0.3,  2],
@@ -1908,13 +1938,50 @@ function buildScene(d){
   let li=0;
   for(const k of keys){
     const L = new THREE.PointLight(k.col, k.i, k.dist, 2);
-    L.position.set(wx(k.x), k.ry||1.6, wz(k.y));
+    L.position.set(wx(k.x), (k.ry||1.6) / CELL_M, wz(k.y));
     L.userData={base:k.i, ph:li*2.1, ramp:1}; group.add(L); lights.push(L); li++;
   }
   for(const t of chosen){
     const L = new THREE.PointLight(TH.torchLight[0], TH.torchLight[1], TH.torchLight[2], 2);
-    L.position.set(wx(t.x)+t.dx*0.6, 1.7, wz(t.y)+t.dy*0.6);
+    L.position.set(wx(t.x)+t.dx*0.28, 1.7 / CELL_M, wz(t.y)+t.dy*0.28);
     L.userData={base:TH.torchLight[1], ph:li*1.7, ramp:1}; group.add(L); lights.push(L); li++;
+  }
+
+  /* Volumetric instanced fire — torch points + molten/boss grid (THREE.Fire tex). */
+  {
+    const fires = [];
+    const torchS = 0.55 / CELL_M;
+    for (const t of d.torches) {
+      fires.push({
+        x: wx(t.x) + t.dx * 0.18,
+        y: 1.55 / CELL_M,
+        z: wz(t.y) + t.dy * 0.18,
+        scale: torchS * (0.9 + cellRng.f(0, 0.25)),
+        seed: cellRng.raw(),
+      });
+    }
+    if (TH.pools?.mode === 0 || d.params?.themeKey === 'molten') {
+      for (const p of d.pools) {
+        fires.push({
+          x: wx(p.x), y: 0.35, z: wz(p.y),
+          scale: 0.85, seed: cellRng.raw(),
+        });
+      }
+    }
+    const boss = rooms[d.boss];
+    if (boss) {
+      const origin = { x: wx(boss.cx), y: 0, z: wz(boss.cy) };
+      fires.push(...gridFireCells(origin, 3.2 / CELL_M, 1, 1.05));
+    }
+    if (fires.length) {
+      fx.fire = new InstancedFire({
+        scene: group,
+        maxCount: Math.max(64, fires.length + 8),
+        color: TH.flame,
+        intensity: 1.15,
+      });
+      fx.fire.setInstances(fires);
+    }
   }
 
   /* graph overlay */
@@ -2047,9 +2114,53 @@ const el = { seed:$('seed'), dice:$('dice'), forge:$('forge'),
   sTiles:$('sTiles'), sLights:$('sLights'), sMs:$('sMs'),
   sCalls:$('sCalls'), sTris:$('sTris'), sFps:$('sFps') };
 
-let raceSel = 'human';
-let classSel = 'worge';
+let raceSel = PLAY_DEFAULTS.race;
+let classSel = PLAY_DEFAULTS.classId;
 let weaponSel = '1h_tome';
+let kindSel = PLAY_DEFAULTS.kind;
+const playHandoff = { characterId: '', era: PLAY_DEFAULTS.era, from: '', theme: '' };
+function setKindSel(id) {
+  kindSel = DUNGEON_KIND_IDS.includes(id) ? id : PLAY_DEFAULTS.kind;
+  document.querySelectorAll('#kindchips .chip').forEach((ch) => {
+    ch.classList.toggle('on', ch.dataset.k === kindSel);
+  });
+}
+function applyPlayQuery() {
+  const q = new URLSearchParams(location.search);
+  playHandoff.characterId = q.get('characterId') || '';
+  playHandoff.era = q.get('era') || PLAY_DEFAULTS.era;
+  playHandoff.from = q.get('from') || '';
+  const race = q.get('race');
+  const cls = q.get('class');
+  if (race && RACES[race]) raceSel = race;
+  if (cls && CLASS_IDS.includes(cls)) classSel = cls;
+  const wep = q.get('weapon');
+  if (wep) weaponSel = wep;
+  if ((q.get('linear') === '1' || q.get('from') === 'home' || PLAY_DEFAULTS.linear) && el.tLinear) {
+    if (q.get('linear') === '0') el.tLinear.checked = false;
+    else el.tLinear.checked = true;
+  }
+  const yuka = q.get('yuka');
+  const yEl = document.getElementById('tYuka');
+  if (yEl) {
+    yEl.checked = yuka === '0' ? false : PLAY_DEFAULTS.yuka;
+    play.useYuka = yEl.checked;
+  }
+  if (q.get('kind')) setKindSel(q.get('kind'));
+  playHandoff.theme = q.get('theme') || '';
+  const seed = q.get('seed');
+  if (seed && el.seed) el.seed.value = seed;
+  const rooms = q.get('rooms');
+  if (rooms && el.rooms) {
+    el.rooms.value = rooms;
+    if (el.vRooms) el.vRooms.textContent = String(rooms);
+  }
+  const loops = q.get('loops');
+  if (loops && el.loops) {
+    el.loops.value = loops;
+    if (el.vLoops) el.vLoops.textContent = `${loops}%`;
+  }
+}
 function paintHeroFace(){
   const img = document.getElementById('heroFaceImg');
   const name = document.getElementById('heroFaceName');
@@ -2069,17 +2180,29 @@ function setRaceSel(id){
   });
   paintHeroFace();
 }
+const CLASS_CHIP_IDS = CLASS_IDS;
+const WEAPON_BY_CLASS = CLASS_WEAPON_SETS;
 function setClassSel(id){
-  classSel = id === 'warrior' || id === 'mage' || id === 'ranger' ? id : 'worge';
+  classSel = CLASS_CHIP_IDS.includes(id) ? id : 'worge';
   document.querySelectorAll('#classchips .chip').forEach(ch=>{
     ch.classList.toggle('on', ch.dataset.c === classSel);
   });
-  const row = document.getElementById('worge-weapons');
-  if (row) row.hidden = classSel !== 'worge';
+  const allowed = WEAPON_BY_CLASS[classSel] || [];
+  const row = document.getElementById('class-weapons');
+  if (row) row.hidden = allowed.length === 0;
+  const lab = document.getElementById('weaplab');
+  if (lab) lab.textContent = (CLASSES[classSel]?.label || 'CLASS') + ' WEAPON';
+  document.querySelectorAll('#weapchips .chip').forEach(ch=>{
+    const ok = allowed.includes(ch.dataset.w);
+    ch.hidden = !ok;
+    if (ok && !allowed.includes(weaponSel)) setWeaponSel(allowed[0]);
+  });
   paintHeroFace();
+  fillAllySelects();
 }
 function setWeaponSel(id){
-  weaponSel = id === 'nature_staff' || id === 'arcane_staff' ? id : '1h_tome';
+  const allowed = WEAPON_BY_CLASS[classSel] || [];
+  weaponSel = allowed.includes(id) ? id : (allowed[0] || '1h_tome');
   document.querySelectorAll('#weapchips .chip').forEach(ch=>{
     ch.classList.toggle('on', ch.dataset.w === weaponSel);
   });
@@ -2092,6 +2215,43 @@ document.querySelectorAll('#classchips .chip').forEach(ch=>{
 });
 document.querySelectorAll('#weapchips .chip').forEach(ch=>{
   ch.addEventListener('click', ()=> setWeaponSel(ch.dataset.w));
+});
+function fillAllySelects() {
+  const fill = dungeonFill(classSel);
+  for (let i = 0; i < 3; i++) {
+    const sel = document.getElementById(`ally${i}`);
+    if (!sel) continue;
+    if (!sel.dataset.ready) {
+      for (const id of CLASS_IDS) {
+        const o = document.createElement('option');
+        o.value = id;
+        o.textContent = (CLASSES[id]?.label || id).toUpperCase();
+        sel.appendChild(o);
+      }
+      sel.dataset.ready = '1';
+      sel.addEventListener('change', () => {
+        if (play.active && play.phase === 'lobby') play.setAllyClass(i, sel.value);
+      });
+    }
+    sel.value = fill[i] || CLASS_IDS[0];
+  }
+}
+applyPlayQuery();
+setRaceSel(raceSel);
+setClassSel(classSel);
+document.getElementById('btnEquip')?.addEventListener('click', async () => {
+  const panel = document.getElementById('equip-panel');
+  if (!panel) return;
+  const { fillEquipPanel } = await import('./play/hud.js');
+  fillEquipPanel({
+    raceId: raceSel,
+    classId: classSel,
+    weaponId: weaponSel,
+    level: PLAY.level,
+    sheet: play.sheet,
+  });
+  panel.hidden = !panel.hidden;
+  panel.classList.toggle('open', !panel.hidden);
 });
 (function mountPirates(){
   const row = document.getElementById('pirateFaces');
@@ -2115,9 +2275,9 @@ async function enterDungeon(){
   if(play.active){ play.exit(); return; }
   const linear = !!(el.tLinear && el.tLinear.checked);
   if(linear){
-    el.rooms.value = 16;
+    el.rooms.value = DUNGEON_LAYOUT.linearRooms;
     el.loops.value = 0;
-    el.vRooms.textContent = '16';
+    el.vRooms.textContent = String(DUNGEON_LAYOUT.linearRooms);
     el.vLoops.textContent = '0%';
     forge(false);
   } else if(animating){
@@ -2127,7 +2287,16 @@ async function enterDungeon(){
   if(el.enter){ el.enter.textContent = 'LOADING…'; el.enter.disabled = true; }
   try {
     forgeCast.setVisible(false);
-    await play.enter({ dungeon: D, raceId: raceSel, classId: classSel, weaponId: weaponSel, linear });
+    const allyClasses = [0, 1, 2].map((i) => document.getElementById(`ally${i}`)?.value).filter(Boolean);
+    await play.enter({
+      dungeon: D,
+      raceId: raceSel,
+      classId: classSel,
+      weaponId: weaponSel,
+      linear,
+      allyClasses,
+      characterId: playHandoff.characterId,
+    });
     if(el.enter) el.enter.textContent = 'LEAVE DUNGEON';
   } finally {
     if(el.enter) el.enter.disabled = false;
@@ -2146,6 +2315,7 @@ function setThemeSel(t){
   themeSel = t;
   document.querySelectorAll('#chips .chip').forEach(ch=>ch.classList.toggle('on', ch.dataset.t===t));
 }
+if (playHandoff.theme) setThemeSel(playHandoff.theme);
 function resolveTheme(seed){
   return themeSel==='auto'
     ? THEME_KEYS[(Math.imul(seed ^ 0x9e37, 2654435761)>>>0) % THEME_KEYS.length]
@@ -2170,6 +2340,7 @@ function applyObjectVis(){
     for(const k of OBJ_MESHES[cat])
       if(meshes[k]) meshes[k].visible = objVis[cat];
   if(fx.parts) fx.parts.visible = objVis.particles;
+  if(fx.fire?.mesh) fx.fire.mesh.visible = objVis.torches;
   for(const m of fx.shafts) m.visible = objVis.particles;
   for(const m of fx.liquids) m.visible = objVis.liquids;
   for(const sp of fx.spinners) sp.m.visible = objVis.props;
@@ -2197,7 +2368,20 @@ function finishAnim(){
 }
 
 /* -------- forge -------- */
+function applyLinearDefaults(){
+  const linear = !!(el.tLinear && el.tLinear.checked);
+  if(linear){
+    el.rooms.min = 7;
+    el.rooms.max = 20;
+    el.rooms.value = DUNGEON_LAYOUT.linearRooms;
+    el.loops.value = 0;
+    el.vRooms.textContent = String(DUNGEON_LAYOUT.linearRooms);
+    el.vLoops.textContent = '0%';
+  }
+}
+
 function forge(animate){
+  applyLinearDefaults();
   const seed = (parseInt(el.seed.value,10)||0)>>>0;
   const themeKey = resolveTheme(seed);
   const params = {
@@ -2205,15 +2389,25 @@ function forge(animate){
     roomCount:+el.rooms.value,
     loopChance:+el.loops.value/100,
     decorDensity:+el.decor.value/100,
-    themeKey
+    themeKey,
+    kind: kindSel,
   };
   const d = generateDungeon(params);
+  attachDungeonTerrain(d);
   buildScene(d);
   const TH = THEMES[themeKey];
   dressing.apply(d, group, TH).catch((err) => console.warn('[dressing]', err));
   plantCoverKits(d, group);
   plantWallTorches(d, group);
   plantRoomScenes(d, group);
+  plantMagicRocks(d, group).catch((err) => console.warn('[magic-rocks]', err));
+  if (d.terrain?.sample) {
+    group.traverse((o) => {
+      if (o.name && /^(kit-chest|kit-torch|cover-|torch-|smelter-|temple-|magic-rock-)/.test(o.name)) {
+        plantObjectOnTerrain(o, d.terrain.sample);
+      }
+    });
+  }
   forgeCast.refresh(d, group).catch((err) => console.warn('[forge-cast]', err));
   applyObjectVis();
   el.vTheme.textContent = themeSel==='auto' ? 'AUTO \u00b7 '+TH.label : TH.label;
@@ -2279,7 +2473,7 @@ function liveUpdate(time, tt){
 }
 
 /* -------- main loop -------- */
-const timer = new THREE.Timer();
+const clock = new THREE.Clock();
 let elapsed = 0;
 let fpsFrames = 0, fpsTime = 0;
 function tick(){
@@ -2287,8 +2481,7 @@ function tick(){
      build reveal and stats stay live when the tab is hidden */
   if(document.hidden) setTimeout(tick, 100);
   else requestAnimationFrame(tick);
-  timer.update();
-  const dt = Math.min(timer.getDelta(), 0.05);
+  const dt = Math.min(clock.getDelta(), PLAY.maxDt || 0.05);
   elapsed += dt;
   if(animating){
     animT += dt;
@@ -2296,6 +2489,7 @@ function tick(){
     if(animT > animEnd + 0.35) finishAnim();
   }
   liveUpdate(elapsed, animating ? animT - 2.3 : Infinity);
+  fx.fire?.update(cam, elapsed);
   dressing.update(elapsed);
   forgeCast.update(dt);
   play.update(dt);
@@ -2355,11 +2549,38 @@ el.decor.addEventListener('input', ()=>{ el.vDecor.textContent = el.decor.value 
 el.seed.addEventListener('change', ()=>forge(true));
 el.dice.addEventListener('click', ()=>{ el.seed.value = 1 + Math.floor(Math.random()*999999); forge(true); });
 el.forge.addEventListener('click', ()=>forge(true));
+if(el.tLinear) el.tLinear.addEventListener('change', ()=>{
+  if(el.tLinear.checked) applyLinearDefaults();
+  else {
+    el.rooms.min = 12;
+    el.rooms.max = 80;
+    el.rooms.value = DUNGEON_LAYOUT.graphRooms;
+    el.loops.value = Math.round(DUNGEON_LAYOUT.loopGraph * 100);
+    el.vRooms.textContent = String(DUNGEON_LAYOUT.graphRooms);
+    el.vLoops.textContent = el.loops.value + '%';
+  }
+  forge(true);
+});
+const btnExport = document.getElementById('exportCg');
+if(btnExport) btnExport.addEventListener('click', ()=>{
+  if(!D) return;
+  const linear = !!(el.tLinear && el.tLinear.checked);
+  downloadCustomGrudge(customGrudgeFromDungeon(D, { kind: 'instance', linear, era: 'warlords' }));
+});
 el.tGraph.addEventListener('change', ()=>{ if(!animating) setOverlayStatic(); });
 el.tHeat.addEventListener('change', ()=>applyHeat(el.tHeat.checked));
 el.tPost.addEventListener('change', ()=>{ POST.enabled = el.tPost.checked; });
 document.querySelectorAll('#chips .chip').forEach(ch=>{
   ch.addEventListener('click', ()=>{ setThemeSel(ch.dataset.t); forge(true); });
+});
+document.querySelectorAll('#kindchips .chip').forEach((ch) => {
+  ch.addEventListener('click', () => {
+    setKindSel(ch.dataset.k);
+    forge(true);
+  });
+});
+document.getElementById('tYuka')?.addEventListener('change', (e) => {
+  play.useYuka = !!e.target.checked;
 });
 document.querySelectorAll('#objchips .chip').forEach(ch=>{
   ch.addEventListener('click', ()=>{
@@ -2380,8 +2601,13 @@ addEventListener('keydown', e=>{
   const tag = e.target.tagName;
   if(tag==='BUTTON') return;
   if(tag==='INPUT' && e.target.type!=='range' && e.target.type!=='checkbox') return;
-  if(play.active && (e.code==='KeyW'||e.code==='KeyA'||e.code==='KeyS'||e.code==='KeyD'||e.code.startsWith('Digit')||e.code==='Escape')) return;
-  if(e.code==='KeyE'){ enterDungeon(); return; }
+  if(play.active && (e.code==='KeyW'||e.code==='KeyA'||e.code==='KeyS'||e.code==='KeyD'||e.code==='Space'||e.code.startsWith('Digit')||e.code==='Escape')) return;
+  if(e.code==='KeyE'){
+    if (play.active && play.phase === 'lobby') { play.beginCrawl(); return; }
+    if (play.active) return;
+    enterDungeon();
+    return;
+  }
   if(e.code==='KeyR'){ if(play.active) play.exit(); el.seed.value = 1 + Math.floor(Math.random()*999999); forge(true); }
   else if(e.code==='KeyG'){ el.tGraph.checked = !el.tGraph.checked; if(!animating) setOverlayStatic(); }
   else if(e.code==='KeyH'){ el.tHeat.checked = !el.tHeat.checked; applyHeat(el.tHeat.checked); }

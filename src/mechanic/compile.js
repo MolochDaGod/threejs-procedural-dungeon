@@ -8,6 +8,8 @@ import { ENV_LAYERS, PHYSICS_LAYERS } from '../env/layers.js';
 import { DUNGEON_RULESET, RULESET_VERSION, isGatedRoom, poolRule, roomRule } from '../ruleset.js';
 import { planEncounters, critRooms } from '../play/encounters.js';
 import { biomeOf } from '../ssot.js';
+import { compileDressPlan, dressSummary } from '../gen/dressPlan.js';
+import { CUSTOM_GRUDGE_KINDS } from '../gen/customGrudge.js';
 
 export { RULESET_VERSION };
 
@@ -29,6 +31,7 @@ export function hydrateDungeon(raw) {
   if (d.corridor && !(d.corridor instanceof Uint8Array)) d.corridor = Uint8Array.from(d.corridor);
   if (d.flags && !(d.flags instanceof Uint16Array)) d.flags = Uint16Array.from(d.flags);
   if (d.barrierStage && !(d.barrierStage instanceof Uint8Array)) d.barrierStage = Uint8Array.from(d.barrierStage);
+  if (d.cellRole && !(d.cellRole instanceof Uint8Array)) d.cellRole = Uint8Array.from(d.cellRole);
   return d;
 }
 
@@ -50,6 +53,10 @@ export function serializeDungeon(d) {
     roomId: asArray(d.roomId),
     doorway: asArray(d.doorway),
     corridor: asArray(d.corridor),
+    flags: asArray(d.flags),
+    cellRole: asArray(d.cellRole),
+    platforms: d.platforms || [],
+    eventRoom: d.eventRoom || null,
     stats: d.stats,
   };
 }
@@ -74,6 +81,14 @@ function stampMechanics(dungeon, colliders) {
       stamps.push({
         id: `mech-awaken-${r.id}`,
         mechanic: 'awaken_on_enter',
+        roomId: r.id,
+        roomType: r.type,
+      });
+    }
+    if (rule.barriers) {
+      stamps.push({
+        id: `mech-barrier-${r.id}`,
+        mechanic: 'barrier_layer',
         roomId: r.id,
         roomType: r.type,
       });
@@ -135,6 +150,7 @@ export function compileMechanics(dungeon, opts = {}) {
   const { biome, plan } = planEncounters(d, { linear });
   const path = critRooms(d).map((r) => ({ id: r.id, type: r.type, depth: r.depth }));
   const stamps = stampMechanics(d, colliders);
+  const dress = compileDressPlan(d);
   const gated = (d.rooms || []).filter(isGatedRoom).map((r) => r.id);
   const counts = {
     colliders: colliders.length,
@@ -146,6 +162,7 @@ export function compileMechanics(dungeon, opts = {}) {
     rooms: colliders.filter((n) => n.kind === 'room').length,
     encounters: plan.length,
     stamps: stamps.length,
+    dress: dress.length,
   };
   return {
     schema: 'grudge.dungeon.mechanics/v1',
@@ -172,6 +189,8 @@ export function compileMechanics(dungeon, opts = {}) {
       attacks: j.attacks,
     })),
     stamps,
+    dress,
+    dressSummary: dressSummary(dress),
     ruleset: DUNGEON_RULESET.version,
     counts,
     rapier: colliders.filter((n) => n.solid || n.sensor).map((n) => ({
@@ -185,5 +204,85 @@ export function compileMechanics(dungeon, opts = {}) {
       sensor: !!n.sensor,
       layer: n.physicsLayer,
     })),
+  };
+}
+
+/**
+ * AI / Node script document — events, bosses, terrain stamps the play runtime executes.
+ * Same seed + dungeon document ⇒ same script. No LLM in this path.
+ */
+export function compileDungeonScript(dungeon, opts = {}) {
+  const mechanics = compileMechanics(dungeon, opts);
+  if (!mechanics.ok) {
+    return {
+      schema: 'grudge.dungeon.script/v1',
+      version: RULESET_VERSION,
+      ok: false,
+      error: mechanics.error || 'compile failed',
+    };
+  }
+  const d = hydrateDungeon(dungeon);
+  const kindId = opts.kindId && CUSTOM_GRUDGE_KINDS[opts.kindId] ? opts.kindId : 'instance';
+  const kind = CUSTOM_GRUDGE_KINDS[kindId];
+  const events = (mechanics.stamps || []).map((s) => ({
+    id: s.id,
+    when: s.mechanic === 'awaken_on_enter' ? 'enter_room'
+      : s.mechanic === 'clear_gate' ? 'room_cleared'
+      : s.mechanic === 'boss_phases' ? 'boss_hp'
+      : s.mechanic === 'shrine_once' ? 'interact'
+      : s.mechanic === 'pool_hazard' ? 'overlap_water'
+      : s.mechanic === 'barrier_layer' ? 'room_stamp'
+      : s.mechanic === 'telegraph_all' ? 'enemy_cast'
+      : s.mechanic,
+    do: s.mechanic,
+    roomId: s.roomId ?? null,
+    roomType: s.roomType ?? null,
+    at: s.at || null,
+    theme: s.theme || null,
+    dps: s.dps,
+    slow: s.slow,
+  }));
+  if (d.eventRoom) {
+    events.push({
+      id: 'script-event-platform',
+      when: 'enter_room',
+      do: 'event_platforms',
+      roomId: d.eventRoom.roomId ?? d.eventRoom.room?.id ?? null,
+      roomType: 'event',
+      pads: d.eventRoom.sockets || null,
+    });
+  }
+  const bosses = (mechanics.encounters || [])
+    .filter((e) => e.kind === 'boss')
+    .map((e) => ({
+      roomId: e.roomId,
+      name: e.name,
+      hp: e.hp,
+      phases: roomRule('boss').phases || [0.66, 0.33],
+      brain: 'warlord',
+      telegraph: 'aoe',
+    }));
+  return {
+    schema: 'grudge.dungeon.script/v1',
+    version: RULESET_VERSION,
+    ok: true,
+    seed: d.seed,
+    theme: d.params?.themeKey || null,
+    linear: mechanics.linear,
+    kind: kindId,
+    pass: kind.pass,
+    completeOn: kind.pass === 'dungeon-complete' ? 'boss-slain' : kind.pass,
+    path: mechanics.path,
+    gatedRooms: mechanics.gatedRooms,
+    events,
+    bosses,
+    terrain: {
+      platforms: d.platforms || [],
+      eventRoom: d.eventRoom || null,
+      pools: mechanics.counts?.pools || 0,
+      barriers: (mechanics.stamps || []).filter((s) => s.mechanic === 'barrier_layer').length,
+    },
+    encounters: mechanics.encounters,
+    ruleset: DUNGEON_RULESET.version,
   };
 }

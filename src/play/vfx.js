@@ -3,6 +3,9 @@
  * Procedural, GPU-light, tinted from the Grudge spell catalog.
  */
 import * as THREE from 'three';
+import { InstancedFire, gridFireCells } from '../vfx/instancedFire.js';
+import { PuffField, puffPreset } from '../vfx/particles.js';
+import { DUNGEON_SI } from '../ssot.js';
 
 const _fwd = new THREE.Vector3();
 const _up = new THREE.Vector3(0, 1, 0);
@@ -45,6 +48,8 @@ export class VfxWorld {
     this.scene = scene;
     this.items = [];
     this.shake = new ShakeRig();
+    this.camera = null;
+    this.clock = 0;
   }
 
   spawn(kind, opts) {
@@ -131,6 +136,107 @@ export class VfxWorld {
     this.items.push({ type: 'fade', root: mesh, life, max: life });
   }
 
+  /**
+   * Fire puff — threejs-games Fire. `duration: 'small' | 'long'`.
+   * Color-editable. Optional mesh follow.
+   */
+  fire({ origin, color, duration = 'small', life, mesh = null } = {}) {
+    const name = duration === 'long' ? 'fireLong' : 'fireSmall';
+    return this._spawnPuff(name, { origin, color, life, mesh });
+  }
+
+  /** Aesthetic smoke column (looping or short). */
+  smoke({ origin, color, life, mesh = null, opacity } = {}) {
+    return this._spawnPuff('smokeAesthetic', { origin, color, life, mesh, opacity });
+  }
+
+  /** AOE cloud — colorable smoke disc (poison / frost / fire / shadow). */
+  cloud({ origin, color, radius = 2.4, life, opacity } = {}) {
+    return this._spawnPuff('aoeCloud', {
+      origin, color, life, opacity, radius,
+      size: Math.max(22, radius * 12),
+    });
+  }
+
+  /** Opaque heal / holy mist. Higher alpha, Normal blending. */
+  mist({ origin, color, radius = 2.2, life, opacity } = {}) {
+    return this._spawnPuff('healMist', {
+      origin,
+      color: color ?? 0xc8f0a8,
+      life,
+      size: Math.max(24, radius * 11),
+      opacity: opacity ?? 0.84,
+    });
+  }
+
+  /**
+   * Mesh-aware speed trail. Follows an Object3D, or streaks `from` → `to` (dash).
+   */
+  speedTrail({ mesh = null, from = null, to = null, color, life, opacity, kind = 'smoke' } = {}) {
+    const streak = !!(from && to);
+    const follow = streak ? null : mesh;
+    const name = kind === 'fire' ? 'projectileFire' : (follow ? 'projectileSmoke' : 'speedTrail');
+    const item = this._spawnPuff(name, { origin: from || mesh?.position, color, life, mesh: follow, opacity });
+    if (item?.field && streak) item.field.along(from, to);
+    return item;
+  }
+
+  _spawnPuff(presetName, { origin, color, life, mesh, opacity, size, radius } = {}) {
+    const overrides = {};
+    if (color != null) overrides.color = color;
+    if (size != null) overrides.size = size;
+    if (opacity != null) overrides.opacity = opacity;
+    const spec = puffPreset(presetName, overrides);
+    if (life != null) spec.life = life;
+    const field = new PuffField(spec);
+    if (color != null) field.setColor(color);
+    if (mesh) field.attachTo(mesh);
+    else if (origin) {
+      const o = origin;
+      let y = o.y != null ? o.y : 0.9;
+      if (y < 0.25) y = 0.65;
+      field.mesh.position.set(o.x, y, o.z);
+    }
+    this.scene.add(field.mesh);
+    const max = spec.life ?? 1;
+    const item = {
+      type: 'puff',
+      field,
+      root: field.mesh,
+      life: max,
+      max,
+      radius: radius || 0,
+    };
+    this.items.push(item);
+    return item;
+  }
+
+  /** Grid-cell volumetric fire AoE (boss puddle / molten floor). */
+  gridFire({ origin, color, radius = 3.4, life = 4.8, cell = DUNGEON_SI.cell, scale = 2.2, dps = 0, onTick }) {
+    const pts = gridFireCells(origin, radius, cell, scale);
+    const field = new InstancedFire({
+      scene: this.scene,
+      maxCount: Math.max(16, pts.length),
+      color: color || 0xff5a0d,
+      intensity: 1.2,
+    });
+    field.setInstances(pts);
+    this.items.push({
+      type: 'gridFire',
+      field,
+      root: field.mesh,
+      life,
+      max: life,
+      radius,
+      dps,
+      onTick,
+      tickAcc: 0,
+      origin: origin.clone ? origin.clone() : origin,
+    });
+    this.smoke({ origin, color, life, opacity: 0.38 });
+    this.shake.add(0.28);
+  }
+
   /** Persistent danger disc (boss puddle / linger AOE). */
   zone({ origin, color, radius = 2.4, life = 4.2, dps = 0, onTick }) {
     const disc = new THREE.Mesh(
@@ -194,7 +300,9 @@ export class VfxWorld {
     this.items.push({ type: 'fade', root: mesh, life, max: life });
   }
 
-  update(dt, enemies) {
+  update(dt, enemies, camera) {
+    this.clock = (this.clock || 0) + dt;
+    if (camera) this.camera = camera;
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i];
       it.life -= dt;
@@ -229,6 +337,18 @@ export class VfxWorld {
           it.tickAcc = 0;
           it.onTick?.(it);
         }
+      } else if (it.type === 'gridFire') {
+        if (this.camera) it.field.update(this.camera, this.clock);
+        const k = it.life / it.max;
+        it.field.uniforms.intensity.value = 0.55 + 0.7 * Math.min(1, k * 2);
+        it.tickAcc = (it.tickAcc || 0) + dt;
+        if (it.dps && it.tickAcc >= 0.35) {
+          it.tickAcc = 0;
+          it.onTick?.(it);
+        }
+      } else if (it.type === 'puff') {
+        const k = Math.max(0, it.life / it.max);
+        it.field.update(dt, { life01: k });
       } else if (it.type === 'fade') {
         const k = it.life / it.max;
         const mats = it.root.material
@@ -242,11 +362,17 @@ export class VfxWorld {
         if (it.spin) it.root.rotation.z += it.spin * dt;
       }
       if (it.life <= 0) {
-        this.scene.remove(it.root);
-        it.root.traverse((o) => {
-          o.geometry?.dispose?.();
-          o.material?.dispose?.();
-        });
+        if (it.type === 'puff' && it.field) {
+          this.scene.remove(it.field.mesh);
+          it.field.dispose();
+        } else if (it.field) it.field.dispose();
+        else {
+          this.scene.remove(it.root);
+          it.root.traverse((o) => {
+            o.geometry?.dispose?.();
+            o.material?.dispose?.();
+          });
+        }
         this.items.splice(i, 1);
       }
     }
@@ -254,11 +380,17 @@ export class VfxWorld {
 
   clear() {
     for (const it of this.items) {
-      this.scene.remove(it.root);
-      it.root.traverse((o) => {
-        o.geometry?.dispose?.();
-        o.material?.dispose?.();
-      });
+      if (it.type === 'puff' && it.field) {
+        this.scene.remove(it.field.mesh);
+        it.field.dispose();
+      } else if (it.field) it.field.dispose();
+      else {
+        this.scene.remove(it.root);
+        it.root.traverse((o) => {
+          o.geometry?.dispose?.();
+          o.material?.dispose?.();
+        });
+      }
     }
     this.items.length = 0;
   }

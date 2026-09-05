@@ -5,8 +5,9 @@
  */
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
-import { ANIM_URLS, CLIP_DONOR, PLAY, RACES, ROLE_KITS, WORGE_WEAPONS, raceCharacterUrl } from '../ssot.js';
+import { ANIM_URLS, CLIP_DONOR, PLAY, RACES, ROLE_KITS, WEAPON_KITS, WORGE_WEAPONS, raceCharacterUrl } from '../ssot.js';
 import { loadGltf } from './assets.js';
+import { plantFeet } from '../terrain/footPlant.js';
 
 const RACE_PREFIXES = ['WK_', 'BRB_', 'ELF_', 'DWF_', 'ORC_', 'UD_'];
 
@@ -34,7 +35,12 @@ const WARDROBE_HINT = /units_|weapon_|shield|xtra_|shoulder|body_|arms_|legs_|he
 
 function resolveKit(role, weaponId) {
   const base = { ...(ROLE_KITS[role] || ROLE_KITS.warrior) };
-  if (role !== 'worge') return base;
+  const kit = WEAPON_KITS[weaponId];
+  if (kit) {
+    Object.assign(base, kit);
+    return base;
+  }
+  if (role !== 'worge' && role !== 'verduror' && role !== 'priest') return base;
   const opt = WORGE_WEAPONS[weaponId] || WORGE_WEAPONS['1h_tome'];
   base.weapon = opt.weapon;
   base.tome = !!opt.tome;
@@ -53,15 +59,22 @@ function kitToWant(role, equipped, weaponId) {
     head: kit.head,
     shoulders: kit.shoulders,
   };
-  if (!equipped) return want;
+  if (!equipped || kit.unarmed) return want;
   if (kit.weapon === 'sword') want.sword = 'A';
   if (kit.weapon === 'axe') want.axe = 'A';
+  if (kit.weapon === 'hammer') want.hammer = 'A';
+  if (kit.weapon === 'spear') want.spear = true;
+  if (kit.weapon === 'dagger') want.dagger = true;
   if (kit.weapon === 'staff') want.staff = kit.staffVar || 'A';
   if (kit.weapon === 'bow') want.bow = true;
+  if (kit.offHand === 'hammer') want.hammer = 'A';
+  if (kit.offHand === 'sword') want.sword = 'A';
   if (kit.shield) want.shield = 'A';
   if (kit.quiver) want.quiver = true;
   if (kit.tome) want.tome = true;
   want.staffTint = kit.staffTint;
+  want.tomeTint = kit.tomeTint;
+  want.dual = !!kit.dual;
   return want;
 }
 
@@ -93,12 +106,13 @@ function variantOf(match, def) {
  * One body + one head + one arms + one legs + class weapon.
  * Showing every mesh is the classic spiked / deformed wardrobe blob.
  */
-function makeTome() {
+function makeTome(tint = 0xb070ff) {
   const g = new THREE.Group();
   g.name = 'worge_tome';
+  const c = new THREE.Color(tint);
   const cover = new THREE.Mesh(
     new THREE.BoxGeometry(0.16, 0.22, 0.045),
-    new THREE.MeshStandardMaterial({ color: 0x3a1848, roughness: 0.55, metalness: 0.15, emissive: 0x2a1040, emissiveIntensity: 0.25 }),
+    new THREE.MeshStandardMaterial({ color: c.clone().multiplyScalar(0.28), roughness: 0.55, metalness: 0.15, emissive: c, emissiveIntensity: 0.22 }),
   );
   const page = new THREE.Mesh(
     new THREE.BoxGeometry(0.13, 0.19, 0.03),
@@ -107,7 +121,7 @@ function makeTome() {
   page.position.z = 0.012;
   const gem = new THREE.Mesh(
     new THREE.OctahedronGeometry(0.028, 0),
-    new THREE.MeshStandardMaterial({ color: 0xb070ff, emissive: 0x6a30c8, emissiveIntensity: 0.7, roughness: 0.25 }),
+    new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.7, roughness: 0.25 }),
   );
   gem.position.set(0, 0.02, 0.03);
   g.add(cover, page, gem);
@@ -116,14 +130,20 @@ function makeTome() {
   return g;
 }
 
-function attachTome(root) {
+function attachTome(root, tint) {
   const hand = root.getObjectByName('L_hand_container')
     || root.getObjectByName('Bip001 L Hand')
     || root.getObjectByName('Bip001_L_Hand');
   if (!hand) return;
   const old = hand.getObjectByName('worge_tome');
   if (old) hand.remove(old);
-  hand.add(makeTome());
+  hand.add(makeTome(tint));
+}
+
+function leftHand(root) {
+  return root.getObjectByName('L_hand_container')
+    || root.getObjectByName('Bip001 L Hand')
+    || root.getObjectByName('Bip001_L_Hand');
 }
 
 function tintMesh(mesh, hex) {
@@ -180,7 +200,14 @@ function applyWardrobe(root, role = 'warrior', equipped = true, raceId = 'human'
       if (mesh.visible) tintMesh(mesh, want.staffTint);
     }
   }
-  if (want.tome) attachTome(root);
+  if (want.dual && want.hammer && catalog.hammer) {
+    const lh = leftHand(root);
+    for (const mesh of Object.values(catalog.hammer)) {
+      if (!mesh.visible || !lh) continue;
+      lh.attach(mesh);
+    }
+  }
+  if (want.tome) attachTome(root, want.tomeTint);
 
   let vis = 0;
   root.traverse((o) => { if (o.isMesh && o.visible) vis++; });
@@ -245,15 +272,26 @@ function stripPositionTracks(clip) {
   return clip;
 }
 
+function isolateMeshes(root, hide, keep) {
+  if (!hide && !keep) return;
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    const n = o.name || '';
+    if (keep && keep.test(n)) { o.visible = true; return; }
+    if (hide && hide.test(n)) o.visible = false;
+  });
+}
+
 function classifyClips(clips) {
-  const out = { idle: null, walk: null, run: null, attack: null, cast: null, death: null };
+  const out = { idle: null, walk: null, run: null, attack: null, cast: null, death: null, dodge: null };
   const hit = (re) => clips.find((c) => re.test(c.name));
-  out.idle   = hit(/^idle$/i) || hit(/gs_idle|idle|stand|breath/i);
-  out.walk   = hit(/^walk$/i) || hit(/gs_walk|bow_walk|magic_walk|walk|locomot/i);
-  out.run    = hit(/^run$/i) || hit(/gs_run|run|sprint/i) || out.walk;
-  out.attack = hit(/^attack$/i) || hit(/sword_attack|slash|melee|strike|combat/i);
-  out.cast   = hit(/magic_cast|^cast$|bow_shot|spell|shoot/i) || out.attack;
+  out.idle   = hit(/^idle(_\d+)?$/i) || hit(/gs_idle|idle|stand|breath|metarig|scene|poselib|^pose$/i);
+  out.walk   = hit(/^walk(_\d+)?$/i) || hit(/gs_walk|bow_walk|magic_walk|walk|move(?!2)|locomot/i);
+  out.run    = hit(/^run(_\d+)?$/i) || hit(/gs_run|run|sprint|rush/i) || out.walk;
+  out.attack = hit(/^attack/i) || hit(/sword_attack|slash|melee|strike|combat|stab|slice/i);
+  out.cast   = hit(/magic_cast|^cast$|bow_shot|spell|shoot|shout/i) || out.attack;
   out.death  = hit(/death|die|dead/i);
+  out.dodge  = hit(/dodge|roll|dash|evade|sidestep/i) || out.run;
   if (!out.idle && clips[0]) out.idle = clips[0];
   return out;
 }
@@ -300,6 +338,11 @@ export class Actor {
     this.busy = 0;
     this.alive = true;
     this.ready = false;
+    this.groundSampler = null;
+  }
+
+  bindTerrain(sampler) {
+    this.groundSampler = sampler || null;
   }
 
   play(name, fade = 0.12, loop = true) {
@@ -342,6 +385,7 @@ export class Actor {
       }
     }
     this.mixer?.update(dt);
+    if (this.groundSampler) plantFeet(this.root, this.groundSampler);
   }
 
   dispose() {
@@ -396,12 +440,13 @@ export async function spawnActor({
   const eq = prefab?.equipped ?? equipped;
   const wid = prefab?.weaponId || '1h_tome';
   actor.prefab = prefab || { raceId: rid, role: r, height: h, weaponId: wid };
-  const url = raceCharacterUrl(rid);
+  const nativeMesh = prefab?.mesh || null;
+  const url = nativeMesh || raceCharacterUrl(rid);
   let gltf;
   try {
     gltf = await loadGltf(url);
   } catch (err) {
-    console.warn('[grudge-dungeon] character CDN miss', rid, err);
+    console.warn('[grudge-dungeon] character CDN miss', rid || url, err);
     return makeFallback(actor, h, r === 'mage' ? 0x7a4ad9 : 0xc9a227);
   }
   const visual = cloneSkinned(gltf.scene);
@@ -413,13 +458,16 @@ export async function spawnActor({
       if (o.material?.map) o.material.map.colorSpace = THREE.SRGBColorSpace;
     }
   });
-  applyWardrobe(visual, r, eq, rid, wid);
+  if (nativeMesh) isolateMeshes(visual, prefab.hide, prefab.keep);
+  else applyWardrobe(visual, r, eq, rid, wid);
   actor.visual = visual;
   actor.root.add(visual);
 
   const animRoot = findAnimRoot(visual);
   actor.mixer = new THREE.AnimationMixer(animRoot);
-  const clips = await gatherClips(gltf, collectBoneMap(visual));
+  const clips = nativeMesh
+    ? (gltf.animations || []).map((c) => stripPositionTracks(c.clone()))
+    : await gatherClips(gltf, collectBoneMap(visual));
   actor.clips = classifyClips(clips);
   if (!actor.clips.idle) {
     console.warn('[grudge-dungeon] no idle clip for', rid);
@@ -428,7 +476,21 @@ export async function spawnActor({
     actor.mixer.update(1 / 30);
   }
   fitHeight(visual, h);
+  if (prefab?.yaw) visual.rotation.y = prefab.yaw;
   actor.ready = true;
+  const stamp = {
+    v: 1,
+    loader: 'dungeon-spawnActor',
+    race: rid,
+    classId: r,
+    mixerCount: 1,
+    skeleton: 'Bip001',
+    face: 'toon-plusZ',
+    ground: 'bone-box-feet',
+    mesh: url,
+  };
+  actor.root.userData.warlordsPlayContract = stamp;
+  visual.userData.warlordsPlayContract = stamp;
   return actor;
 }
 

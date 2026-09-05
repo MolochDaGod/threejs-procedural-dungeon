@@ -27,6 +27,7 @@ function unitFromName(name, room, fallbackKind) {
       keep: cr.keep,
       brain: cr.brain,
       telegraph: cr.telegraph,
+      yaw: cr.yaw,
     };
   }
   const caster = fallbackKind === 'caster' || /bow|bolt|hunter|mage|shaman|chanter|runecaster|spore/i.test(name);
@@ -101,7 +102,7 @@ export function planEncounters(dungeon, { linear = true, kind = 'biome', playerR
   };
 
   for (const r of rooms) {
-    if (r.type === 'entrance' || r.type === 'treasure' || r.type === 'shrine') continue;
+    if (r.type === 'entrance' || r.type === 'treasure' || r.type === 'shrine' || r.type === 'vendor') continue;
     if (r.type === 'boss') {
       pushBoss(r);
       continue;

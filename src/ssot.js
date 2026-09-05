@@ -50,32 +50,48 @@ export const ANIM_URLS = {
 };
 
 export const COMBAT_DEPLOY = {
+  host: COMBAT,
   clipDonor: CLIP_DONOR,
   telegraphWarning: `${COMBAT}/models/telegraph_warning.glb`,
   telegraphArrow: `${COMBAT}/models/telegraph_arrow.glb`,
+  /** Faction / Toon foes — race kit on CDN, clips from combat donor. */
+  enemyFrom: 'toon-rts + combat clip donor',
+  ban: 'FBX minions under combat /models/minions',
 };
 
 /**
- * Worge = knight. Weapon two is caster kit:
- *   1h_tome      — 1H + tome (offhand)
- *   nature_staff — 2H nature staff
- *   arcane_staff — 2H arcane staff
+ * Worge = knight. Weapon two is caster kit.
+ * Spec sets live in CLASS_WEAPON_SETS (Q swap).
  */
 export const WORGE_WEAPONS = {
   '1h_tome':      { id: '1h_tome',      label: '1H + Tome',    weapon: 'sword', staff: false, tome: true,  staffTint: null,     staffVar: null },
   nature_staff:   { id: 'nature_staff', label: 'Nature Staff', weapon: 'staff', staff: true,  tome: false, staffTint: 0x6bbf4a, staffVar: 'B' },
   arcane_staff:   { id: 'arcane_staff', label: 'Arcane Staff', weapon: 'staff', staff: true,  tome: false, staffTint: 0xb070ff, staffVar: 'C' },
+  dagger_ice_tome:{ id: 'dagger_ice_tome', label: 'Dagger + Ice Tome', weapon: 'dagger', staff: false, tome: true, staffTint: 0x8fd4ff, staffVar: null },
 };
 
 /** Combat Gladiators class kits (body/head letters, not wardrobe A-only). */
 export const ROLE_KITS = {
-  warrior: { body: 'A', arms: 'A', legs: 'A', head: 'A', shoulders: 'A', weapon: 'sword', shield: true },
-  worge:   { body: 'B', arms: 'B', legs: 'B', head: 'B', shoulders: 'B', weapon: 'sword', tome: true },
-  mage:    { body: 'D', arms: 'D', legs: 'A', head: 'D', shoulders: 'B', weapon: 'staff' },
-  ranger:  { body: 'C', arms: 'C', legs: 'C', head: 'C', shoulders: 'A', weapon: 'bow', quiver: true },
+  warrior:  { body: 'A', arms: 'A', legs: 'A', head: 'A', shoulders: 'A', weapon: 'sword', shield: true },
+  raider:   { body: 'A', arms: 'A', legs: 'A', head: 'A', shoulders: 'A', weapon: 'sword', twoHand: true },
+  worge:    { body: 'B', arms: 'B', legs: 'B', head: 'B', shoulders: 'B', weapon: 'sword', tome: true },
+  verduror: { body: 'B', arms: 'B', legs: 'B', head: 'B', shoulders: 'B', weapon: 'staff', staffTint: 0x6bbf4a },
+  mage:     { body: 'D', arms: 'D', legs: 'A', head: 'D', shoulders: 'B', weapon: 'staff' },
+  priest:   { body: 'D', arms: 'D', legs: 'A', head: 'D', shoulders: 'B', weapon: 'staff', tome: true },
+  ranger:   { body: 'C', arms: 'C', legs: 'C', head: 'C', shoulders: 'A', weapon: 'bow', quiver: true },
+  thief:    { body: 'C', arms: 'C', legs: 'C', head: 'C', shoulders: 'A', weapon: 'sword', dual: true },
 };
 
-import { CLASS_LOADOUTS as WEAPON_LOADOUTS, SKILLS, loadoutFor, skillById } from './play/weaponSkills.js';
+import {
+  CLASS_LOADOUTS as WEAPON_LOADOUTS,
+  SKILLS,
+  loadoutFor,
+  skillById,
+  CLASS_WEAPON_SETS,
+  WEAPON_KITS,
+  WEAPON_LABEL,
+  weaponsForClass,
+} from './play/weaponSkills.js';
 
 /**
  * 6-slot bar — linear / zone / samurai / flame sword. No 2D sprites.
@@ -83,7 +99,7 @@ import { CLASS_LOADOUTS as WEAPON_LOADOUTS, SKILLS, loadoutFor, skillById } from
  */
 export const SPELLS = SKILLS;
 export const CLASS_LOADOUTS = WEAPON_LOADOUTS;
-export { loadoutFor, skillById };
+export { loadoutFor, skillById, CLASS_WEAPON_SETS, WEAPON_KITS, WEAPON_LABEL, weaponsForClass };
 
 /** Theme → enemy race (Warlords era, not mixed eras). */
 export const THEME_ENEMY = {
@@ -112,9 +128,15 @@ export const DRESSING = {
   torch: `${CDN}/game-assets/glb/kaykit/gltf/torch.glb`,
   chest: `${CDN}/game-assets/glb/kaykit/gltf/chest_rare.glb`,
   banner: `${CDN}/game-assets/glb/kaykit/gltf/banner.glb`,
+  carpet: `${CDN}/game-assets/glb/kaykit/gltf/floorDecoration_wood.glb`,
+  crate: `${CDN}/game-assets/glb/kaykit/gltf/crate.glb`,
+  barrel: `${CDN}/game-assets/glb/kaykit/gltf/barrel.glb`,
 };
 
 export const PLAY = {
+  level: 20,
+  tickHz: 60,
+  maxDt: 0.05,
   playerHeight: 1.82,
   enemyHeight: 1.72,
   bossHeight: 2.35,
@@ -159,6 +181,8 @@ export const INSTANCE = {
   physics: 'rapier3d-compat',
   physicsPackage: '@dimforge/rapier3d-compat',
   physicsVersion: '^0.19.3',
+  fixedDt: 1 / 60,
+  tickHz: 60,
   maxPlayers: 8,
   host: 'three+rapier+node',
 };
@@ -171,15 +195,33 @@ export { CREATURES, creatureOf, creaturesForBiome } from './content/creatures/in
 export { PROP_KITS } from './content/props/kits.js';
 export { DUNGEON_KINDS, DUNGEON_KIND_IDS, enemyFactionRaces } from './content/kinds.js';
 export { HERO_24, PIRATE_FACES, portraitUrl, heroOf, portraitFallback } from './content/era/heroes24.js';
-export { CLASSES, CLASS_IDS } from './content/era/warlords.js';
+export { CLASSES, CLASS_IDS, FAMILIES, FAMILY_OF, TEAM_COMPS, dungeonFill, familyOf } from './content/era/warlords.js';
 export { THEME_BIOME, POOL_RULES, biomeOf } from './content/biomes/index.js';
 export { ENEMY_ATTACKS, ROLE_ATTACKS } from './combat/attacks.js';
 
 export const DUNGEON_LAYOUT = {
   linearRooms: 7,
-  graphRooms: 8,
-  roomsMin: 6,
-  roomsMax: 20,
+  graphRooms: 42,
+  roomsMin: 7,
+  roomsMax: 80,
   loopLinear: 0,
-  loopGraph: 0.12,
+  loopGraph: 0.15,
+};
+
+/**
+ * Starting play defaults — query + forge panel override these.
+ * Enemies: Toon kits + combat.grudge-studio.com clip donor / telegraphs.
+ * Combat FBX minions are not play bodies.
+ */
+export const PLAY_DEFAULTS = {
+  linear: true,
+  rooms: 7,
+  loops: 0,
+  theme: 'auto',
+  kind: 'biome',
+  race: 'human',
+  classId: 'worge',
+  yuka: true,
+  seed: 1337,
+  era: 'warlords',
 };

@@ -4,6 +4,8 @@
  * zone drop. Procedural meshes + ShaderMaterial — never PNG sprites.
  */
 import * as THREE from 'three';
+import { loadGltf } from './assets.js';
+import { MAGIC_ROCK_DIAMETER_M } from '../content/props/magicRocks.js';
 
 const _n = new THREE.Vector3();
 const _side = new THREE.Vector3();
@@ -18,14 +20,21 @@ function glow(color, opacity = 0.88) {
   });
 }
 
-function boltMat(color) {
+function shaderMode(shader) {
+  if (shader === 'fire') return 1;
+  if (shader === 'smoke') return 2;
+  return 0;
+}
+
+function boltMat(color, shader = 'bolt') {
   return new THREE.ShaderMaterial({
     transparent: true,
-    blending: THREE.AdditiveBlending,
+    blending: shader === 'smoke' ? THREE.NormalBlending : THREE.AdditiveBlending,
     depthWrite: false,
     uniforms: {
       uColor: { value: new THREE.Color(color) },
       uTime: { value: 0 },
+      uMode: { value: shaderMode(shader) },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -37,12 +46,32 @@ function boltMat(color) {
     fragmentShader: /* glsl */ `
       uniform vec3 uColor;
       uniform float uTime;
+      uniform float uMode;
       varying vec2 vUv;
+      float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+      }
       void main() {
         float shaft = 1.0 - abs(vUv.x - 0.5) * 2.0;
-        float pulse = 0.65 + 0.35 * sin(vUv.y * 18.0 - uTime * 14.0);
-        float a = pow(max(shaft, 0.0), 1.4) * pulse;
-        gl_FragColor = vec4(uColor * (0.55 + a), a);
+        float n = hash(vUv * 8.0 + vec2(uTime * 3.1, uTime * 1.7));
+        float a;
+        vec3 col;
+        if (uMode < 0.5) {
+          float pulse = 0.65 + 0.35 * sin(vUv.y * 18.0 - uTime * 14.0);
+          a = pow(max(shaft, 0.0), 1.4) * pulse;
+          col = uColor * (0.55 + a);
+        } else if (uMode < 1.5) {
+          float flick = 0.62 + 0.38 * n;
+          float core = pow(max(shaft, 0.0), 1.05);
+          float tongue = 0.55 + 0.45 * sin(vUv.y * 22.0 - uTime * 18.0 + n * 6.28);
+          a = core * flick * tongue;
+          col = uColor * (0.45 + 1.35 * core);
+        } else {
+          float soft = pow(max(shaft, 0.0), 0.55);
+          a = soft * (0.38 + 0.22 * n);
+          col = uColor * 0.72;
+        }
+        gl_FragColor = vec4(col, a);
       }
     `,
   });
@@ -56,17 +85,36 @@ export class LinearCastWorld {
   }
 
   /** Line front that advances at constant m/s, optional lightning/fire forks. */
-  line({ origin, dir, color, range = 12, speed = 22, width = 0.28, forks = false, onHit, height = 0.7 }) {
+  line({ origin, dir, color, range = 12, speed = 22, width = 0.28, forks = false, onHit, height = 0.7, meshPath = null, shader = 'bolt' }) {
     _n.copy(dir).setY(0).normalize();
     const root = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(width, height, 0.55), boltMat(color));
+    const body = new THREE.Mesh(new THREE.BoxGeometry(width, height, 0.55), boltMat(color, shader));
     body.position.y = height * 0.55;
     root.add(body);
     root.position.copy(origin);
     root.position.y = 0.04;
     root.rotation.y = Math.atan2(_n.x, _n.z);
     this.scene.add(root);
-    this.items.push({
+    if (meshPath) {
+      loadGltf(meshPath).then((gltf) => {
+        if (!gltf?.scene) return;
+        const rock = gltf.scene.clone(true);
+        const box = new THREE.Box3().setFromObject(rock);
+        const size = box.getSize(new THREE.Vector3());
+        const longest = Math.max(size.x, size.y, size.z, 0.001);
+        rock.scale.multiplyScalar(MAGIC_ROCK_DIAMETER_M / longest);
+        rock.position.y = MAGIC_ROCK_DIAMETER_M * 0.5;
+        rock.traverse((o) => {
+          if (o.isMesh) {
+            o.castShadow = true;
+            if (o.material) o.material = o.material.clone();
+          }
+        });
+        body.visible = false;
+        root.add(rock);
+      }).catch(() => { /* keep procedural bolt */ });
+    }
+    const item = {
       type: 'line',
       root,
       body,
@@ -81,11 +129,13 @@ export class LinearCastWorld {
       onHit,
       hit: new Set(),
       forkCd: 0,
-    });
+    };
+    this.items.push(item);
+    return item;
   }
 
   /** Flaming fissure — rising 3D shards along the aim line, then forks. */
-  fissure({ origin, dir, color, range = 12, onHit }) {
+  fissure({ origin, dir, color, range = 12, onHit, meshPath = null }) {
     _n.copy(dir).setY(0).normalize();
     const root = new THREE.Group();
     const count = 10;
@@ -97,11 +147,31 @@ export class LinearCastWorld {
       );
       shard.position.set(0, h * 0.5, (i + 0.6) * (range / count));
       shard.rotation.x = Math.PI;
+      shard.name = `fissure-cone-${i}`;
       root.add(shard);
     }
     root.position.copy(origin);
     root.rotation.y = Math.atan2(_n.x, _n.z);
     this.scene.add(root);
+    if (meshPath) {
+      loadGltf(meshPath).then((gltf) => {
+        if (!gltf?.scene) return;
+        const cones = root.children.filter((c) => c.name.startsWith('fissure-cone-'));
+        for (const cone of cones) {
+          const rock = gltf.scene.clone(true);
+          const box = new THREE.Box3().setFromObject(rock);
+          const size = box.getSize(new THREE.Vector3());
+          const longest = Math.max(size.x, size.y, size.z, 0.001);
+          rock.scale.multiplyScalar((0.28 + cone.position.z * 0.02) / longest);
+          rock.position.copy(cone.position);
+          rock.traverse((o) => {
+            if (o.isMesh && o.material) o.material = o.material.clone();
+          });
+          cone.visible = false;
+          root.add(rock);
+        }
+      }).catch(() => { /* keep cones */ });
+    }
     this._spawnForks(origin, _n, color, range * 0.55, 3);
     this.items.push({
       type: 'fissure',

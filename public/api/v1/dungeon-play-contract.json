@@ -20,5 +20,19 @@
     "portraits": "24 lore heroes + Racalvin, John Wayne, Scoujge Faithbear",
     "objective": "START at entrance · COMPLETE on warlord slain"
   },
+  "complete": {
+    "on": "boss-slain",
+    "pass": "dungeon-complete",
+    "not": "all-enemies-dead",
+    "report": "/api/dungeon/complete",
+    "return": "https://grudgewarlords.com/home"
+  },
+  "script": {
+    "compile": "/api/dungeon/script",
+    "schema": "grudge.dungeon.script/v1",
+    "events": ["awaken_on_enter", "clear_gate", "boss_phases", "event_platforms", "pool_hazard", "telegraph_all"]
+  },
+  "handoff": "?characterId=<uuid>&era=warlords&from=home&linear=1&race=&class=",
+  "node": "npm start → server/index.mjs",
   "note": "One generateDungeon. kind only changes planEncounters. Enemies may spawn in more than one biome."
 }

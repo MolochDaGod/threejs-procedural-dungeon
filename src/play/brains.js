@@ -3,8 +3,11 @@
  * Every attack winds up with a ground telegraph + telling clip, then resolves.
  */
 import { findPath } from '../gen/navmesh.js';
+import { findAiPath } from '../terrain/navmesh.js';
 import { CELL_M } from '../gen/cells.js';
 import { pointInAoe, pointInCone, pointInLine } from './telegraph.js';
+import { groundRoot } from '../terrain/footPlant.js';
+import { coveredFrom, damageBarrier, firstObstruction } from '../grid/cells.js';
 
 export const BRAINS = {
   melee: {
@@ -54,8 +57,8 @@ export const BRAINS = {
     cycle: ['cone', 'line', 'aoe'],
     shapes: {
       cone: { range: 3.1, half: 0.7, damage: 18, color: 0xd8433a, clip: 'attack', knock: 1.6 },
-      line: { range: 14, width: 0.65, damage: 20, color: 0xff6a22, clip: 'cast', knock: 0.8 },
-      aoe: { range: 4.4, damage: 22, color: 0xffe08a, clip: 'cast', knock: 1.8 },
+      line: { range: 14, width: 0.65, damage: 20, color: 0xff6a22, clip: 'cast', knock: 0.8, smash: true },
+      aoe: { range: 4.4, damage: 22, color: 0xffe08a, clip: 'cast', knock: 1.8, shockwave: true },
     },
   },
 };
@@ -79,7 +82,8 @@ function faceToward(e, tx, tz) {
 function moveAlongPath(session, e, tx, tz, dt, speed) {
   e._pathT = (e._pathT || 0) - dt;
   if (e._pathT <= 0 || !e._path?.length) {
-    e._path = session.nav ? findPath(session.nav, e.pos.x, e.pos.z, tx, tz) : [];
+    const tp = findAiPath(session.d, e.pos, { x: tx, z: tz });
+    e._path = tp?.length ? tp : (session.nav ? findPath(session.nav, e.pos.x, e.pos.z, tx, tz) : []);
     e._pathT = 0.28;
   }
   const step = e._path?.length ? e._path[0] : { x: tx, z: tz };
@@ -92,6 +96,7 @@ function moveAlongPath(session, e, tx, tz, dt, speed) {
   if (session.walkable(session.d, nx, e.pos.z, e.radius * 0.45)) e.pos.x = nx;
   if (session.walkable(session.d, e.pos.x, nz, e.radius * 0.45)) e.pos.z = nz;
   e.actor.root.position.copy(e.pos);
+  groundRoot(e.actor.root, session.sampler || e.actor.groundSampler, e.pos.x, e.pos.z);
   faceToward(e, step.x, step.z);
   e.actor.setGait(true, false);
 }
@@ -118,8 +123,8 @@ function beginWindup(session, e, spec) {
   faceToward(e, session.pos.x, session.pos.z);
   const t = session.tele;
   if (spec.shape === 'cone') t.cone({ origin: e.intent.origin, dir, range: spec.range, half: spec.half, color: spec.color, life: spec.windup });
-  else if (spec.shape === 'line') t.line({ origin: e.intent.origin, dir, range: spec.range, width: spec.width, color: spec.color, life: spec.windup });
-  else t.aoe({ origin: e.intent.origin, range: spec.range, color: spec.color, life: spec.windup });
+  else if (spec.shape === 'line') t.line({ origin: e.intent.origin, dir, range: spec.range, width: spec.width || 0.7, color: spec.color, life: spec.windup });
+  else t.incoming({ origin: e.intent.origin, range: spec.range, color: spec.color, life: spec.windup });
 }
 
 function resolveIntent(session, e) {
@@ -127,17 +132,34 @@ function resolveIntent(session, e) {
   if (!it) return;
   const px = session.pos.x;
   const pz = session.pos.z;
+  const dng = session.d;
   let hit = false;
-  if (it.shape === 'cone') hit = pointInCone(px, pz, it.origin, it.dir, it.range, it.half);
-  else if (it.shape === 'line') hit = pointInLine(px, pz, it.origin, it.dir, it.range, it.width);
-  else hit = pointInAoe(px, pz, it.origin, it.range);
+  if (it.shape === 'cone') {
+    hit = pointInCone(px, pz, it.origin, it.dir, it.range, it.half)
+      && !coveredFrom(dng, it.origin.x, it.origin.z, px, pz);
+  } else if (it.shape === 'line') {
+    hit = pointInLine(px, pz, it.origin, it.dir, it.range, it.width)
+      && !coveredFrom(dng, it.origin.x, it.origin.z, px, pz);
+    const endx = it.origin.x + it.dir.x * it.range;
+    const endz = it.origin.z + it.dir.z * it.range;
+    const obs = firstObstruction(dng, it.origin.x, it.origin.z, endx, endz);
+    if (obs?.kind === 'barrier' && it.smash !== false) damageBarrier(dng, obs.gx, obs.gz);
+  } else {
+    hit = pointInAoe(px, pz, it.origin, it.range)
+      && !coveredFrom(dng, it.origin.x, it.origin.z, px, pz);
+  }
 
   if (it.shape === 'cone') session.vfx.slash({ origin: it.origin.clone().setY(1.1), dir: it.dir, color: it.color, range: it.range });
   else if (it.shape === 'line') session.vfx.beam({ origin: it.origin.clone().setY(1.15), dir: it.dir, color: it.color, range: it.range });
   else session.vfx.nova({ origin: it.origin.clone(), color: it.color, range: it.range });
 
+  if (!hit && (it.shape === 'line' || it.shape === 'aoe') && coveredFrom(dng, it.origin.x, it.origin.z, px, pz)) {
+    session.vfx?.impact?.({ origin: session.pos.clone().setY(1.1), color: 0x88aacc });
+  }
   if (hit) {
-    session.hp -= it.damage;
+    if (typeof session.takeDamage === 'function') {
+      session.takeDamage(it.damage, { damage: it.damage, crit: 0.05, critFactor: 1.4 }, it.shape === 'cone' ? 'slash' : 'aoe');
+    } else session.hp -= it.damage;
     session.vfx.shake.add(e.boss ? 0.48 : 0.3);
     session.vfx.impact({ origin: session.pos.clone().setY(1.1), color: it.color });
     const k = it.knock || 0;

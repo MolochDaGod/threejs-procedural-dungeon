@@ -3,16 +3,24 @@
  * Allies cast the same 6-slot catalog on cooldown, like a player would.
  */
 import * as THREE from 'three';
-import { CLASSES, CLASS_IDS, PLAY, RACE_IDS, loadoutFor } from '../ssot.js';
+import { CLASSES, PLAY, RACE_IDS, RACES, dungeonFill, loadoutFor } from '../ssot.js';
+import { groundRoot } from '../terrain/footPlant.js';
+import { passiveFor } from './passives.js';
 
 const _dir = new THREE.Vector3();
 
 export function otherClasses(playerClass) {
-  return CLASS_IDS.filter((id) => id !== playerClass);
+  return dungeonFill(playerClass);
 }
 
+/** Same Warlords faction as the player (Crusade / Fabled / Legion). Repeat if the faction has two races. */
 export function allyRaces(playerRace) {
-  return RACE_IDS.filter((id) => id !== playerRace);
+  const fac = RACES[playerRace]?.faction;
+  const same = RACE_IDS.filter((id) => RACES[id]?.faction === fac);
+  const pool = same.length ? same : RACE_IDS;
+  const others = pool.filter((id) => id !== playerRace);
+  const src = others.length ? others : pool;
+  return [0, 1, 2].map((i) => src[i % src.length]);
 }
 
 export function makeAlly(actor, { classId, raceId, pos }) {
@@ -36,9 +44,10 @@ export function makeAlly(actor, { classId, raceId, pos }) {
     loadout,
     cds,
     casting: 0,
-    hold: cls.role === 'tank' ? 2.0 : cls.role === 'cast' ? 7.2 : cls.role === 'kite' ? 8.5 : 4.2,
+    hold: cls.role === 'tank' ? 2.0 : cls.role === 'cast' ? 7.2 : cls.role === 'kite' ? 8.5 : cls.role === 'heal' ? 4.6 : cls.role === 'peel' ? 3.4 : 4.2,
     speed: cls.role === 'tank' ? 5.0 : 5.4,
     threat: 0,
+    threatKey: `ally:${cls.id}`,
   };
 }
 
@@ -79,9 +88,30 @@ export function tickAlly(a, dt, host) {
       ? 5.4
       : a.role === 'kite'
         ? a.hold
-        : 4.0;
+        : a.role === 'heal'
+          ? 4.6
+          : a.role === 'peel'
+            ? 3.4
+            : 4.0;
   const toPlayer = a.pos.distanceTo(player);
   let moving = false;
+  const pas = passiveFor(a.role);
+  const danger = host.incomingOrigin?.();
+  if (pas.cover && danger && a.role !== 'tank') {
+    const spot = host.coverSpot?.(a.pos, danger);
+    if (spot) {
+      _dir.set(spot.x - a.pos.x, 0, spot.z - a.pos.z);
+      if (_dir.lengthSq() > 0.04) {
+        _dir.normalize();
+        stepToward(a, _dir, a.speed * 1.25, dt, host);
+        moving = true;
+        a.actor.root.position.copy(a.pos);
+        groundRoot(a.actor.root, a.actor.groundSampler, a.pos.x, a.pos.z);
+        a.actor.setGait(true, true);
+        return;
+      }
+    }
+  }
 
   if (toPlayer > 14) {
     _dir.copy(player).sub(a.pos).setY(0).normalize();
@@ -100,6 +130,7 @@ export function tickAlly(a, dt, host) {
   }
 
   a.actor.root.position.copy(a.pos);
+  groundRoot(a.actor.root, a.actor.groundSampler, a.pos.x, a.pos.z);
   a.actor.setGait(moving, toPlayer > 10);
 
   if (a.role === 'tank' && foe) {
@@ -111,15 +142,14 @@ export function tickAlly(a, dt, host) {
     }
   }
 
-  if (a.role === 'flex' && foe) {
+  if ((a.role === 'flex' || a.role === 'peel') && foe) {
     a.utilCd = (a.utilCd || 0) - dt;
     if (a.utilCd <= 0 && dist < 5) {
-      a.utilCd = 7;
+      a.utilCd = a.role === 'peel' ? 5 : 7;
       host.utility?.(a, foe);
     }
   }
-
-  if (a.casting > 0 || !foe) return;
+  if (a.casting > 0) return;
   const spell = pickReadySpell(a, foe, host);
   if (!spell) return;
   a.cds[spell.id] = spell.cd;
@@ -141,11 +171,19 @@ function stepToward(a, dir, speed, dt, host) {
   if (host.walkable(a.pos.x, nz)) a.pos.z = nz;
 }
 
+function pickHeal(ready) {
+  return ready.find((s) => s.heal > 0) || ready.find((s) => s.kind === 'nova' && s.element === 'holy') || null;
+}
+
 function pickReadySpell(a, foe, host) {
-  const dist = a.pos.distanceTo(foe.pos);
-  const ready = a.loadout.filter((s) => (a.cds[s.id] || 0) <= 0 && a.mana >= s.mana);
+  const ready = a.loadout.filter((s) => (a.cds[s.id] || 0) <= 0 && a.mana >= (s.mana || 0));
   if (!ready.length) return null;
   const partyHurt = host.partyHurtRatio ? host.partyHurtRatio() : host.playerHp / host.playerHpMax;
+  if (!foe) {
+    if (partyHurt < 0.92) return pickHeal(ready);
+    return null;
+  }
+  const dist = a.pos.distanceTo(foe.pos);
   if (a.role === 'tank') {
     return ready.find((s) => s.kind === 'slash' && dist <= s.range + 0.6)
       || ready.find((s) => s.kind === 'dash' && dist > 4)
@@ -154,7 +192,7 @@ function pickReadySpell(a, foe, host) {
   }
   if (a.role === 'cast') {
     if (partyHurt < 0.62) {
-      const heal = ready.find((s) => s.kind === 'nova');
+      const heal = pickHeal(ready);
       if (heal) return heal;
     }
     return ready.find((s) => s.kind === 'projectile' && dist <= s.range)
@@ -173,16 +211,35 @@ function pickReadySpell(a, foe, host) {
   }
   if (a.role === 'flex') {
     if (partyHurt < 0.7) {
-      const util = ready.find((s) => s.kind === 'nova') || ready.find((s) => s.kind === 'dash');
+      const util = pickHeal(ready) || ready.find((s) => s.kind === 'dash');
       if (util) return util;
     }
     return ready.find((s) => s.kind === 'beam' && dist <= s.range)
       || ready.find((s) => s.kind === 'projectile' && dist <= s.range)
       || ready[0];
   }
+  if (a.role === 'heal') {
+    if (partyHurt < 0.92) {
+      return pickHeal(ready)
+        || ready.find((s) => s.kind === 'nova')
+        || ready.find((s) => s.kind === 'beam')
+        || ready.find((s) => s.kind === 'zone')
+        || ready[0];
+    }
+    return ready.find((s) => s.kind === 'beam' && dist <= s.range)
+      || ready.find((s) => s.kind === 'projectile' && dist <= s.range)
+      || null;
+  }
+  if (a.role === 'peel') {
+    return ready.find((s) => s.kind === 'dash' && dist > 3)
+      || ready.find((s) => s.kind === 'teleport')
+      || ready.find((s) => s.kind === 'slash' && dist <= 3.2)
+      || ready.find((s) => s.kind === 'zone')
+      || ready[0];
+  }
   if (partyHurt < 0.5) {
-    const heal = ready.find((s) => s.kind === 'nova');
-    if (heal && a.pos.distanceTo(host.playerPos) <= heal.range + 1.2) return heal;
+    const heal = pickHeal(ready);
+    if (heal && a.pos.distanceTo(host.playerPos) <= (heal.range || 4) + 1.2) return heal;
   }
   return ready.find((s) => (s.kind === 'slash' && dist <= s.range + 0.4) || (s.kind !== 'slash' && dist <= s.range))
     || ready[0];

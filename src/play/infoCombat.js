@@ -52,12 +52,20 @@ function addGains(pool, gains, pts) {
   }
 }
 
-export function deriveSheet(info, raceId = 'human', classId = 'worge') {
+export function deriveSheet(info, raceId = 'human', classId = 'worge', level = PLAY.level) {
   const cls = info.classes.classes[classId] || info.classes.classes.worge || info.classes.classes.warrior;
   const race = info.races.races[raceId] || info.races.races.human;
-  const points = { ...attrMap(cls.startingAttributes), ...Object.fromEntries(ATTR_KEYS.map((k) => [k, 0])) };
+  const start = attrMap(cls.startingAttributes);
+  const points = { ...Object.fromEntries(ATTR_KEYS.map((k) => [k, 0])), ...start };
   const raceBonus = attrMap(race.bonuses);
-  for (const k of ATTR_KEYS) points[k] = (points[k] || 0) + (raceBonus[k] || 0);
+  const alloc = info.attrs?.allocation || {};
+  const per = alloc.pointsPerLevel ?? 7;
+  const lv = Math.max(1, Math.min(alloc.maxLevel ?? 20, level || 20));
+  const extra = per * (lv - 1);
+  const weight = ATTR_KEYS.reduce((s, k) => s + (start[k] || 0), 0) || 1;
+  for (const k of ATTR_KEYS) {
+    points[k] = (start[k] || 0) + (raceBonus[k] || 0) + Math.round(extra * (start[k] || 0) / weight);
+  }
 
   const pool = { ...BASE };
   const catalog = info.attrs.attributes || [];
@@ -84,6 +92,10 @@ export function deriveSheet(info, raceId = 'human', classId = 'worge') {
     classId: cls.id,
     className: cls.name,
     raceName: race.name,
+    level: lv,
+    armor: Math.round(pool.defense || 0),
+    armorTypes: cls.armorTypes || ['cloth'],
+    weaponTypes: cls.weaponTypes || [],
     color: cls.color,
     icon: cls.iconUrl || `${INFO}${cls.icon || ''}`,
     raceIcon: race.iconUrl || `${INFO}${race.icon || ''}`,
@@ -121,20 +133,26 @@ export function resolveHit(incoming, attacker, defender, rng = Math.random) {
 }
 
 export function fallbackSheet(raceId = 'human', classId = 'worge') {
+  const lv = PLAY.level || 20;
+  const scale = 1 + 0.085 * (lv - 1);
   return {
     raceId,
     classId,
     className: classId,
     raceName: raceId,
+    level: lv,
+    armor: Math.round(20 * scale),
+    armorTypes: [],
+    weaponTypes: [],
     color: '#d97706',
     icon: 'https://assets.grudge-studio.com/icons/warlords/classes/worge.png',
     raceIcon: `https://assets.grudge-studio.com/icons/warlords/races/${raceId}.webp`,
     points: {},
-    hpMax: PLAY.hp,
-    manaMax: PLAY.mana,
-    staminaMax: PLAY.stamina,
-    damage: 18,
-    defense: 20,
+    hpMax: Math.round(PLAY.hp * scale),
+    manaMax: Math.round(PLAY.mana * scale),
+    staminaMax: Math.round(PLAY.stamina * (0.7 + 0.3 * scale)),
+    damage: Math.round(18 * scale),
+    defense: Math.round(20 * scale),
     block: 0.08,
     blockEffect: 0.35,
     crit: 0.08,

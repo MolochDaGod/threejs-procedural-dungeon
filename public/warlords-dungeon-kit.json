@@ -1,5 +1,5 @@
 {
-  "version": "2.1.1",
+  "version": "2.2.0",
   "product": "warlords",
   "cdn": "https://assets.grudge-studio.com",
   "note": "Game-ready dungeon kit compiled from D1 gn_assets (tag=dungeon) + cave contracts + Rapier/nav contract. No new host.",
@@ -12,15 +12,23 @@
   "generation": {
     "algorithm": "scatter-separate-delaunay-mst-carve-bfs",
     "deterministic": "mulberry32",
-    "cellM": 2,
-    "linearDefault": { "rooms": 16, "loops": 0, "path": "critical" },
+    "cellM": 2.15,
+    "linearDefault": { "rooms": 7, "loops": 0, "path": "critical" },
     "graphDefault": { "rooms": 42, "loopChance": 0.15 },
     "themes": ["ancient", "molten", "frost", "grim", "verdant"],
     "host": "three.js client + node instance server",
     "instance": {
-      "version": 1,
+      "version": 2,
       "maxPlayers": 8,
-      "payload": "src/gen/instance.js dungeonToInstance"
+      "payload": "src/gen/instance.js dungeonToInstance",
+      "playClient": "same seed grid + dress stamps; Kenney TILE.WALL stays architecture; carpets/wall_art/furniture from purpose=play",
+      "tickHz": 60,
+      "physics": "rapier3d-compat fixed 1/60"
+    },
+    "dress": {
+      "compiler": "src/gen/dressPlan.js compileDressPlan",
+      "roles": ["carpet", "wall_art", "furniture"],
+      "nav": "carpets never block; furniture 1-cell from wall, skip doorway/BLOCK/BARRIER"
     }
   },
   "navmesh": {
@@ -46,25 +54,25 @@
     { "id": "kaykit_vertex", "role": "kit", "note": "KayKit dungeon GLBs ship vertex color / embedded maps", "gameReady": true }
   ],
   "pieces": [
-    { "id": "cave_twin_mouth", "glb": "models/caves/2cave.glb", "category": "entrance", "targetHeightM": 8, "gameReady": true, "nav": "authored-floor", "collider": "trimesh-fixed" },
+    { "id": "cave_twin_mouth", "glb": "models/caves/2cave.glb", "category": "entrance", "purpose": "isolate", "targetHeightM": 8, "gameReady": false, "nav": "authored-floor", "collider": "trimesh-fixed", "note": "outdoor cave — not a room wall" },
     { "id": "cave_lethal_ape", "glb": "models/caves/old_cave_lethal_ape_redux.glb", "category": "entrance", "targetHeightM": 10, "gameReady": true, "nav": "authored-floor", "collider": "trimesh-fixed" },
-    { "id": "triad_mountain", "glb": "models/evil_rock_mountains_triad.glb", "category": "entrance", "targetHeightM": 14, "gameReady": true, "nav": "none", "collider": "none" },
+    { "id": "triad_mountain", "glb": "models/evil_rock_mountains_triad.glb", "category": "lobby", "purpose": "isolate", "targetHeightM": 14, "gameReady": false, "nav": "none", "collider": "none", "note": "142MB cave-mountain — lobby lazy load, not play halls" },
     { "id": "kaykit_floor_tiles_large", "glb": "game-assets/glb/kaykit/gltf/floorDecoration_tilesLarge.glb", "category": "floor", "targetHeightM": 0.08, "gameReady": true, "nav": "walkable", "collider": "cuboid" },
     { "id": "kaykit_floor_tiles_small", "glb": "game-assets/glb/kaykit/gltf/floorDecoration_tilesSmall.glb", "category": "floor", "targetHeightM": 0.08, "gameReady": true, "nav": "walkable", "collider": "cuboid" },
     { "id": "kaykit_floor_bricks", "glb": "game-assets/glb/kaykit/gltf/floorDecoration_shatteredBricks.glb", "category": "floor", "targetHeightM": 0.08, "gameReady": true, "nav": "walkable", "collider": "cuboid" },
-    { "id": "kaykit_floor_wood", "glb": "game-assets/glb/kaykit/gltf/floorDecoration_wood.glb", "category": "floor", "targetHeightM": 0.08, "gameReady": true, "nav": "walkable", "collider": "cuboid" },
-    { "id": "kaykit_wall", "glb": "game-assets/glb/kaykit/gltf/wall.glb", "category": "wall", "targetHeightM": 3, "gameReady": true, "nav": "blocked", "collider": "cuboid" },
+    { "id": "kaykit_floor_wood", "glb": "game-assets/glb/kaykit/gltf/floorDecoration_wood.glb", "category": "carpet", "purpose": "play", "targetHeightM": 0.04, "gameReady": true, "nav": "walkable", "collider": "none" },
+    { "id": "kaykit_wall", "glb": "game-assets/glb/kaykit/gltf/wall.glb", "category": "wall", "purpose": "play", "targetHeightM": 3, "gameReady": true, "nav": "blocked", "collider": "cuboid" },
     { "id": "kaykit_wall_corner", "glb": "game-assets/glb/kaykit/gltf/wallCorner.glb", "category": "wall", "targetHeightM": 3, "gameReady": true, "nav": "blocked", "collider": "cuboid" },
     { "id": "kaykit_stairs", "glb": "game-assets/glb/kaykit/gltf/stairs.glb", "category": "wall", "targetHeightM": 2.2, "gameReady": true, "nav": "walkable", "collider": "cuboid" },
     { "id": "kaykit_pillar", "glb": "game-assets/glb/kaykit/gltf/pillar.glb", "category": "pillar", "targetHeightM": 3.2, "gameReady": true, "nav": "blocked", "collider": "cuboid" },
-    { "id": "kaykit_door", "glb": "game-assets/glb/kaykit/gltf/door.glb", "category": "entrance", "targetHeightM": 2.4, "gameReady": true, "nav": "doorway", "collider": "cuboid" },
+    { "id": "kaykit_door", "glb": "game-assets/glb/kaykit/gltf/door.glb", "category": "entrance", "purpose": "play", "targetHeightM": 2.4, "gameReady": true, "nav": "doorway", "collider": "cuboid" },
     { "id": "kaykit_door_gate", "glb": "game-assets/glb/kaykit/gltf/door_gate.glb", "category": "entrance", "targetHeightM": 2.6, "gameReady": true, "nav": "doorway", "collider": "cuboid" },
     { "id": "kaykit_chest_common", "glb": "game-assets/glb/kaykit/gltf/chest_common.glb", "category": "prop", "targetHeightM": 0.7, "gameReady": true, "nav": "blocked-small", "collider": "cuboid" },
-    { "id": "kaykit_chest_rare", "glb": "game-assets/glb/kaykit/gltf/chest_rare.glb", "category": "prop", "targetHeightM": 0.7, "gameReady": true, "nav": "blocked-small", "collider": "cuboid" },
-    { "id": "kaykit_barrel", "glb": "game-assets/glb/kaykit/gltf/barrel.glb", "category": "prop", "targetHeightM": 0.9, "gameReady": true, "nav": "blocked-small", "collider": "cuboid" },
-    { "id": "kaykit_crate", "glb": "game-assets/glb/kaykit/gltf/crate.glb", "category": "prop", "targetHeightM": 0.8, "gameReady": true, "nav": "blocked-small", "collider": "cuboid" },
-    { "id": "kaykit_banner", "glb": "game-assets/glb/kaykit/gltf/banner.glb", "category": "prop", "targetHeightM": 2.2, "gameReady": true, "nav": "none", "collider": "none" },
-    { "id": "kaykit_torch", "glb": "game-assets/glb/kaykit/gltf/torch.glb", "category": "prop", "targetHeightM": 0.6, "gameReady": true, "nav": "none", "collider": "none" },
+    { "id": "kaykit_chest_rare", "glb": "game-assets/glb/kaykit/gltf/chest_rare.glb", "category": "furniture", "purpose": "play", "targetHeightM": 0.62, "gameReady": true, "nav": "blocked-small", "collider": "cuboid" },
+    { "id": "kaykit_barrel", "glb": "game-assets/glb/kaykit/gltf/barrel.glb", "category": "furniture", "purpose": "play", "targetHeightM": 0.85, "gameReady": true, "nav": "blocked-small", "collider": "cuboid" },
+    { "id": "kaykit_crate", "glb": "game-assets/glb/kaykit/gltf/crate.glb", "category": "furniture", "purpose": "play", "targetHeightM": 0.72, "gameReady": true, "nav": "blocked-small", "collider": "cuboid" },
+    { "id": "kaykit_banner", "glb": "game-assets/glb/kaykit/gltf/banner.glb", "category": "wall_art", "purpose": "play", "targetHeightM": 1.35, "gameReady": true, "nav": "none", "collider": "none" },
+    { "id": "kaykit_torch", "glb": "game-assets/glb/kaykit/gltf/torch.glb", "category": "prop", "purpose": "play", "targetHeightM": 0.6, "gameReady": true, "nav": "none", "collider": "none" },
     { "id": "kaykit_pillar_broken", "glb": "game-assets/glb/kaykit/gltf/pillar_broken.glb", "category": "pillar", "targetHeightM": 2.4, "gameReady": true, "nav": "blocked", "collider": "cuboid" }
   ],
   "worldDungeons": [

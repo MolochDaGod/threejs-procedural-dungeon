@@ -2,7 +2,7 @@
  * Warlords Era monster / boss prefabs — Toon-RTS races, equipped loadouts.
  * brain: melee | ranger | mage | warlord
  */
-import { THEME_ENEMY } from '../ssot.js';
+import { THEME_ENEMY, CLASSES, CLASS_IDS, creaturesForBiome } from '../ssot.js';
 
 const P = (o) => ({ equipped: true, ...o });
 
@@ -76,18 +76,43 @@ export const THEME_CAST = {
 
 export function prefabFor(themeKey, roomType, salt = 0) {
   const pack = THEME_CAST[themeKey] || THEME_CAST.ancient;
+  if (roomType === 'elite' || roomType === 'boss') {
+    const authored = creaturesForBiome(themeKey).filter((c) => (
+      roomType === 'boss' ? (c.kind === 'miniboss' || c.kind === 'elite') : c.kind !== 'grunt'
+    ));
+    if (authored.length && Math.abs(salt) % 2 === 0) {
+      const c = authored[Math.abs(salt) % authored.length];
+      const brain = c.brain === 'kite' ? 'ranger' : c.brain === 'pursue' ? 'melee' : 'mage';
+      return {
+        id: c.id,
+        label: c.label,
+        mesh: c.mesh,
+        clips: 'native',
+        hide: c.hide,
+        keep: c.keep,
+        height: c.height,
+        hp: c.hp,
+        speed: c.speed,
+        radius: c.radius,
+        role: c.role,
+        brain: roomType === 'boss' ? 'warlord' : brain,
+        raceId: pack.combat[0].raceId,
+        equipped: false,
+      };
+    }
+  }
   const list = roomType === 'boss' ? pack.bosses : roomType === 'elite' ? pack.elites : pack.combat;
   return list[Math.abs(salt) % list.length];
 }
 
 export function playerPrefab(raceId, classId = 'worge', weaponId = '1h_tome') {
-  const role = classId === 'worge' || classId === 'mage' || classId === 'ranger' ? classId : 'warrior';
+  const role = CLASS_IDS.includes(classId) ? classId : 'worge';
   return {
     id: `hero_${raceId}_${role}_${weaponId}`,
-    label: role === 'worge' ? 'Worge' : 'Warlord',
+    label: CLASSES[role]?.label || role,
     raceId,
     role,
-    weaponId: role === 'worge' ? weaponId : null,
+    weaponId,
     height: 1.82,
     equipped: true,
   };

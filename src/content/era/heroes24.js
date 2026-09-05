@@ -5,7 +5,23 @@
 const CDN_FACE = 'https://client.grudge-studio.com/images/portraits';
 const LORE_FACE = 'https://grudge-heros.puter.site/media/heroes/portraits';
 
-const CLASS_FILE = { warrior: 'warrior', mage: 'mage', ranger: 'ranger', worge: 'worg' };
+const CLASS_FILE = {
+  warrior: 'warrior', raider: 'warrior',
+  mage: 'mage', priest: 'mage',
+  ranger: 'ranger', thief: 'ranger',
+  worge: 'worg', verduror: 'worg',
+};
+
+const SPEC_LORE = {
+  'human-priest': { name: 'Sister Calia Vellum', title: 'The Atoning Light' },
+  'human-raider': { name: 'Hrolf Two-Hands', title: 'The Parry King' },
+  'human-thief': { name: 'Nix Goldhook', title: 'The Harbor Cut' },
+  'human-verduror': { name: 'Ilya Mistreed', title: 'The Jade Channel' },
+  'elf-priest': { name: 'Saelith Dawnward', title: 'The Disciple' },
+  'elf-verduror': { name: 'Nimue Craneveil', title: 'The Mist Weaver' },
+  'orc-raider': { name: "Grom'kar Skullsplitter", title: 'The Two-Hand' },
+  'orc-thief': { name: 'Rokka Coinblade', title: 'The Outlaw' },
+};
 
 const LORE = {
   'human-warrior': { name: 'Sir Aldric Valorheart', title: 'The Iron Bastion' },
@@ -81,7 +97,22 @@ export const PIRATE_FACES = [
 ];
 
 export function heroOf(raceId, classId) {
+  const specId = `${raceId}-${classId}`;
+  if (SPEC_LORE[specId]) {
+    const file = CLASS_FILE[classId] || classId;
+    return {
+      id: specId,
+      race: raceId,
+      classId,
+      name: SPEC_LORE[specId].name,
+      title: SPEC_LORE[specId].title,
+      portrait: `${LORE_FACE}/${raceId}_${file}.png`,
+      portraitFallback: `${CDN_FACE}/${raceId}.png`,
+    };
+  }
+  const familyFile = CLASS_FILE[classId];
   return HERO_24.find((h) => h.race === raceId && h.classId === classId)
+    || HERO_24.find((h) => h.race === raceId && CLASS_FILE[h.classId] === familyFile)
     || PIRATE_FACES.find((h) => h.race === raceId && h.classId === classId)
     || null;
 }

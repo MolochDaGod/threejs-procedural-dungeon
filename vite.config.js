@@ -21,9 +21,33 @@ function fixRapierInitDeprecation() {
   };
 }
 
+function dungeonApiDev() {
+  return {
+    name: 'grudge-dungeon-api',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const path = (req.url || '').split('?')[0];
+        if (!path.startsWith('/api') && path !== '/health') return next();
+        try {
+          const { routeDungeonApi } = await import('./server/router.mjs');
+          const hit = await routeDungeonApi(req, res);
+          if (!hit) next();
+        } catch (err) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify({ ok: false, error: String(err?.message || err) }));
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
-  plugins: [fixRapierInitDeprecation()],
+  plugins: [fixRapierInitDeprecation(), dungeonApiDev()],
+  server: {
+    fs: { allow: ['F:/GitHub/threejs-procedural-dungeon', 'D:/Games/Models'] },
+  },
   build: {
     target: 'es2020',
     outDir: 'dist',

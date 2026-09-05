@@ -54,6 +54,7 @@
         </div>
         <button class="btn primary" id="forge" style="width:100%;margin-top:10px">FORGE&nbsp;DUNGEON</button>
         <button class="btn" id="enter" style="width:100%;margin-top:8px">ENTER&nbsp;DUNGEON</button>
+        <button class="btn" id="exportCg" style="width:100%;margin-top:8px">EXPORT&nbsp;CUSTOMGRUDGE</button>
       </div>
 
       <div class="sec">
@@ -66,21 +67,53 @@
           <button class="chip" data-r="orc">ORC</button>
           <button class="chip" data-r="undead">UNDEAD</button>
         </div>
-        <span class="lab" style="margin-top:10px"><span>CLASS</span><b>info.*</b></span>
+        <span class="lab" style="margin-top:10px"><span>CLASS</span><b>family · spec</b></span>
         <div class="chips" id="classchips">
           <button class="chip on" data-c="worge">WORGE</button>
+          <button class="chip" data-c="verduror">VERDUROR</button>
           <button class="chip" data-c="warrior">WARRIOR</button>
+          <button class="chip" data-c="raider">RAIDER</button>
           <button class="chip" data-c="mage">MAGE</button>
+          <button class="chip" data-c="priest">PRIEST</button>
           <button class="chip" data-c="ranger">RANGER</button>
+          <button class="chip" data-c="thief">THIEF</button>
         </div>
-        <div id="worge-weapons">
-          <span class="lab" style="margin-top:10px"><span>WORGE&nbsp;WEAPON</span><b>option&nbsp;2</b></span>
+        <div id="class-weapons">
+          <span class="lab" style="margin-top:10px"><span id="weaplab">WEAPON</span><b>option</b></span>
           <div class="chips" id="weapchips">
             <button class="chip on" data-w="1h_tome">1H+TOME</button>
             <button class="chip" data-w="nature_staff">NATURE</button>
             <button class="chip" data-w="arcane_staff">ARCANE</button>
+            <button class="chip" data-w="sword_shield">SWORD+SHIELD</button>
+            <button class="chip" data-w="two_hand">2H</button>
+            <button class="chip" data-w="greataxe">AXE</button>
+            <button class="chip" data-w="mace_sword">MACE+SWORD</button>
+            <button class="chip" data-w="fire_staff">FIRE STAFF</button>
+            <button class="chip" data-w="ice_staff">ICE STAFF</button>
+            <button class="chip" data-w="holy_staff">HOLY</button>
+            <button class="chip" data-w="hammer_holy_tome">HAMMER+TOME</button>
+            <button class="chip" data-w="dagger_ice_tome">DAGGER+ICE</button>
+            <button class="chip" data-w="unarmed">UNARMED</button>
+            <button class="chip" data-w="mace_nature_tome">MACE+TOME</button>
+            <button class="chip" data-w="bow">BOW</button>
+            <button class="chip" data-w="spear">SPEAR</button>
+            <button class="chip" data-w="dual">DUAL</button>
+            <button class="chip" data-w="pistol">PISTOL</button>
           </div>
         </div>
+        <span class="lab" style="margin-top:10px"><span>TEAM LOBBY</span><b>ally specs</b></span>
+        <div id="ally-picks">
+          <label class="lab">ALLY 1
+            <select id="ally0" class="ally-sel"></select>
+          </label>
+          <label class="lab">ALLY 2
+            <select id="ally1" class="ally-sel"></select>
+          </label>
+          <label class="lab">ALLY 3
+            <select id="ally2" class="ally-sel"></select>
+          </label>
+        </div>
+        <button class="btn" id="btnEquip" style="width:100%;margin-top:8px">EQUIPMENT</button>
         <div class="hero-face" id="heroFace">
           <img id="heroFaceImg" alt="" width="48" height="48" />
           <div>
@@ -91,6 +124,7 @@
         <span class="lab" style="margin-top:10px"><span>PIRATES</span><b>lore</b></span>
         <div class="pirate-row" id="pirateFaces"></div>
         <label class="tog" style="margin-top:10px"><input type="checkbox" id="tLinear" checked> Linear crawl <span class="key">E</span></label>
+        <label class="tog"><input type="checkbox" id="tYuka" checked> Yuka AI <span class="key">combat</span></label>
       </div>
 
       <div class="sec">
@@ -102,6 +136,12 @@
           <button class="chip" data-t="frost">FROST</button>
           <button class="chip" data-t="grim">GRIM</button>
           <button class="chip" data-t="verdant">VERDANT</button>
+        </div>
+        <span class="lab" style="margin-top:10px"><span>ENCOUNTER</span><b>combat.grudge-studio.com</b></span>
+        <div class="chips" id="kindchips">
+          <button class="chip on" data-k="biome">BIOME</button>
+          <button class="chip" data-k="faction">FACTION</button>
+          <button class="chip" data-k="boss">BOSS</button>
         </div>
       </div>
 
@@ -117,10 +157,10 @@
       </div>
 
       <div class="sec">
-        <label class="sl"><span class="lab"><span>ROOMS</span><b id="vRooms">42</b></span>
-          <input type="range" id="rooms" min="12" max="80" value="42" aria-label="Room count"></label>
-        <label class="sl"><span class="lab"><span>LOOPINESS</span><b id="vLoops">15%</b></span>
-          <input type="range" id="loops" min="0" max="40" value="15" aria-label="Loop chance"></label>
+        <label class="sl"><span class="lab"><span>ROOMS</span><b id="vRooms">7</b></span>
+          <input type="range" id="rooms" min="7" max="80" value="7" aria-label="Room count"></label>
+        <label class="sl"><span class="lab"><span>LOOPINESS</span><b id="vLoops">0%</b></span>
+          <input type="range" id="loops" min="0" max="40" value="0" aria-label="Loop chance"></label>
         <label class="sl"><span class="lab"><span>DECOR&nbsp;DENSITY</span><b id="vDecor">60%</b></span>
           <input type="range" id="decor" min="0" max="100" value="60" aria-label="Decoration density"></label>
       </div>
@@ -154,7 +194,12 @@
       </div>
     </div>
 
-    <div id="hints"><b>drag</b> pan · <b>wheel</b> zoom · <b>shift-drag</b> orbit · <b>E</b> enter · <b>WASD</b> move · <b>1–6</b> cast · <b>R</b> reforge · <b>T</b> theme · <b>Esc</b> leave</div>
+    <div id="equip-panel" hidden>
+      <header><b>EQUIPMENT</b><span>Warlords · I / EQUIPMENT to close</span></header>
+      <div id="equip-body"></div>
+    </div>
+
+    <div id="hints"><b>drag</b> pan · <b>wheel</b> zoom · <b>shift-drag</b> orbit · <b>E</b> enter/descend · <b>Q</b> weapon · <b>I</b> equip · <b>WASD</b> move · <b>1–6</b> cast · <b>Esc</b> leave</div>
 
     <script type="module" src="./src/main.js"></script>
   </body>

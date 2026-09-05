@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRESSING } from '../ssot.js';
 import { cellCenter } from '../gen/cells.js';
+import { plantObjectOnTerrain } from '../terrain/footPlant.js';
 
 const loader = new GLTFLoader();
 const cache = new Map();
@@ -87,6 +88,7 @@ export class DungeonDressing {
       mesh.rotation.y = Math.atan2(t.dx, t.dy);
       mesh.name = 'kit-torch';
       this.root.add(mesh);
+      plantObjectOnTerrain(mesh, d.terrain?.sample);
       const L = new THREE.PointLight(flame, intensity * 1.15, dist + 1.5, 2);
       L.position.set(w.x + t.dx * 0.62, 1.72, w.z + t.dy * 0.62);
       L.userData = { base: intensity * 1.15, ph: (t.x * 13 + t.y * 7) * 0.17 };
@@ -106,6 +108,7 @@ export class DungeonDressing {
       mesh.rotation.y = (r.id * 1.7) % (Math.PI * 2);
       mesh.name = 'kit-chest';
       this.root.add(mesh);
+      plantObjectOnTerrain(mesh, d.terrain?.sample);
     } catch { /* optional */ }
   }
 

@@ -5,8 +5,8 @@
  *
  * Optional: if WASM fails to load, callers keep using grid walkable().
  */
-import { CELL_M, FLOOR_THICK_M, WALL_HEIGHT_M, worldOf } from '../gen/cells.js';
-import { wallRuns } from '../gen/navmesh.js';
+import { worldOf } from '../gen/cells.js';
+import { buildColliderAssets } from '../physics/colliders.js';
 
 export const RAPIER_PKG = '@dimforge/rapier3d-compat';
 export const RAPIER_FIXED_DT = 1 / 60;
@@ -27,20 +27,23 @@ export async function createDungeonPhysics(dungeon) {
 
   try {
   const world = new RAPIER.World({ x: 0, y: RAPIER_GRAVITY_Y, z: 0 });
-  const { walls } = wallRuns(dungeon);
+  const nodes = buildColliderAssets(dungeon);
+  const barrierByCell = new Map();
 
-  const floorDesc = RAPIER.ColliderDesc.cuboid(dungeon.W * CELL_M * 0.5 + 4, FLOOR_THICK_M * 0.5, dungeon.H * CELL_M * 0.5 + 4)
-    .setTranslation(0, -FLOOR_THICK_M * 0.5, 0)
-    .setFriction(0.9);
-  world.createCollider(floorDesc);
-
-  for (const run of walls) {
-    const hx = Math.max(run.sx * CELL_M * 0.5, 0.45);
-    const hz = Math.max(run.sz * CELL_M * 0.5, 0.45);
-    const desc = RAPIER.ColliderDesc.cuboid(hx, WALL_HEIGHT_M * 0.5, hz)
-      .setTranslation(run.cx, WALL_HEIGHT_M * 0.5, run.cz)
-      .setFriction(0.6);
-    world.createCollider(desc);
+  for (const n of nodes) {
+    if (n.collider?.kind !== 'box') continue;
+    const walk = n.kind === 'floor' || n.kind === 'platform' || n.walk;
+    const wallish = n.kind === 'wall' || n.kind === 'void_shell' || n.kind === 'cover';
+    if (!walk && !wallish && !n.sensor) continue;
+    const [hx, hy, hz] = n.collider.params;
+    const [x, y, z] = n.position;
+    const desc = RAPIER.ColliderDesc.cuboid(hx, hy, hz)
+      .setTranslation(x, y, z)
+      .setFriction(n.bounce ? 0.2 : 0.9)
+      .setRestitution(n.restitution || (n.bounce ? 1.15 : 0));
+    if (n.sensor) desc.setSensor(true);
+    const col = world.createCollider(desc);
+    if (n.breakable && n.cellI != null) barrierByCell.set(n.cellI, col);
   }
 
   const controller = world.createCharacterController(CCT_OFFSET);
@@ -67,7 +70,8 @@ export async function createDungeonPhysics(dungeon) {
     controller,
     body,
     capsule,
-    walls: walls.length,
+    walls: nodes.filter((n) => n.kind === 'wall').length,
+    barriers: barrierByCell,
     acc: 0,
     vy: 0,
   };
@@ -77,12 +81,13 @@ export async function createDungeonPhysics(dungeon) {
   }
 }
 
-export function stepDungeonPhysics(phys, wishX, wishZ, dt) {
+export function stepDungeonPhysics(phys, wishX, wishZ, dt, jumpPressed = false) {
   if (!phys) return null;
   phys.acc += Math.min(dt, 0.1);
   let guard = 0;
-  const out = { x: 0, y: 0, z: 0 };
+  const out = { x: 0, y: 0, z: 0, grounded: false };
   while (phys.acc >= RAPIER_FIXED_DT && guard++ < 8) {
+    if (jumpPressed && phys.controller.computedGrounded()) phys.vy = 8.2;
     phys.vy += RAPIER_GRAVITY_Y * RAPIER_FIXED_DT;
     const desired = {
       x: wishX * RAPIER_FIXED_DT,
@@ -105,6 +110,7 @@ export function stepDungeonPhysics(phys, wishX, wishZ, dt) {
   out.x = t.x;
   out.y = t.y - CCT_RADIUS - CCT_HALF;
   out.z = t.z;
+  out.grounded = phys.controller.computedGrounded();
   return out;
 }
 
@@ -118,7 +124,21 @@ export function setPhysicsFeet(phys, x, z) {
   });
 }
 
+export function dropBarrierCollider(phys, cellI) {
+  if (!phys?.barriers) return false;
+  const col = phys.barriers.get(cellI);
+  if (!col) return false;
+  try {
+    phys.world.removeCollider(col, true);
+  } catch {
+    /* already gone */
+  }
+  phys.barriers.delete(cellI);
+  return true;
+}
+
 export function disposeDungeonPhysics(phys) {
   if (!phys) return;
+  phys.barriers?.clear();
   phys.world.free();
 }

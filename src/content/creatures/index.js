@@ -2,6 +2,8 @@
  * Authored dungeon creatures (local GLB, native clips + textures).
  * Hide author leftover Icosphere / extra heads. Fit visible body to SI height.
  */
+import { flareOf } from '../flare.js';
+
 export const CREATURES = {
   rock_monster: {
     id: 'rock_monster',
@@ -171,7 +173,7 @@ export const CREATURES = {
 };
 
 export function creatureOf(id) {
-  return CREATURES[id] || null;
+  return CREATURES[id] || flareOf(id) || null;
 }
 
 export function creaturesForBiome(biomeId) {
