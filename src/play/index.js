@@ -34,6 +34,7 @@ import { VfxWorld } from './vfx.js';
 import { TelegraphField } from './telegraph.js';
 import { instanceCatalog, preloadDungeonAssets, loadGltf } from './assets.js';
 import { loadInteriorKits, plantDressPlan } from '../props/kitPlant.js';
+import { DungeonGates, GATE_FORCE_SEC, livingInRoom as livingAtGate } from '../props/gates.js';
 import { DungeonPinata, clearPinataCell } from './pinata.js';
 import { addLoot, BAG_DEFS, corpseYield, loadBag, spendLoot } from './bag.js';
 import { CLASS_CRAFTS, canRefillTonic, craftsForClass } from './classCrafts.js';
@@ -255,6 +256,7 @@ export class PlaySession {
       /* class slot 0 / smash handled via binds.c0 */
       if (e.code === 'KeyE' && this.phase === 'lobby') { e.preventDefault(); this.beginCrawl(); }
       if (e.code === 'KeyE' && this.phase === 'crawl' && this.tryLootCorpse()) { e.preventDefault(); return; }
+      if (e.code === 'KeyE' && this.phase === 'crawl' && this.tryOpenGate(true)) { e.preventDefault(); return; }
 
       if (e.code === 'Escape') this.exit();
       if (e.code === 'Tab') {
@@ -266,7 +268,7 @@ export class PlaySession {
     });
     addEventListener('keyup', (e) => {
       this.keys.delete(e.code);
-      if (e.code === 'KeyE') this._lootE = false;
+      if (e.code === 'KeyE') { this._lootE = false; this._gateE = false; }
     });
     addEventListener('pointermove', (e) => {
       if (!this.active || this.tps?.enabled) return;
@@ -416,6 +418,9 @@ export class PlaySession {
     bindScript(this, dungeon, { linear: this.linearCrawl, playerRace: this.raceId });
     await loadInteriorKits();
     await plantDressPlan(this.instance.dress, this.layers.Dress || this.group);
+    this.gates?.dispose();
+    this.gates = new DungeonGates();
+    await this.gates.plant(dungeon, this.group);
     this.pinata = new DungeonPinata(this.layers.Pinata || this.group, {
       flash: (m) => toast(m),
       onBreak: (node) => {
@@ -515,6 +520,9 @@ export class PlaySession {
     this.instance = null;
     this.pinata?.clear();
     this.pinata = null;
+    this.gates?.dispose();
+    this.gates = null;
+    this.gateCast = null;
     this._reward = null;
     this.timer0 = 0;
     this.reviveT = 0;
@@ -621,16 +629,17 @@ export class PlaySession {
     }
     const nearDown = (this.allies || []).some((a) => a.downed && a.pos.distanceTo(this.pos) < 1.7);
     const nearLoot = !!this.nearCorpse();
+    const nearGate = !!this.gates?.near(this.pos.x, this.pos.z);
     const blockKey = loadHudLayout().binds.block || PLAY.block.key;
-    const eHeld = this.keys.has(blockKey) && !this._lootE;
-    if (eHeld && this.phase === 'crawl' && !nearDown && !nearLoot && !this.inCombat()) {
+    const eHeld = this.keys.has(blockKey) && !this._lootE && !this._gateE;
+    if (eHeld && this.phase === 'crawl' && !nearDown && !nearLoot && !nearGate && !this.inCombat()) {
       this._eHold = (this._eHold || 0) + dt;
       if (this._eHold >= 0.28) this.openRadial();
     } else {
       this._eHold = 0;
       if (!eHeld) this.closeRadial();
     }
-    this.blocking = !this.downed && this.phase === 'crawl' && eHeld && this.inCombat() && !nearDown && !nearLoot && !this.radial;
+    this.blocking = !this.downed && this.phase === 'crawl' && eHeld && this.inCombat() && !nearDown && !nearLoot && !nearGate && !this.radial;
     this.player?.setHold?.('block', this.blocking);
     if (this.keys.has('KeyR') && this.phase === 'crawl' && !this.downed) {
       this._rHold = (this._rHold || 0) + dt;
@@ -675,6 +684,10 @@ export class PlaySession {
     this.vel.z += (target.z - this.vel.z) * Math.min(1, PLAY.accel * dt);
     this._air = false;
     if (!this._lastPos) this._lastPos = this.pos.clone();
+    if (this.gateCast) {
+      this.vel.x = 0;
+      this.vel.z = 0;
+    }
     if (this.phys) {
       if (this.classId === 'thief' && this.classState?.hidden && this.keys.has('Space')) {
         this.endThiefInvis();
@@ -2607,6 +2620,56 @@ export class PlaySession {
     return true;
   }
 
+  aggroRoom(roomId) {
+    for (const e of this.enemies || []) {
+      if (!e.alive || e.room?.id !== roomId) continue;
+      e.asleep = false;
+      pull(this, e, 12);
+    }
+  }
+
+  finishOpenGate(g) {
+    if (!g) return false;
+    this.gates.playOpen(g);
+    this.script?.gatesOpen.add(g.toRoom);
+    this.script?.gatesOpen.add(g.fromRoom);
+    this.gateCast = null;
+    this._gateE = true;
+    toast('Gate opens');
+    return true;
+  }
+
+  tryOpenGate(fromKey) {
+    if (this.phase !== 'crawl' || this.downed) return false;
+    const nearDown = (this.allies || []).some((a) => a.downed && a.pos.distanceTo(this.pos) < 1.7);
+    if (nearDown || this.nearCorpse()) return false;
+    const g = this.gates?.near(this.pos.x, this.pos.z);
+    if (!g) return false;
+    const living = livingAtGate(this, g.fromRoom);
+    if (!living.length) return this.finishOpenGate(g);
+    if (fromKey) {
+      this._gateE = true;
+      if (!this.gateCast || this.gateCast.gate !== g) {
+        this.gateCast = { gate: g, t: 0, max: GATE_FORCE_SEC };
+        this.aggroRoom(g.fromRoom);
+        toast('Forcing the gate · hall aggro');
+      }
+    }
+    return true;
+  }
+
+  tickGate(dt) {
+    this.gates?.update(dt);
+    const g = this.gates?.near(this.pos.x, this.pos.z);
+    if (!g || this.downed) { this.gateCast = null; return; }
+    if (!livingAtGate(this, g.fromRoom).length) return;
+    const holding = this.keys.has('KeyE') || this._gateE;
+    if (this.gateCast && this.gateCast.gate === g && holding) {
+      this.gateCast.t += dt;
+      if (this.gateCast.t >= (this.gateCast.max || GATE_FORCE_SEC)) this.finishOpenGate(g);
+    } else if (!holding) this.gateCast = null;
+  }
+
   hitRadius(pos, r, dmg) {
     for (const e of this.enemies) {
       if (!e.alive) continue;
@@ -2850,6 +2913,18 @@ export class PlaySession {
     return rooms || 'Find the warlord';
   }
 
+  _gateHud() {
+    const g = this.gates?.near(this.pos.x, this.pos.z);
+    if (!g || this.downed) return null;
+    const n = livingAtGate(this, g.fromRoom).length;
+    return {
+      force: n > 0,
+      n,
+      t: this.gateCast?.t || 0,
+      max: GATE_FORCE_SEC,
+    };
+  }
+
   _lootHud() {
     const e = this.nearCorpse();
     if (!e) return null;
@@ -2882,10 +2957,12 @@ export class PlaySession {
       cds: this.cds,
       cdMax: Object.fromEntries((this.loadout || []).map((s) => [s.slot, s.cd])),
       activeSlot: this.activeSlot,
-      casting: extra.casting != null ? extra.casting : this.casting,
-      castMax: this.castMax,
-      castName: (this.loadout?.[this.activeSlot - 1]?.name) || '',
-      castHeal: !!(this.loadout?.[this.activeSlot - 1]?.heal && this.casting > 0),
+      casting: this.gateCast
+        ? Math.max(0, (this.gateCast.max || GATE_FORCE_SEC) - this.gateCast.t)
+        : (extra.casting != null ? extra.casting : this.casting),
+      castMax: this.gateCast ? (this.gateCast.max || GATE_FORCE_SEC) : this.castMax,
+      castName: this.gateCast ? 'Open gate' : ((this.loadout?.[this.activeSlot - 1]?.name) || extra.castName || ''),
+      castHeal: !this.gateCast && !!(this.loadout?.[this.activeSlot - 1]?.heal && this.casting > 0),
       healFocus: this.healFocus,
       objective: extra.objective || this.objective(),
       party: [
@@ -2909,6 +2986,7 @@ export class PlaySession {
       parryT: this.parryT,
       lockpick: this.lockpick,
       lootBody: this._lootHud(),
+      gate: this._gateHud(),
       classState: this.classState,
       classCds: this.classCds,
       classCdMax: Object.fromEntries((this.classSkills || []).map((s) => [s.slot, s.cd])),
@@ -2996,6 +3074,7 @@ export class PlaySession {
     this.mana = Math.min(sheet.manaMax, this.mana + sheet.manaRegen * gdt);
     if (!this.downed) this.hp = Math.min(sheet.hpMax, this.hp + sheet.hpRegen * gdt);
     this.tickRevive(gdt);
+    this.tickGate(gdt);
     if (!this.keys.has('ShiftLeft') && !this.keys.has('ShiftRight')) {
       this.stamina = Math.min(sheet.staminaMax, (this.stamina ?? sheet.staminaMax) + sheet.staminaRegen * gdt);
     }

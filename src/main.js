@@ -28,6 +28,7 @@ import { preloadDungeonAssets } from './play/assets.js';
 import { stampBossArena, stampCover } from './grid/cells.js';
 import { stampEventPlatformRoom } from './grid/eventPlatform.js';
 import { loadInteriorKits, plantCoverKits, plantRoomScenes, plantWallTorches, plantMagicRocks } from './props/kitPlant.js';
+import { DungeonGates } from './props/gates.js';
 import { applyBiomeLook } from './props/saharaKit.js';
 import { InstancedFire, gridFireCells } from './vfx/instancedFire.js';
 import { playCharacterId } from './play/ids.js';
@@ -1484,11 +1485,13 @@ let animT = Infinity, animEnd = 0, animating = false;
 let fx = { liquids:[], shafts:[], spinners:[], parts:null, fire:null };
 let levelGeos = [];
 const dressing = new DungeonDressing();
+const forgeGates = new DungeonGates();
 const forgeCast = new ForgeCast();
 const lerpC = (a,b,t)=> _c.set(a).lerp(new THREE.Color(b), t).getHex();
 
 function disposeLevel(){
   dressing.dispose();
+  forgeGates.dispose();
   forgeCast.dispose();
   if(group){ scene.remove(group);
     group.traverse(o=>{
@@ -2311,6 +2314,7 @@ async function enterDungeon(){
   try {
     forgeCast.setVisible(false);
     const allyClasses = [0, 1, 2].map((i) => document.getElementById(`ally${i}`)?.value).filter(Boolean);
+    forgeGates.root.visible = false;
     await play.enter({
       dungeon: D,
       raceId: raceSel,
@@ -2330,6 +2334,7 @@ play.ctx.onExitPlay = ()=>{
   cam.zoom = 1; cam.updateProjectionMatrix();
   if(el.enter) el.enter.textContent = 'ENTER DUNGEON';
   forgeCast.setVisible(true);
+  forgeGates.root.visible = true;
 };
 
 /* -------- theme selection -------- */
@@ -2424,6 +2429,7 @@ function forge(animate){
   plantWallTorches(d, group);
   plantRoomScenes(d, group);
   plantMagicRocks(d, group).catch((err) => console.warn('[magic-rocks]', err));
+  forgeGates.plant(d, scene).catch((err) => console.warn('[gates]', err));
   if (d.terrain?.sample) {
     group.traverse((o) => {
       if (o.name && /^(kit-chest|kit-torch|cover-|torch-|smelter-|temple-|magic-rock-)/.test(o.name)) {
@@ -2514,6 +2520,7 @@ function tick(){
   liveUpdate(elapsed, animating ? animT - 2.3 : Infinity);
   if (typeof fx.fire?.update === 'function') fx.fire.update(cam, elapsed);
   dressing.update(elapsed);
+  forgeGates.update(dt);
   forgeCast.update(dt);
   play.update(dt);
   renderer.info.reset();

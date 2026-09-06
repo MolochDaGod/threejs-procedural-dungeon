@@ -22,8 +22,8 @@ function roomIdAt(session, wx, wz) {
   return d.roomId[c.y * d.W + c.x];
 }
 
-function livingInRoom(session, roomId) {
-  return session.enemies.filter((e) => e.alive && e.room?.id === roomId);
+export function livingInRoom(session, roomId) {
+  return (session.enemies || []).filter((e) => e.alive && e.room?.id === roomId);
 }
 
 export function createScriptRuntime(script) {
@@ -76,6 +76,7 @@ export function clearRoom(session, roomId, { toastFn } = {}) {
   if (livingInRoom(session, roomId).length) return false;
   rt.cleared.add(roomId);
   rt.gatesOpen.add(roomId);
+  session.gates?.openForRoom?.(roomId);
   toastFn?.('Path opens');
   return true;
 }
@@ -133,6 +134,7 @@ export function tickScript(session, { toastFn, onPhase, onComplete } = {}) {
 
 /** Block walking into a gated room whose prior hall is not cleared. */
 export function gateBlocks(session, wx, wz) {
+  if (session.gates?.blocks?.(wx, wz)) return true;
   const rt = session.script;
   const d = session.d;
   if (!rt || !d?.rooms) return false;

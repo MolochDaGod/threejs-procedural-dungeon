@@ -57,7 +57,7 @@ export const DUNGEON_RULESET = {
     smash: 'Boss/elite earth_spike and column only — player never breaks cells',
   },
   mechanics: [
-    { id: 'clear_gate',    when: 'leave_gated_room', unless: 'room_cleared', effect: 'block_deeper' },
+    { id: 'clear_gate',    when: 'KeyE near doorway', unless: 'room_cleared', effect: '5s_cast + room_aggro; instant if cleared' },
     { id: 'awaken_on_enter', when: 'enter_room', effect: 'awaken_room_mobs' },
     { id: 'shrine_once',   when: 'KeyE', unless: 'spent', effect: 'restore_party' },
     { id: 'pool_hazard',   when: 'overlap_water', effect: 'dps_slow' },

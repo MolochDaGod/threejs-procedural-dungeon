@@ -135,6 +135,7 @@ export const DRESSING = {
   barrel: `${CDN}/game-assets/glb/kaykit/gltf/barrel.glb`,
   pillar: `${CDN}/game-assets/glb/kaykit/gltf/pillar.glb`,
   ruin: `${CDN}/game-assets/glb/kaykit/gltf/pillar_broken.glb`,
+  gate: '/models/props/the-gate.glb',
 };
 
 export const PLAY = {
@@ -170,6 +171,7 @@ export const PLAY = {
   },
   parry: { key: 'KeyC', window: 0.30, cd: 1.35, stam: 12, invuln: 0.22, shiftRmb: true, stun: 1.4 },
   block: { key: 'KeyE', factor: 0.55, stam: 6, drain: 14, facingDot: 0.15 },
+  gate: { key: 'KeyE', forceSec: 5, reach: 2.2, heightM: 3.25, thickM: 0.55 },
   slide: { key: 'ControlLeft', distance: 3.4, duration: 0.55, cd: 0.95, stam: 22, hitRadius: 1.15, damage: 16 },
   /** Indoor shoulder TPS — Casting contract, hall-scale boom (not map 20 / outdoor 8.4). */
   tps: {

@@ -93,6 +93,11 @@ export function mountHud() {
       <div class="ph-loot-list" id="ph-loot-list"></div>
       <kbd>E</kbd>
     </div>
+    <div class="ph-gate" id="ph-gate" hidden>
+      <b>GATE</b>
+      <em id="ph-gate-msg">E · OPEN</em>
+      <i id="ph-gate-bar"></i>
+    </div>
     <div class="ph-load" id="ph-load" hidden><i></i><b>Loading dungeon…</b></div>
     <div class="ph-lobby" id="ph-lobby" hidden>
       <header>FOUR HEROES · pick class &amp; weapon · then enter</header>
@@ -447,6 +452,18 @@ export function renderHud(state) {
     const show = (state.reviveT || 0) > 0.05;
     rev.hidden = !show;
     if (show) rev.querySelector('i').style.width = `${Math.min(100, (state.reviveT / 2) * 100)}%`;
+  }
+  const gate = hud.querySelector('#ph-gate');
+  if (gate) {
+    const g = state.gate;
+    const show = !!g && (state.reviveT || 0) <= 0.05 && !state.lootBody;
+    gate.hidden = !show;
+    if (show) {
+      const msg = gate.querySelector('#ph-gate-msg');
+      if (msg) msg.textContent = g.force ? `HOLD E · 5s · ${g.n} aggro` : 'E · OPEN';
+      const bar = gate.querySelector('#ph-gate-bar');
+      if (bar) bar.style.width = g.force ? `${Math.min(100, 100 * (g.t || 0) / Math.max(0.01, g.max || 5))}%` : '0';
+    }
   }
   const loot = hud.querySelector('#ph-loot');
   if (loot) {
