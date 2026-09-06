@@ -156,7 +156,7 @@ export const CLASS_SKILL_0 = {
     cd: 8,
     range: 2,
     damage: 0,
-    heal: 0,
+    heal: 24,
     telegraphSec: 0.28,
     anim: 'cast',
     slot: 0,

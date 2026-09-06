@@ -3,11 +3,14 @@
  * Bear SSOT = Casting worge-bear: ONE wk-warbear.glb + six race albedos.
  * Do not rematch clips onto race GLBs. Iguana = FantasyPack1 per-race bake.
  */
+import * as THREE from 'three';
 import { RACES } from '../ssot.js';
 
 export const CASTING = 'https://casting.grudge.studio';
 export const WORGE_BEAR_MESH = `${CASTING}/models/class-forms/worge-bear/wk-warbear.glb`;
-export const WORGE_BEAR_HEIGHT_M = 2.0;
+/** Standing SI — larger than orc 2.0 m. AABB of the whole GLB is not this. */
+export const WORGE_BEAR_HEIGHT_M = 2.8;
+export const IGUANA_HEIGHT_M = 2.0;
 
 const BEAR_ALBEDO_EXT = {
   WK: 'png',
@@ -79,12 +82,33 @@ export const FORMS = {
     classIds: ['verduror'],
     start: true,
     heal: true,
-    heightM: 1.65,
+    heightM: IGUANA_HEIGHT_M,
     meshUrl: IGUANA_MESH,
     albedo: iguanaAlbedoUrl,
     tint: iguanaTint,
   },
 };
+
+const _meshBox = new THREE.Box3();
+
+/** Visible-mesh height, then feet on y=0. Do not use the whole GLB scene AABB. */
+export function fitFormToSi(root, heightM) {
+  if (!root) return;
+  root.updateMatrixWorld(true);
+  _meshBox.makeEmpty();
+  root.traverse((o) => {
+    if (o.isMesh && o.visible) _meshBox.expandByObject(o);
+  });
+  if (_meshBox.isEmpty()) _meshBox.setFromObject(root);
+  const h = Math.max(0.2, _meshBox.max.y - _meshBox.min.y);
+  root.scale.multiplyScalar(heightM / h);
+  root.updateMatrixWorld(true);
+  _meshBox.makeEmpty();
+  root.traverse((o) => {
+    if (o.isMesh && o.visible) _meshBox.expandByObject(o);
+  });
+  if (!_meshBox.isEmpty()) root.position.y -= _meshBox.min.y;
+}
 
 export function formUrl(formId, raceId) {
   const f = FORMS[formId];
@@ -107,3 +131,18 @@ export const WORGE_BEAR_CLIP_ROLES = {
   warbear_stun: 'stun',
   warbear_die: 'death',
 };
+
+export function classifyFormClip(name) {
+  const n = String(name || '').toLowerCase();
+  if (WORGE_BEAR_CLIP_ROLES[n]) return WORGE_BEAR_CLIP_ROLES[n];
+  const stem = (n.match(/warbear_[a-z0-9_]+/) || [n])[0];
+  if (WORGE_BEAR_CLIP_ROLES[stem]) return WORGE_BEAR_CLIP_ROLES[stem];
+  if (/stand|idle|wait/.test(n)) return 'idle';
+  if (/run|sprint/.test(n)) return 'run';
+  if (/walk|move|locomotion/.test(n)) return 'walk';
+  if (/attack|slash|bite|claw|strike/.test(n)) return 'attack';
+  if (/hit|flinch|damage/.test(n)) return 'hit';
+  if (/stun/.test(n)) return 'stun';
+  if (/die|death/.test(n)) return 'death';
+  return null;
+}

@@ -39,7 +39,7 @@ import { addLoot, loadBag, spendLoot } from './bag.js';
 import { CLASS_CRAFTS, canRefillTonic, craftsForClass } from './classCrafts.js';
 import { bindHud, fillEquipPanel, mountHud, paintClassRadial, paintItemRadial, paintMappedBars, paintMountMenu, renderHud, setHudClassSkills, setHudSkills, showEnd, toast } from './hud.js';
 import { classSkill0 } from './classSkill0.js';
-import { defaultFormFor, FORMS, formUrl, WORGE_BEAR_CLIP_ROLES, WORGE_BEAR_HEIGHT_M } from './forms.js';
+import { classifyFormClip, defaultFormFor, fitFormToSi, FORMS, formUrl } from './forms.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 
 import { makeTotemMesh, TOTEM_LIFE, TOTEM_PULSE, TOTEM_RANGE_BONUS, TOTEM_SHIELD_MAX, TOTEM_SHIELD_TICK, TOTEM_STR } from './totems.js';
@@ -717,11 +717,19 @@ export class PlaySession {
           sneak: !!(this.classId === 'thief' && this.classState?.hidden),
           strafe,
         });
+        this._syncFormGait(moving, this.downed ? false : sprint);
       }
       if (this._air && !this._wasAir) this.player.requestOneShot?.('jump');
       this._wasAir = this._air;
       if (this._formMixer) {
         this._formMixer.update(dt);
+      }
+      if (this.classState?.form === 'iguana' && !this.downed) {
+        this._iguanaHotT = (this._iguanaHotT || 0) - dt;
+        if (this._iguanaHotT <= 0) {
+          this._iguanaHotT = 2.4;
+          this.applyPartyHeal(8, this.pos, { range: 4.2, color: 0x6bbf4a, name: 'Iguana bloom' });
+        }
       }
       this.player.update(dt);
       if (sprint && moving) {
@@ -1775,6 +1783,7 @@ export class PlaySession {
         toast(`${spell.name} · off`);
       } else {
         void this.enterForm(spell.form);
+        if (spell.heal) this.applyPartyHeal(spell.heal, this.pos, { range: Math.max(spell.range || 4, 4.2), color: spell.color, name: spell.name });
         toast(spell.name);
       }
     } else if (spell.id === 't_invis' || spell.id === 't_marking_marks') {
@@ -2129,12 +2138,39 @@ export class PlaySession {
       this._formMixer.stopAllAction();
       this._formMixer = null;
     }
+    this._formActions = null;
+    this._formGait = null;
     if (this._formVis) {
       this.player?.root.remove(this._formVis);
       this._formVis = null;
     }
     if (this.player?.visual) this.player.visual.visible = true;
     if (this.classState) this.classState.form = null;
+  }
+
+  _syncFormGait(moving, sprint) {
+    const acts = this._formActions;
+    if (!acts?.idle) return;
+    const next = !moving ? 'idle' : (sprint && acts.run ? 'run' : (acts.walk ? 'walk' : 'idle'));
+    if (this._formGait === next) return;
+    const prev = acts[this._formGait];
+    const cur = acts[next];
+    if (prev && prev !== cur) prev.fadeOut(0.14);
+    if (cur) {
+      cur.reset();
+      cur.setLoop(THREE.LoopRepeat, Infinity);
+      cur.fadeIn(0.12).play();
+    }
+    this._formGait = next;
+  }
+
+  _formOneShot(role) {
+    const act = this._formActions?.[role];
+    if (!act) return;
+    act.reset();
+    act.setLoop(THREE.LoopOnce, 1);
+    act.clampWhenFinished = true;
+    act.fadeIn(0.08).play();
   }
 
   async enterForm(formId) {
@@ -2145,11 +2181,9 @@ export class PlaySession {
       const src = gltf.scene || gltf;
       const vis = cloneSkinned(src);
       vis.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
-      const wantH = formId === 'bear' ? WORGE_BEAR_HEIGHT_M : (FORMS[formId]?.heightM || 1.7);
-      const box = new THREE.Box3().setFromObject(vis);
-      const h = Math.max(0.2, box.max.y - box.min.y);
-      vis.scale.multiplyScalar(wantH / h);
       vis.position.set(0, 0, 0);
+      vis.scale.set(1, 1, 1);
+      fitFormToSi(vis, FORMS[formId]?.heightM || 2);
       const spec = FORMS[formId];
       if (spec?.albedo) {
         const albedo = typeof spec.albedo === 'function' ? spec.albedo(this.raceId) : spec.albedo;
@@ -2181,18 +2215,26 @@ export class PlaySession {
       this.player.root.add(vis);
       this._formVis = vis;
       const clips = gltf.animations || [];
+      this._formActions = {};
+      this._formGait = null;
       if (clips.length) {
         this._formMixer = new THREE.AnimationMixer(vis);
         for (const raw of clips) {
           const clip = raw.clone();
           clip.tracks = clip.tracks.filter((t) => !/\.position$/i.test(t.name) || !/^(Armature|Warbear|Bip001|_rootJoint)/i.test(t.name.split('.')[0]));
           const act = this._formMixer.clipAction(clip);
-          const stem = (clip.name.match(/warbear_[a-z0-9_]+/i) || [clip.name])[0];
-          const role = WORGE_BEAR_CLIP_ROLES[stem] || (/stand|idle/i.test(stem) ? 'idle' : null);
-          if (role === 'idle') act.play();
+          const role = classifyFormClip(clip.name);
+          if (role && !this._formActions[role]) this._formActions[role] = act;
+        }
+        const idle = this._formActions.idle;
+        if (idle) {
+          idle.setLoop(THREE.LoopRepeat, Infinity);
+          idle.play();
+          this._formGait = 'idle';
         }
       }
       this.classState.form = formId;
+      if (formId === 'iguana') this._iguanaHotT = 0.4;
       toast(`Form · ${FORMS[formId]?.name || formId}`);
     } catch (err) {
       console.warn('[grudge-dungeon] form miss', formId, err?.message || err);
@@ -2213,7 +2255,8 @@ export class PlaySession {
     const sprinting = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
     const animName = animForSpell(this.player?.clips, spell, { comboStage: this.comboStage || 0, sprint: sprinting });
     const shotDur = this.player?.clips?.[animName]?.duration || 0.42;
-    this.player?.requestOneShot(animName, shotDur);
+    if (this._formVis) this._formOneShot(spell.kind === 'slash' || spell.kind === 'dash' ? 'attack' : (spell.heal ? 'idle' : 'attack'));
+    else this.player?.requestOneShot(animName, shotDur);
     playSfx(spell.kind === 'slash' || spell.kind === 'dash' ? 'combat_hit' : 'combat_spell', { volume: 0.32 });
     this.vfx.aura({ origin: this.pos.clone(), color: spell.color, life: 0.28 });
     const tel = spell.telegraphSec || 0.15;

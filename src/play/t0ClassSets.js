@@ -279,7 +279,7 @@ export const T8_CLASS_SETS = {
     {
       id: 'unarmed',
       t8: 'ITEM-20260822000000-7FDFEE-782E79BC', name: 'Bear Claws T8', t0: 't0-claw',
-      skills: ['claw_rending_slash', 'claw_beast_stomp', 'claw_instinct', 'claw_bear_maul', 'claw_bear_guard', 'claw_blood_frenzy'],
+      skills: ['claw_rending_slash', 'claw_instinct', 't0_staff_healing_sprout', 'staff_divine_wave', 'staff_radiant_heal', 'claw_blood_frenzy'],
     },
     {
       id: 'mace_nature_tome',
