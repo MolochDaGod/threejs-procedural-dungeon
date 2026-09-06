@@ -1,8 +1,8 @@
 # Grudge Dungeons — Warlords Era
 
-Playable layer on [Dungeon Forge](https://procedural-dungeon.netlify.app): the same seeded pipeline, plus a **linear crawl** using production Warlords / uMMORPG (Toon RTS) characters bound the same way as [Grudge Gladiators](https://combat.grudge-studio.com/).
+**Playable product:** https://grudge-dungeons.vercel.app — Grudge Warlords Era linear crawl (Toon RTS / uMMORPG characters, same bind as [Grudge Gladiators](https://combat.grudge-studio.com/)).
 
-**Live:** https://grudge-dungeons.vercel.app
+[procedural-dungeon.netlify.app](https://procedural-dungeon.netlify.app) is the **upstream generator demo only** (Majid Manzarpour). Not Grudge, not a game, not this deploy. This repo uses that seeded `generateDungeon` in-process — no second generator, no Netlify host.
 
 ## Source of truth
 

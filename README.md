@@ -1,8 +1,10 @@
 # Grudge Dungeons — Warlords Era
 
-Playable crawl on [Dungeon Forge](https://procedural-dungeon.netlify.app). Same seeded `generateDungeon` (no second generator). Play bodies are Toon-RTS `{race}.glb` from the Grudge CDN, bound like [Grudge Gladiators](https://combat.grudge-studio.com/) — not vendored Unity FBX, not Meshy, not capsules.
+**This game is [https://grudge-dungeons.vercel.app](https://grudge-dungeons.vercel.app).** That is the only playable Warlords crawl.
 
-**Live:** [https://grudge-dungeons.vercel.app](https://grudge-dungeons.vercel.app)
+[procedural-dungeon.netlify.app](https://procedural-dungeon.netlify.app) is **not** Grudge. It is Majid Manzarpour’s upstream **generator demo** (watch a seed carve rooms). No Toon kits, no Rapier TPS, no T8 skills, not game-ready. This repo kept that `generateDungeon` pipeline and built play on it — one generator, **this** Vercel host.
+
+Play bodies are Toon-RTS `{race}.glb` from the Grudge CDN, bound like [Grudge Gladiators](https://combat.grudge-studio.com/) — not vendored Unity FBX, not Meshy, not capsules.
 
 Forge → **ENTER DUNGEON** / `E` → indoor shoulder TPS crawl. Full contract: [`docs/GRUDGE_DUNGEON.md`](docs/GRUDGE_DUNGEON.md). Clip names: [`src/play/clipRoles.js`](src/play/clipRoles.js).
 
@@ -163,9 +165,9 @@ threejs-procedural-dungeon/
 
 ---
 
-# Dungeon Forge (upstream generator)
+# Upstream generator (not the game)
 
-### ▶ [Play the live demo](https://procedural-dungeon.netlify.app)  ·  by [@majidmanzarpour](https://x.com/majidmanzarpour)
+Credit: [Majid Manzarpour](https://x.com/majidmanzarpour) — [procedural-dungeon.netlify.app](https://procedural-dungeon.netlify.app) is a **watch-it-forge** showcase of the seeded pipeline. It is **not** Grudge Dungeons and it is **not** a playable Warlords crawl. Play lives only at [grudge-dungeons.vercel.app](https://grudge-dungeons.vercel.app).
 
 **A deterministic procedural dungeon generator you can watch build itself, room by room.** Rooms
 are scattered and shoved apart, triangulated, wired into a corridor graph, carved into a tile grid,
@@ -305,4 +307,5 @@ textures, and post-processing are still generated in the browser.
 
 ## License
 
-[MIT](LICENSE) © 2026 [Majid Manzarpour](https://x.com/majidmanzarpour).
+Generator pipeline: [MIT](LICENSE) © [Majid Manzarpour](https://x.com/majidmanzarpour).  
+Warlords crawl / Toon play / this Vercel product: **Grudge Studio** — [https://grudge-dungeons.vercel.app](https://grudge-dungeons.vercel.app).

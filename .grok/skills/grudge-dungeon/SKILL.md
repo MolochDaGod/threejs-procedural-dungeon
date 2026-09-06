@@ -10,7 +10,7 @@ description: >
 
 # Grudge Dungeon — skill router
 
-This repo is **Dungeon Forge + playable Warlords crawl**. Do not treat it as a greenfield Three.js toy.
+This repo is **Grudge Dungeons** — playable Warlords crawl at **https://grudge-dungeons.vercel.app**. The in-repo forge is the seeded `generateDungeon` pipeline (upstream credit: Majid’s Netlify demo, not our game). Do not treat this as a greenfield Three.js toy. Do not send players to procedural-dungeon.netlify.app.
 
 ## Always load first
 
@@ -27,7 +27,7 @@ Then load siblings from the map. **Loaded** = you actually read the file.
 - Spells are **linear** (projectile / beam / slash / nova / dash) per `SPELLS` in `src/ssot.js`.
 - Linear crawl = critical path, **7 wide rooms**, 0 loops unless the user asks for the full graph. Path is cave/door entrance → combat → mini-boss → **boss arena**.
 - Secrets stay out of the client. `GEMINI_API_KEY` is agent-only.
-- **No new hosts.** Play ships on existing Vercel SPA (`/dungeon` on grudge-builder). Assets go to existing R2 `models/dungeons/warlords-dungeon-kit.json`. Deploy with `grudge-assets-sync` / `npm run upload:warlords-assets` / `agent:deploy --client` — never a new Vercel project.
+- **No new hosts.** Play ships on existing Vercel `grudgenexus/grudge-dungeons` → `https://grudge-dungeons.vercel.app`. Assets go to existing R2 `models/dungeons/warlords-dungeon-kit.json`. Never a new Vercel project, never Netlify.
 
 ## When the user says “tune / polish / feel / HUD / AI skills”
 
