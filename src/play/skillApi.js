@@ -39,6 +39,7 @@ function applyRemote(local, remote) {
   if (icon) local.iconUrl = iconUrlFromPath(icon);
   const prefab = remote.prefab || {};
   if (prefab.vfxRef) local.castEffectId = local.castEffectId || prefab.vfxRef;
+  if (prefab.overlayRef) local.overlayRef = prefab.overlayRef;
   if (prefab.impactRef) local.impactEffectId = local.impactEffectId || prefab.impactRef;
   if (prefab.modelRef && !local.meshPath) local.meshPath = resolvePlayUrl(prefab.modelRef);
   if (prefab.overlay) local.overlay = { ...(local.overlay || {}), ...prefab.overlay };

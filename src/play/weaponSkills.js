@@ -85,6 +85,7 @@ function decorate(id, m) {
     telegraphSec: m.telegraphSec ?? (kind === 'slash' ? 0.12 : kind === 'nova' || kind === 'zone' ? 0.4 : 0.22),
     meshPath,
     overlay,
+    overlayRef: overlay?.overlayRef || overlay?.vfxRef || null,
     castEffectId: overlay?.vfxRef || null,
     anim: kind === 'slash' || kind === 'dash' ? 'attack' : 'cast',
     iconUrl: resolveSkillIcon({ id, iconUrl: m.iconUrl }),

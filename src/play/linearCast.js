@@ -142,6 +142,8 @@ export class LinearCastWorld {
     if (overlay) {
       attachStylizedOverlay(root, overlay, color).then((bits) => {
         item.styTrail = bits.trail || null;
+        item.styHead = bits.head || null;
+        item.styMuzzle = bits.muzzle || null;
       }).catch(() => {});
     }
     this.items.push(item);
@@ -184,6 +186,8 @@ export class LinearCastWorld {
     if (overlay) {
       attachStylizedOverlay(root, overlay, color).then((bits) => {
         item.styTrail = bits.trail || null;
+        item.styHead = bits.head || null;
+        item.styMuzzle = bits.muzzle || null;
       }).catch(() => {});
     }
     this.items.push(item);
@@ -289,6 +293,13 @@ export class LinearCastWorld {
       });
       if (it.styTrail?.material?.map) {
         it.styTrail.material.map.offset.x -= dt * 2.6;
+      }
+      if (it.styHead?.userData?.spin && it.styHead.material) {
+        it.styHead.material.rotation += dt * it.styHead.userData.spin;
+      }
+      if (it.styMuzzle?.material) {
+        it.styMuzzle.material.opacity = Math.max(0, (it.styMuzzle.material.opacity ?? 1) - dt * 4.2);
+        if (it.styMuzzle.material.opacity <= 0.02) it.styMuzzle.visible = false;
       }
       if (it.type === 'line') {
         const step = it.vel * dt;
