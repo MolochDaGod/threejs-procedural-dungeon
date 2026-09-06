@@ -340,6 +340,7 @@ export class Actor {
     this.moveLock = 0;
     this._hold = null;
     this.alive = true;
+    this.dead = false;
     this.ready = false;
     this.groundSampler = null;
   }
@@ -411,8 +412,33 @@ export class Actor {
     }
   }
 
+  die() {
+    this.alive = false;
+    this.dead = true;
+    this.busy = 0;
+    this._hold = null;
+    const act = this.play('death', 0.12, false);
+    if (act) {
+      for (const k of LOCO_KEYS) {
+        if (this.loco[k]) {
+          this.loco[k].setEffectiveWeight(0);
+          this.loco[k].fadeOut(0.12);
+        }
+      }
+    } else {
+      for (const k of LOCO_KEYS) {
+        if (this.loco[k]) this.loco[k].paused = true;
+      }
+      if (this.actions.overlay) {
+        this.actions.overlay.paused = true;
+        this.actions.overlay.clampWhenFinished = true;
+      }
+    }
+    return act;
+  }
+
   setGait(moving, sprint, opts = {}) {
-    if (!this.alive) return;
+    if (!this.alive || this.dead) return;
     let next = 'idle';
     if (opts.downed) next = this.clips.crawl ? 'crawl' : 'walk';
     else if (opts.sneak) next = moving ? (this.clips.sneak ? 'sneak' : 'walk') : (this.clips.crouch ? 'crouch' : 'idle');
@@ -428,6 +454,10 @@ export class Actor {
   }
 
   update(dt) {
+    if (this.dead) {
+      this.mixer?.update(dt);
+      return;
+    }
     if (this.moveLock > 0) this.moveLock -= dt;
     if (this.busy > 0) {
       this.busy -= dt;

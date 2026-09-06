@@ -87,6 +87,12 @@ export function mountHud() {
     <div class="ph-toast" id="ph-toast"></div>
     <div class="ph-timer" id="ph-timer" hidden>0:00</div>
     <div class="ph-revive" id="ph-revive" hidden><i></i><b>HOLD E · LIFT</b></div>
+    <div class="ph-loot" id="ph-loot" hidden>
+      <b>LOOT BODY</b>
+      <em id="ph-loot-who"></em>
+      <div class="ph-loot-list" id="ph-loot-list"></div>
+      <kbd>E</kbd>
+    </div>
     <div class="ph-load" id="ph-load" hidden><i></i><b>Loading dungeon…</b></div>
     <div class="ph-lobby" id="ph-lobby" hidden>
       <header>FOUR HEROES · pick class &amp; weapon · then enter</header>
@@ -200,7 +206,7 @@ export function paintMappedBars(hud, loadout, classSkills, extra = {}) {
   }
 }
 
-export function bindHud(hud, { onCast, onClassCast, onUseItem, onMount, onMountMenu, onItemRadial, onExit, onHealFocus, onEnterCrawl, onPickClass, onPickWeapon, onPickAlly, onHudLayout, getSkillPool }) {
+export function bindHud(hud, { onCast, onClassCast, onUseItem, onMount, onMountMenu, onItemRadial, onExit, onHealFocus, onEnterCrawl, onPickClass, onPickWeapon, onPickAlly, onHudLayout, getSkillPool, onLootBody }) {
   hud.querySelector('#ph-bar6').addEventListener('click', (e) => {
     const slot = e.target.closest('.ph-slot');
     if (!slot) return;
@@ -251,6 +257,7 @@ export function bindHud(hud, { onCast, onClassCast, onUseItem, onMount, onMountM
     onExit?.();
   });
   hud.querySelector('#ph-enter-crawl')?.addEventListener('click', () => onEnterCrawl?.());
+  hud.querySelector('#ph-loot')?.addEventListener('click', () => onLootBody?.());
   bindHudEdit(hud, {
     onLayout: onHudLayout,
     getPool: getSkillPool,
@@ -440,6 +447,22 @@ export function renderHud(state) {
     const show = (state.reviveT || 0) > 0.05;
     rev.hidden = !show;
     if (show) rev.querySelector('i').style.width = `${Math.min(100, (state.reviveT / 2) * 100)}%`;
+  }
+  const loot = hud.querySelector('#ph-loot');
+  if (loot) {
+    const body = state.lootBody;
+    const show = !!(body && body.items?.length) && (state.reviveT || 0) <= 0.05;
+    loot.hidden = !show;
+    if (show) {
+      const who = loot.querySelector('#ph-loot-who');
+      if (who) who.textContent = body.name || 'Body';
+      const list = loot.querySelector('#ph-loot-list');
+      if (list) {
+        list.innerHTML = body.items.map((s) => `
+          <div class="eq-loot"><img src="${s.icon || ''}" alt="" width="28" height="28" /><b>${s.label}</b><span>×${s.n}</span></div>
+        `).join('');
+      }
+    }
   }
   const lock = hud.querySelector('#ph-lock');
   if (lock) {

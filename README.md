@@ -42,7 +42,8 @@ Honest vs shipped. Green = live on `grudge-dungeons.vercel.app`. Yellow = wired 
 | Session bag unique crafts | Green | lockpick set / form page / tonics / spell pages — **not** Railway yet |
 | Hurt / stun clips | Yellow | **not on donor** — flinch no-ops (never fake `attack`) |
 | Magic / bow unique casts | Yellow | no `magic_cast` / `bow_shot` on donor — reuse `attack` |
-| Death clip | Yellow | donor has none; `anim_death.glb` fill |
+| Death clip | Green | donor has none; `anim_death.glb` on `Actor.die()` (freeze pose if missing) |
+| Corpse loot | Green | stand on body · **E** loot popup → session bag (`BAG_DEFS` only) |
 | Warbear / iguana forms | Yellow | Casting warbear URL + local iguana albedos; not Railway `formSkin` |
 | Account bag / character UUID handoff | Red | crawl bag is session yield only |
 
@@ -67,6 +68,7 @@ Skills are catalog ids (T8 / T0), linear 3D (slash / projectile / beam / nova / 
 | Dodge roll | X · **AA / DD** double-tap |
 | Parry (stagger) | **Shift+RMB** (not focus toggle) |
 | Block | **E** (combat) · hold E OOC = class radial |
+| Loot body | **E** when LOOT BODY popup (skips block) · hold E on downed ally = lift |
 | Slide | Ctrl |
 | Weapon skills | 1–5 |
 | Items / mounts | 6–7 / 8 |

@@ -44,6 +44,14 @@ export function saveBag(bag) {
   try { localStorage.setItem(KEY, JSON.stringify(bag)); } catch { /* guest */ }
 }
 
+/** Session corpse yield — existing bag ids only. */
+export function corpseYield(kind = 'trash') {
+  if (kind === 'boss') return [{ id: 'iron_bit', n: 2 }, { id: 'stone_chip', n: 3 }];
+  if (kind === 'elite') return [{ id: 'iron_bit', n: 1 }, { id: 'cloth_scrap', n: 1 }];
+  const pool = ['wood_scrap', 'cloth_scrap', 'stone_chip'];
+  return [{ id: pool[Math.floor(Math.random() * 3)], n: 1 }];
+}
+
 export function addLoot(bag, id, n = 1) {
   const next = { ...bag, [id]: (bag[id] || 0) + n };
   saveBag(next);

@@ -35,7 +35,7 @@ import { TelegraphField } from './telegraph.js';
 import { instanceCatalog, preloadDungeonAssets, loadGltf } from './assets.js';
 import { loadInteriorKits, plantDressPlan } from '../props/kitPlant.js';
 import { DungeonPinata, clearPinataCell } from './pinata.js';
-import { addLoot, loadBag, spendLoot } from './bag.js';
+import { addLoot, BAG_DEFS, corpseYield, loadBag, spendLoot } from './bag.js';
 import { CLASS_CRAFTS, canRefillTonic, craftsForClass } from './classCrafts.js';
 import { bindHud, fillEquipPanel, mountHud, paintClassRadial, paintItemRadial, paintMappedBars, paintMountMenu, renderHud, setHudClassSkills, setHudSkills, showEnd, toast } from './hud.js';
 import { classSkill0 } from './classSkill0.js';
@@ -59,6 +59,12 @@ import { attachPlayHelpers } from '../helpers/playHelpers.js';
 import { mountShrineWisps, tickWisps } from './wisp.js';
 
 const KEYS = new Set();
+
+function corpseKind(e) {
+  if (e?.boss || e?.kind === 'boss' || e?.room?.type === 'boss') return 'boss';
+  if (e?.kind === 'elite' || e?.room?.type === 'elite') return 'elite';
+  return 'trash';
+}
 
 function elementShader(el) {
   if (el === 'fire') return 'fire';
@@ -156,6 +162,7 @@ export class PlaySession {
       onPickAlly: (i, id) => { void this.setAllyClass(i, id); },
       onHudLayout: () => this.refreshHudBars(),
       getSkillPool: () => [...(this.loadout || []), ...(this.classSkills || [])],
+      onLootBody: () => this.tryLootCorpse(),
     });
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
@@ -247,6 +254,7 @@ export class PlaySession {
       }
       /* class slot 0 / smash handled via binds.c0 */
       if (e.code === 'KeyE' && this.phase === 'lobby') { e.preventDefault(); this.beginCrawl(); }
+      if (e.code === 'KeyE' && this.phase === 'crawl' && this.tryLootCorpse()) { e.preventDefault(); return; }
 
       if (e.code === 'Escape') this.exit();
       if (e.code === 'Tab') {
@@ -256,7 +264,10 @@ export class PlaySession {
         else this.aiming?.cycleTarget(this.enemies);
       }
     });
-    addEventListener('keyup', (e) => this.keys.delete(e.code));
+    addEventListener('keyup', (e) => {
+      this.keys.delete(e.code);
+      if (e.code === 'KeyE') this._lootE = false;
+    });
     addEventListener('pointermove', (e) => {
       if (!this.active || this.tps?.enabled) return;
       const nx = (e.clientX / innerWidth) * 2 - 1;
@@ -609,16 +620,17 @@ export class PlaySession {
       this.iframes = (elapsed >= PLAY.dodge.iframeStart && elapsed < PLAY.dodge.iframeEnd) ? 0.08 : 0;
     }
     const nearDown = (this.allies || []).some((a) => a.downed && a.pos.distanceTo(this.pos) < 1.7);
+    const nearLoot = !!this.nearCorpse();
     const blockKey = loadHudLayout().binds.block || PLAY.block.key;
-    const eHeld = this.keys.has(blockKey);
-    if (eHeld && this.phase === 'crawl' && !nearDown && !this.inCombat()) {
+    const eHeld = this.keys.has(blockKey) && !this._lootE;
+    if (eHeld && this.phase === 'crawl' && !nearDown && !nearLoot && !this.inCombat()) {
       this._eHold = (this._eHold || 0) + dt;
       if (this._eHold >= 0.28) this.openRadial();
     } else {
       this._eHold = 0;
       if (!eHeld) this.closeRadial();
     }
-    this.blocking = !this.downed && this.phase === 'crawl' && eHeld && this.inCombat() && !nearDown && !this.radial;
+    this.blocking = !this.downed && this.phase === 'crawl' && eHeld && this.inCombat() && !nearDown && !nearLoot && !this.radial;
     this.player?.setHold?.('block', this.blocking);
     if (this.keys.has('KeyR') && this.phase === 'crawl' && !this.downed) {
       this._rHold = (this._rHold || 0) + dt;
@@ -2555,15 +2567,44 @@ export class PlaySession {
     addThreat(e, 'player', dmg * THREAT.damageMul * tankMul);
     pull(this, e, 8);
     playSfx('combat_hit', { volume: 0.3 });
-    e.actor.requestOneShot(e.status.stun || e.status.freeze ? 'stun' : 'hit', e.status.stun || e.status.freeze ? 0.35 : 0.18);
     this.vfx.shake.add(0.22);
     if (e.hp <= 0) {
       e.alive = false;
-      e.actor.alive = false;
-      e.actor.play('death', 0.08, false);
+      e.looted = false;
+      e.loot = corpseYield(corpseKind(e));
+      e.actor.die();
       this.punch(e.boss ? 90 : 40, e.boss ? 0.7 : 0.3);
       toast(e.boss ? `${e.prefab?.label || 'The warlord'} falls` : `${e.prefab?.label || 'Foe'} down`);
+    } else {
+      e.actor.requestOneShot(e.status.stun || e.status.freeze ? 'stun' : 'hit', e.status.stun || e.status.freeze ? 0.35 : 0.18);
     }
+  }
+
+  nearCorpse() {
+    if (this.phase !== 'crawl' || this.downed) return null;
+    const nearDown = (this.allies || []).some((a) => a.downed && a.pos.distanceTo(this.pos) < 1.7);
+    if (nearDown) return null;
+    let best = null;
+    let bestD = 1.8;
+    for (const e of this.enemies || []) {
+      if (e.alive || e.looted || !(e.loot?.length)) continue;
+      const d = e.pos.distanceTo(this.pos);
+      if (d < bestD) { best = e; bestD = d; }
+    }
+    return best;
+  }
+
+  tryLootCorpse() {
+    const e = this.nearCorpse();
+    if (!e) return false;
+    for (const it of e.loot) this.bag = addLoot(this.bag, it.id, it.n);
+    const names = e.loot.map((it) => `${BAG_DEFS[it.id]?.label || it.id} ×${it.n}`).join(' · ');
+    e.looted = true;
+    e.loot = [];
+    this._lootE = true;
+    this.player?.requestOneShot?.('interact', 0.45);
+    toast(`Looted · ${names}`);
+    return true;
   }
 
   hitRadius(pos, r, dmg) {
@@ -2809,6 +2850,20 @@ export class PlaySession {
     return rooms || 'Find the warlord';
   }
 
+  _lootHud() {
+    const e = this.nearCorpse();
+    if (!e) return null;
+    return {
+      name: e.prefab?.label || 'Body',
+      items: e.loot.map((it) => ({
+        id: it.id,
+        n: it.n,
+        label: BAG_DEFS[it.id]?.label || it.id,
+        icon: BAG_DEFS[it.id]?.icon || '',
+      })),
+    };
+  }
+
   _hudState(sheet, extra = {}) {
     const listed = (this.script?.script?.path || []).filter((p) => p.type === 'combat' || p.type === 'elite' || p.type === 'boss');
     return {
@@ -2853,6 +2908,7 @@ export class PlaySession {
       iframes: this.iframes,
       parryT: this.parryT,
       lockpick: this.lockpick,
+      lootBody: this._lootHud(),
       classState: this.classState,
       classCds: this.classCds,
       classCdMax: Object.fromEntries((this.classSkills || []).map((s) => [s.slot, s.cd])),

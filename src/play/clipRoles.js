@@ -71,7 +71,7 @@ export const CLIP_FALLBACK = {
   jump: ['jump', 'flip'],
   slide: ['slide', 'dodge'],
   slideExit: ['slideExit'],
-  death: ['death', 'crawl'],
+  death: ['death'],
   interact: ['interact', 'plant', 'cast'],
   plant: ['plant', 'interact'],
   uppercut: ['uppercut', 'attack'],

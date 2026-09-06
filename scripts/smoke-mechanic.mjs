@@ -6,7 +6,7 @@ import { buildColliderAssets, greedyRects, hitsSolid, TILE } from '../src/physic
 import { compileMechanics, compileDungeonScript } from '../src/mechanic/compile.js';
 import { bindScript, tickScript } from '../src/play/scriptRuntime.js';
 import { readFileSync } from 'node:fs';
-import { CLASS_IDS, CLASS_WEAPON_SETS, COMBAT_DEPLOY, DUNGEON_KINDS, DUNGEON_SI, HERO_24, PIRATE_FACES, PLAY, PLAY_DEFAULTS, PROP_KITS, creatureOf, creaturesForBiome, loadoutFor, skillById } from '../src/ssot.js';
+import { ANIM_URLS, CLASS_IDS, CLASS_WEAPON_SETS, COMBAT_DEPLOY, DUNGEON_KINDS, DUNGEON_SI, HERO_24, PIRATE_FACES, PLAY, PLAY_DEFAULTS, PROP_KITS, creatureOf, creaturesForBiome, loadoutFor, skillById } from '../src/ssot.js';
 import { allyRaces } from '../src/play/party.js';
 import { flareBossForTheme, flareOf, FLARE_HOST } from '../src/content/flare.js';
 import { CELL_FLAG, damageBarrier, destroyCell, stampCover, firstObstruction, lineOpen } from '../src/grid/cells.js';
@@ -30,7 +30,7 @@ import { CLASS_CRAFTS, craftsForClass, canRefillTonic } from '../src/play/classC
 import { resolvePlayUrl } from '../src/play/playUrl.js';
 import { HUD_BINDS_DEFAULT, optimalSlots } from '../src/play/hudLayout.js';
 import { GAP_CLOSE, MELEE_COMBO } from '../src/play/meleeCombo.js';
-import { CLIP_DONOR_NAMES, CLIP_SKIP, classifyClips, resolveClipName, animForSpell, hitWindowSec } from '../src/play/clipRoles.js';
+import { CLIP_DONOR_NAMES, CLIP_SKIP, CLIP_FALLBACK, classifyClips, resolveClipName, animForSpell, hitWindowSec } from '../src/play/clipRoles.js';
 import { classifyId, playCharacterId } from '../src/play/ids.js';
 import { COMBAT_ITEMS } from '../src/play/combatItems.js';
 import { canAct, inferCc, makeStatus } from '../src/play/status.js';
@@ -40,7 +40,7 @@ import { createLockpickSession, attemptLockpickTumble, pinInSweetZone, setLockpi
 import { applyTaunt, topThreatKey, THREAT } from '../src/play/aggro.js';
 import { playKitPieces } from '../src/d1.js';
 import { FACTION_NERF, PACK_COMPS, packSizeForRoom, planFactionPacks } from '../src/play/factionPacks.js';
-import { BAG_DEFS } from '../src/play/bag.js';
+import { BAG_DEFS, corpseYield } from '../src/play/bag.js';
 
 const W = 12, H = 10;
 const grid = new Uint8Array(W * H);
@@ -337,6 +337,20 @@ report.styArrow = skillById('bow_quick_shot').overlay?.id === 'styproj.arrow';
 report.styGun = skillById('gun_grudge_shot').overlay?.id === 'styproj.laser2';
 report.styLocal = resolvePlayUrl('models/vfx/stylized-projectiles/Trail01.png') === '/models/vfx/stylized-projectiles/Trail01.png';
 report.bagClothIcon = /^https:\/\/assets\.grudge-studio\.com\//.test(BAG_DEFS.cloth_scrap.icon);
+const trashYield = corpseYield('trash');
+report.corpseTrash = trashYield.length === 1 && !!BAG_DEFS[trashYield[0].id] && trashYield[0].n === 1;
+const eliteYield = corpseYield('elite');
+report.corpseElite = eliteYield.some((x) => x.id === 'iron_bit') && eliteYield.every((x) => BAG_DEFS[x.id]);
+const bossYield = corpseYield('boss');
+report.corpseBoss = bossYield.some((x) => x.id === 'iron_bit' && x.n === 2) && bossYield.every((x) => BAG_DEFS[x.id]);
+report.deathNoCrawl = resolveClipName(swordRoles, 'death') === null;
+report.deathFallback = CLIP_FALLBACK.death[0] === 'death' && !CLIP_FALLBACK.death.includes('crawl');
+report.animDeathUrl = String(ANIM_URLS.death || '').includes('anim_death.glb');
+report.lootE = playSrc.includes('tryLootCorpse') && playSrc.includes('actor.die()');
+const charSrc = readFileSync(new URL('../src/play/characters.js', import.meta.url), 'utf8');
+report.actorDie = charSrc.includes("play('death'") && charSrc.includes('this.dead = true');
+const hudSrc = readFileSync(new URL('../src/play/hud.js', import.meta.url), 'utf8');
+report.phLoot = hudSrc.includes('id="ph-loot"') && hudSrc.includes('LOOT BODY');
 const skillApiSrc = readFileSync(new URL('../src/play/skillApi.js', import.meta.url), 'utf8');
 report.skillApiHealth = skillApiSrc.includes('/api/health') && skillApiSrc.includes('master-weaponSkills.json');
 const linearSrc = readFileSync(new URL('../src/play/linearCast.js', import.meta.url), 'utf8');
@@ -371,7 +385,7 @@ const fireSrc = readFileSync(new URL('../src/vfx/instancedFire.js', import.meta.
 report.fireHasUpdate = /update\s*\(/.test(fireSrc) && fireSrc.includes('uniforms');
 const mainSrc = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 report.fireTickGuarded = mainSrc.includes("typeof fx.fire?.update === 'function'");
-if (!mech.ok || !report.scriptOk || !report.floorWalkable || !report.voidBlocked || rects.length < 1 || floorY !== DUNGEON_SI.groundY || !report.troll || !report.smash || !report.barrierGone || report.heroes24 !== 24 || report.spiderSeeds < 2 || !report.modularWall || report.smelterVersions !== 5 || !report.carveLava || !report.carveVoid || !report.eventRoom || report.eventPlatforms < 4 || !report.eventSockets || report.platformCols < 2 || !report.puffHeal || !report.puffFire || report.puffKit.length < 6 || report.classSpecs !== 8 || !report.dualWeapons || report.playLevel !== 20 || !report.tpsIndoor || !report.fleetDodge || !report.hudBinds || !report.hudOptimal || !report.comboKnown || !report.gapKnown || !report.statusStun || !report.ccFreeze || !report.slideCtrl || !report.parryStun || !report.f0 || !report.warbear || !report.worgeNotBear || !report.formSi || !report.iguanaHeal || !report.iguanaFaction || !report.verdurorF || !report.thiefF || !report.classCrafts || !report.classItems4 || !report.skillNames || !report.lv20hp || report.dress < 1 || !report.playCarpets || !report.playWallArt || report.playFurniture < 2 || !report.t8Warrior || !report.t8Raider || !report.t8Mage || !report.t8Priest || !report.t8Worge || !report.t8Verduror || !report.t8Claws || !report.t8Bar6 || !report.t8SkillsKnown || !report.t0Wand || !report.t0Sapling || !report.warriorTank || !report.rangerLog || !report.mageWand || !report.worgeForms || !report.lockpickSweet || !report.lockpickOpen || !report.tauntHolds || !report.holyHeal || !report.radiantHeal || !report.priestBarHeal || !report.factionAllies || !report.playDefaults || !report.combatDonor || !report.uuidHero || !report.uuidRejectAccount || !report.uuidRejectCode || !report.uuidPrefab || !report.uuidSkill || !report.uuidIcon || !report.uuidVfx || !report.styFire || !report.styFrost || !report.styArrow || !report.styGun || !report.styLocal || !report.bagClothIcon || !report.itemIconsLabeled || !report.classF0All || !report.classF0Icons || !report.tauntNotArcane || !report.clipDonorCount || !report.clipSword || !report.clipJumpNotWall || !report.clipHitNoAttack || !report.clipParryChain || !report.clipGsLoco || !report.animSlash || !report.animCombo || !report.animDash || !report.hitWindow || !report.hitQTick || !report.parryClip || !report.noFlinchAttack || !report.dungeonKinds || !report.flareBoss || !report.flareIndoor || !report.pack2 || !report.pack3 || !report.pack5 || !report.pack6 || !report.factionBoss18 || report.factionAiPlayers < 8 || !report.canonWarrior || !report.canonMage || !report.canonAlias || !report.canonMesh || !report.orbFire || !report.orbIce || !report.skillApiHealth || !report.linearWave || !report.rockCdn || !report.rock3Cdn || !report.noDiskFs || !report.spiderLocal || !report.prefabT8 || !report.weaponIconCdn || !report.noCraftpixIcon || !report.classBar || !report.classIconCdn || !report.classCompile || !report.fireHasUpdate || !report.fireTickGuarded || !report.noClearOnLoad || !report.noClearOnLobby || !report.noClearEmptyBoss || !report.noClearLivingBoss || !report.endHiddenCss || !report.lobbyCss) {
+if (!mech.ok || !report.scriptOk || !report.floorWalkable || !report.voidBlocked || rects.length < 1 || floorY !== DUNGEON_SI.groundY || !report.troll || !report.smash || !report.barrierGone || report.heroes24 !== 24 || report.spiderSeeds < 2 || !report.modularWall || report.smelterVersions !== 5 || !report.carveLava || !report.carveVoid || !report.eventRoom || report.eventPlatforms < 4 || !report.eventSockets || report.platformCols < 2 || !report.puffHeal || !report.puffFire || report.puffKit.length < 6 || report.classSpecs !== 8 || !report.dualWeapons || report.playLevel !== 20 || !report.tpsIndoor || !report.fleetDodge || !report.hudBinds || !report.hudOptimal || !report.comboKnown || !report.gapKnown || !report.statusStun || !report.ccFreeze || !report.slideCtrl || !report.parryStun || !report.f0 || !report.warbear || !report.worgeNotBear || !report.formSi || !report.iguanaHeal || !report.iguanaFaction || !report.verdurorF || !report.thiefF || !report.classCrafts || !report.classItems4 || !report.skillNames || !report.lv20hp || report.dress < 1 || !report.playCarpets || !report.playWallArt || report.playFurniture < 2 || !report.t8Warrior || !report.t8Raider || !report.t8Mage || !report.t8Priest || !report.t8Worge || !report.t8Verduror || !report.t8Claws || !report.t8Bar6 || !report.t8SkillsKnown || !report.t0Wand || !report.t0Sapling || !report.warriorTank || !report.rangerLog || !report.mageWand || !report.worgeForms || !report.lockpickSweet || !report.lockpickOpen || !report.tauntHolds || !report.holyHeal || !report.radiantHeal || !report.priestBarHeal || !report.factionAllies || !report.playDefaults || !report.combatDonor || !report.uuidHero || !report.uuidRejectAccount || !report.uuidRejectCode || !report.uuidPrefab || !report.uuidSkill || !report.uuidIcon || !report.uuidVfx || !report.styFire || !report.styFrost || !report.styArrow || !report.styGun || !report.styLocal || !report.bagClothIcon || !report.itemIconsLabeled || !report.classF0All || !report.classF0Icons || !report.tauntNotArcane || !report.clipDonorCount || !report.clipSword || !report.clipJumpNotWall || !report.clipHitNoAttack || !report.clipParryChain || !report.clipGsLoco || !report.animSlash || !report.animCombo || !report.animDash || !report.hitWindow || !report.hitQTick || !report.parryClip || !report.noFlinchAttack || !report.dungeonKinds || !report.flareBoss || !report.flareIndoor || !report.pack2 || !report.pack3 || !report.pack5 || !report.pack6 || !report.factionBoss18 || report.factionAiPlayers < 8 || !report.canonWarrior || !report.canonMage || !report.canonAlias || !report.canonMesh || !report.orbFire || !report.orbIce || !report.skillApiHealth || !report.linearWave || !report.rockCdn || !report.rock3Cdn || !report.noDiskFs || !report.spiderLocal || !report.prefabT8 || !report.weaponIconCdn || !report.noCraftpixIcon || !report.classBar || !report.classIconCdn || !report.classCompile || !report.fireHasUpdate || !report.fireTickGuarded || !report.noClearOnLoad || !report.noClearOnLobby || !report.noClearEmptyBoss || !report.noClearLivingBoss || !report.endHiddenCss || !report.lobbyCss || !report.corpseTrash || !report.corpseElite || !report.corpseBoss || !report.deathNoCrawl || !report.deathFallback || !report.animDeathUrl || !report.lootE || !report.actorDie || !report.phLoot) {
   console.error('SMOKE FAIL', report);
   process.exit(1);
 }
