@@ -1,20 +1,23 @@
 /**
  * Session dungeon bag. Production ownership is Railway account bag
  * (grudge-production-wiring). This is crawl yield only — not a second DB.
+ * Unique gear is never minted here (no client grudge_uuid).
  */
+import { resolveSkillIcon, ICONS_CDN } from './skillIcons.js';
+
 const KEY = 'grudge-dungeon-bag';
 
 export const BAG_DEFS = {
-  wood_scrap: { id: 'wood_scrap', label: 'Wood scrap', icon: '/ui/craftpix/icons/nature.png' },
-  stone_chip: { id: 'stone_chip', label: 'Stone chip', icon: '/ui/craftpix/icons/shield.png' },
-  cloth_scrap: { id: 'cloth_scrap', label: 'Cloth scrap', icon: '/ui/craftpix/icons/tome.png' },
-  iron_bit: { id: 'iron_bit', label: 'Iron bit', icon: '/ui/craftpix/icons/sword.png' },
-  lockpick_set: { id: 'lockpick_set', label: 'Lockpicking set', icon: '/ui/craftpix/icons/tome.png' },
-  form_page: { id: 'form_page', label: 'Form page', icon: '/ui/craftpix/icons/nature.png' },
-  tonic_blood: { id: 'tonic_blood', label: 'Tonic of Blood', icon: '/ui/craftpix/icons/holy.png' },
-  tonic_power: { id: 'tonic_power', label: 'Tonic of Power', icon: '/ui/craftpix/icons/fireball.png' },
-  spell_page: { id: 'spell_page', label: 'Spell page', icon: '/ui/craftpix/icons/tome.png' },
-  spell_page_portal: { id: 'spell_page_portal', label: 'Portal page', icon: '/ui/craftpix/icons/void.png' },
+  wood_scrap: { id: 'wood_scrap', label: 'Wood scrap', icon: `${ICONS_CDN}/game-assets/icons/skills_rpg/skill_bark_skin.png` },
+  stone_chip: { id: 'stone_chip', label: 'Stone chip', icon: `${ICONS_CDN}/game-assets/icons/skills_rpg/skill_iron_hide.png` },
+  cloth_scrap: { id: 'cloth_scrap', label: 'Cloth scrap', icon: mat('ability_mana_shield.png') },
+  iron_bit: { id: 'iron_bit', label: 'Iron bit', icon: `${ICONS_CDN}/game-assets/icons/skills_rpg/skill_execute.png` },
+  lockpick_set: { id: 'lockpick_set', label: 'Lockpicking set', icon: resolveSkillIcon({ id: 'lockpick_set' }) },
+  form_page: { id: 'form_page', label: 'Form page', icon: resolveSkillIcon({ id: 'form_page' }) },
+  tonic_blood: { id: 'tonic_blood', label: 'Tonic of Blood', icon: resolveSkillIcon({ id: 'tonic_blood' }) },
+  tonic_power: { id: 'tonic_power', label: 'Tonic of Power', icon: resolveSkillIcon({ id: 'tonic_power' }) },
+  spell_page: { id: 'spell_page', label: 'Spell page', icon: resolveSkillIcon({ id: 'spell_page' }) },
+  spell_page_portal: { id: 'spell_page_portal', label: 'Portal page', icon: resolveSkillIcon({ id: 'spell_page_portal' }) },
 };
 
 export function spendLoot(bag, cost) {

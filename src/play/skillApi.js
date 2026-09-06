@@ -6,7 +6,7 @@
  */
 import { SPELLS } from '../ssot.js';
 import { SKILLS } from './weaponSkills.js';
-import { iconUrlFromPath } from './skillIcons.js';
+import { iconUrlFromPath, resolveSkillIcon } from './skillIcons.js';
 import { resolvePlayUrl } from './playUrl.js';
 
 export const SKILL_API = 'https://weapon-skills.grudge-studio.com';
@@ -55,12 +55,16 @@ function walkSkills(node, fn) {
 export function stampSpell(spell) {
   if (!spell?.id) return spell;
   const live = catalogList().find((s) => s.id === spell.id);
-  if (!live) return spell;
-  if (live.iconUrl) spell.iconUrl = live.iconUrl;
-  if (live.meshPath) spell.meshPath = live.meshPath;
-  if (live.telegraphSec != null) spell.telegraphSec = live.telegraphSec;
-  if (live.castEffectId) spell.castEffectId = live.castEffectId;
-  if (live.impactEffectId) spell.impactEffectId = live.impactEffectId;
+  if (live) {
+    if (live.iconUrl) spell.iconUrl = live.iconUrl;
+    if (live.meshPath) spell.meshPath = live.meshPath;
+    if (live.telegraphSec != null) spell.telegraphSec = live.telegraphSec;
+    if (live.castEffectId) spell.castEffectId = live.castEffectId;
+    if (live.impactEffectId) spell.impactEffectId = live.impactEffectId;
+    if (live.t8) spell.t8 = live.t8;
+    if (live.weaponName) spell.weaponName = live.weaponName;
+  }
+  spell.iconUrl = resolveSkillIcon(spell);
   return spell;
 }
 
@@ -81,7 +85,8 @@ export async function hydrateSkillApi() {
     const list = Array.isArray(bundle?.skills) ? bundle.skills : [];
     for (const remote of list) {
       const id = remote.id || remote.skillId;
-      if (id && byId.has(id)) applyRemote(byId.get(id), remote);
+      if (!id || id === 'skill-do-smoke') continue;
+      if (byId.has(id)) applyRemote(byId.get(id), remote);
     }
   } catch (err) {
     console.warn('[grudge-dungeon] SkillAPI bundle miss', err?.message || err);

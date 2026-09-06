@@ -3,7 +3,7 @@
  * Weapon 1–6 stay on the equipped T8 kit. Class F + click row are tree actives.
  * Do not invent skill ids.
  */
-import { iconUrlFromPath } from './skillIcons.js';
+import { iconUrlFromPath, resolveSkillIcon } from './skillIcons.js';
 import { classSkill0 } from './classSkill0.js';
 
 export const CLASS_TREES_URL = 'https://info.grudge-studio.com/api/v1/master-skillTrees.json';
@@ -80,7 +80,11 @@ export function compileClassSkill(sk, index = 0) {
     speed: 18,
     telegraphSec: kind === 'slash' ? 0.14 : 0.28,
     taunt: /taunt/.test(`${sk.id} ${g.id} ${sk.name}`),
-    iconUrl: iconUrlFromPath(g.iconUrl || sk.iconUrl || sk.icon),
+    iconUrl: resolveSkillIcon({
+      id,
+      iconUrl: iconUrlFromPath(g.iconUrl || sk.iconUrl || sk.icon) || undefined,
+      icon: g.iconUrl || sk.iconUrl || sk.icon,
+    }),
     slot: index,
     key: index === 0 ? 'F' : '',
     anim: kind === 'slash' ? 'attack' : 'cast',
@@ -104,7 +108,9 @@ export function classLoadoutFor(classId, trees, level = 20) {
   const f0 = classSkill0(classId);
   if (f0) {
     const rest = rows.filter((s) => s.id !== f0.id).slice(0, 5);
-    return [{ ...f0, classSkill: true, slot: 0, key: 'F' }, ...rest.map((s, i) => ({ ...s, slot: i + 1 }))];
+    const head = { ...f0, classSkill: true, slot: 0, key: 'F' };
+    head.iconUrl = resolveSkillIcon(head);
+    return [head, ...rest.map((s, i) => ({ ...s, slot: i + 1, iconUrl: resolveSkillIcon(s) }))];
   }
-  return rows;
+  return rows.map((s) => ({ ...s, iconUrl: resolveSkillIcon(s) }));
 }

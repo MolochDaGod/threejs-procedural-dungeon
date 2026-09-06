@@ -1,5 +1,5 @@
 /** Combat bar slots 6–7: session consumables / thrown. Not a second bag DB. */
-import { ICONS_CDN } from './skillIcons.js';
+import { resolveSkillIcon } from './skillIcons.js';
 
 export const COMBAT_ITEMS = {
   health_flask: {
@@ -8,7 +8,7 @@ export const COMBAT_ITEMS = {
     kind: 'heal',
     heal: 42,
     cd: 8,
-    iconUrl: `${ICONS_CDN}/game-assets/icons/abilities/ability_arcane_focus.png`,
+    iconUrl: resolveSkillIcon({ id: 'health_flask' }),
   },
   bandage: {
     id: 'bandage',
@@ -16,7 +16,7 @@ export const COMBAT_ITEMS = {
     kind: 'heal',
     heal: 22,
     cd: 4,
-    iconUrl: `${ICONS_CDN}/game-assets/icons/abilities/ability_arcane_focus.png`,
+    iconUrl: resolveSkillIcon({ id: 'bandage' }),
   },
   throwing_knife: {
     id: 'throwing_knife',
@@ -28,55 +28,56 @@ export const COMBAT_ITEMS = {
     cd: 3,
     element: 'physical',
     color: 0xc9cedb,
+    iconUrl: resolveSkillIcon({ id: 'throwing_knife' }),
   },
   lockpick: {
     id: 'lockpick',
     name: 'Lockpick',
     kind: 'tool',
     cd: 1,
-    iconUrl: `${ICONS_CDN}/game-assets/icons/abilities/ability_arcane_focus.png`,
+    iconUrl: resolveSkillIcon({ id: 'lockpick' }),
   },
   lockpick_set: {
     id: 'lockpick_set',
     name: 'Lockpicking Set',
     kind: 'tool',
     cd: 1,
-    iconUrl: `${ICONS_CDN}/game-assets/icons/abilities/ability_arcane_focus.png`,
+    iconUrl: resolveSkillIcon({ id: 'lockpick_set' }),
   },
   form_page: {
     id: 'form_page',
     name: 'Form Page',
     kind: 'page',
     cd: 8,
-    iconUrl: `${ICONS_CDN}/game-assets/icons/abilities/ability_arcane_focus.png`,
+    iconUrl: resolveSkillIcon({ id: 'form_page' }),
   },
   tonic_blood: {
     id: 'tonic_blood',
     name: 'Tonic of Blood',
     kind: 'tonic',
     cd: 6,
-    iconUrl: `${ICONS_CDN}/game-assets/icons/abilities/ability_arcane_focus.png`,
+    iconUrl: resolveSkillIcon({ id: 'tonic_blood' }),
   },
   spell_page: {
     id: 'spell_page',
     name: 'Spell Page',
     kind: 'spell_page',
     cd: 2,
-    iconUrl: `${ICONS_CDN}/game-assets/icons/abilities/ability_arcane_focus.png`,
+    iconUrl: resolveSkillIcon({ id: 'spell_page' }),
   },
   spell_page_portal: {
     id: 'spell_page_portal',
     name: 'Portal Page',
     kind: 'portal',
     cd: 8,
-    iconUrl: `${ICONS_CDN}/game-assets/icons/abilities/ability_arcane_focus.png`,
+    iconUrl: resolveSkillIcon({ id: 'spell_page_portal' }),
   },
   tonic_power: {
     id: 'tonic_power',
     name: 'Tonic of Power',
     kind: 'tonic',
     cd: 6,
-    iconUrl: `${ICONS_CDN}/game-assets/icons/abilities/ability_arcane_focus.png`,
+    iconUrl: resolveSkillIcon({ id: 'tonic_power' }),
   },
   bomb: {
     id: 'bomb',
@@ -87,6 +88,7 @@ export const COMBAT_ITEMS = {
     cd: 10,
     element: 'fire',
     color: 0xff6a22,
+    iconUrl: resolveSkillIcon({ id: 'bomb' }),
   },
 };
 

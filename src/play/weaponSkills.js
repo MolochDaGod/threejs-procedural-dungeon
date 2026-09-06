@@ -3,7 +3,7 @@
  * Authority: master-weapon-prefabs · master-weaponSkills. No invented ids.
  */
 import { CATALOG_SKILL_PLAY, T8_CLASS_SETS, setByKitId } from './t0ClassSets.js';
-import { SKILL_ICON_CDN } from './skillIconCdn.js';
+import { resolveSkillIcon } from './skillIcons.js';
 
 /** Lab nicknames → catalog ids. Never play as a different skill. */
 const LEGACY_ALIAS = {
@@ -83,7 +83,7 @@ function decorate(id, m) {
     telegraphSec: m.telegraphSec ?? (kind === 'slash' ? 0.12 : kind === 'nova' || kind === 'zone' ? 0.4 : 0.22),
     meshPath,
     anim: kind === 'slash' || kind === 'dash' ? 'attack' : 'cast',
-    iconUrl: SKILL_ICON_CDN[id] || m.iconUrl || null,
+    iconUrl: resolveSkillIcon({ id, iconUrl: m.iconUrl }),
   };
 }
 
@@ -189,7 +189,7 @@ export function loadoutFor(classId = 'worge', weaponId = '1h_tome') {
     s.t0 = pack.t0 || null;
     s.off = pack.off || null;
     s.weaponName = pack.name || null;
-    s.iconUrl = SKILL_ICON_CDN[id] || s.iconUrl || null;
+    s.iconUrl = resolveSkillIcon({ ...s, id });
     s.heal = s.heal || 0;
     s.friendly = s.heal > 0 && !(s.damage > 0);
     return s;

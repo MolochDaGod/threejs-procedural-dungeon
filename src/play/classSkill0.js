@@ -163,6 +163,25 @@ export const CLASS_SKILL_0 = {
     key: 'F',
     form: 'iguana',
   },
+  worge: {
+    id: 'bear_form',
+    name: 'Warbear Form',
+    kind: 'nova',
+    classSkill: true,
+    element: 'nature',
+    color: 0x8b6914,
+    mana: 8,
+    stamina: 6,
+    cd: 8,
+    range: 2,
+    damage: 0,
+    heal: 0,
+    telegraphSec: 0.28,
+    anim: 'cast',
+    slot: 0,
+    key: 'F',
+    form: 'bear',
+  },
 };
 
 export function classSkill0(classId) {

@@ -19,7 +19,9 @@
   "skills": {
     "math": "src/play/t0ClassSets.js CATALOG_SKILL_PLAY — catalog ids only",
     "icons": "info.grudge-studio.com/api/v1/master-weaponSkills.json + assets.grudge-studio.com/icons",
-    "skillApi": "https://weapon-skills.grudge-studio.com/api/health + /api/v1/bundle",
+    "skillApi": "https://weapon-skills.grudge-studio.com/api/health + /api/v1/bundle (drafts, not catalog)",
+    "trees": "https://info.grudge-studio.com/api/v1/master-skillTrees.json",
+    "prefabs": "https://info.grudge-studio.com/api/v1/master-weapon-prefabs.json",
     "projectiles": "assets.grudge-studio.com/models/vfx/orbs/orb-{element}.glb SI 0.45 m — never whole fireball.glb",
     "fissure": "isolated magic-rock-N",
     "slashResidual": "linear.wave Getsuga on heavy melee"
@@ -55,6 +57,13 @@
     "events": ["awaken_on_enter", "clear_gate", "boss_phases", "event_platforms", "pool_hazard", "telegraph_all"]
   },
   "handoff": "?characterId=<uuid>&era=warlords&from=home&linear=1&race=&class=",
+  "ids": {
+    "characterId": "RFC UUID characters.id — play PK",
+    "grudge_id": "GRUDGE_… account — bag/wallet, never handoff",
+    "grudge_code": "GRDG-… display stamp — never handoff",
+    "t8": "ITEM-… ObjectStore prefab catalog, not ledger grudge_uuid",
+    "sessionBag": "crawl yield only — no client-minted grudge_uuid"
+  },
   "node": "npm start → server/index.mjs",
   "note": "One generateDungeon. kind only changes planEncounters. Enemies may spawn in more than one biome."
 }

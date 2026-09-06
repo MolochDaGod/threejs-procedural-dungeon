@@ -29,6 +29,7 @@ import { stampBossArena, stampCover } from './grid/cells.js';
 import { stampEventPlatformRoom } from './grid/eventPlatform.js';
 import { loadInteriorKits, plantCoverKits, plantRoomScenes, plantWallTorches, plantMagicRocks } from './props/kitPlant.js';
 import { InstancedFire, gridFireCells } from './vfx/instancedFire.js';
+import { playCharacterId } from './play/ids.js';
 
 /* ================================================================
    DUNGEON FORGE — procedural dungeon generator core + showcase
@@ -2131,7 +2132,7 @@ function setKindSel(id) {
 }
 function applyPlayQuery() {
   const q = new URLSearchParams(location.search);
-  playHandoff.characterId = q.get('characterId') || '';
+  playHandoff.characterId = playCharacterId(q.get('characterId')) || '';
   playHandoff.era = q.get('era') || PLAY_DEFAULTS.era;
   playHandoff.from = q.get('from') || '';
   const race = q.get('race');

@@ -118,7 +118,9 @@ function paintSlot(s, keyLabel) {
   b.style.backgroundImage = `url("${CRAFTPIX_SLOT_BG}")`;
   const src = iconFor(s);
   const extra = s.n != null ? ` ×${s.n}` : '';
-  b.innerHTML = `<img class="ico" alt="" src="${src}" /><i class="ring"></i><kbd>${keyLabel}</kbd><span>${s.name || ''}${extra}</span>`;
+  const label = s.name || s.id || '';
+  b.title = [label, s.t8Name || s.weaponName, s.t8].filter(Boolean).join(' · ');
+  b.innerHTML = `<img class="ico" alt="${label}" src="${src}" /><i class="ring"></i><kbd>${keyLabel}</kbd><span>${label}${extra}</span>`;
   const img = b.querySelector('img');
   img.addEventListener('error', () => {
     img.onerror = null;

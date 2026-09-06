@@ -29,6 +29,7 @@ import { pull, hearBreak, tickMobMotion, losToPlayer, applyTaunt, addThreat, THR
 import { makeClassState, WARRIOR_TANK, WORGE_GRIMOIRE, RAIDER_TWO_HAND, MAGE_WAND, PRIEST_WAND, classItemFor, addGrudgeStack, grudgeDefenseMul, craftWorgeForm } from './classItems.js';
 import { createLockpickSession, tickLockpickHold, attemptLockpickTumble, setLockpickPinAngle, cancelLockpick, pinInSweetZone } from './lockpick.js';
 import { animForSpell, hitWindowSec, reequipActor, spawnActor } from './characters.js';
+import { playCharacterId } from './ids.js';
 import { VfxWorld } from './vfx.js';
 import { TelegraphField } from './telegraph.js';
 import { instanceCatalog, preloadDungeonAssets, loadGltf } from './assets.js';
@@ -348,9 +349,10 @@ export class PlaySession {
       : otherClasses(this.classId);
     this.refreshHudBars();
     this.linearCrawl = linear;
-    this.characterId = characterId || (typeof location !== 'undefined'
-      ? new URLSearchParams(location.search).get('characterId')
-      : null);
+    this.characterId = playCharacterId(characterId)
+      || (typeof location !== 'undefined'
+        ? playCharacterId(new URLSearchParams(location.search).get('characterId'))
+        : null);
     this.ctx.scene.add(this.group);
     this.hud.hidden = false;
     document.body.classList.add('playing');

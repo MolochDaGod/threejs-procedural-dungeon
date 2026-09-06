@@ -7,6 +7,7 @@
 import { cellOf } from '../gen/cells.js';
 import { isGatedRoom, roomRule } from '../ruleset.js';
 import { compileDungeonScript } from '../mechanic/compile.js';
+import { playCharacterId } from './ids.js';
 
 export { compileDungeonScript };
 
@@ -166,7 +167,7 @@ export function completionPayload(session, { win = true } = {}) {
     name: d?.name || null,
     theme: d?.params?.themeKey || null,
     instanceId: session.instance?.id || null,
-    characterId: q.get('characterId') || session.characterId || null,
+    characterId: playCharacterId(q.get('characterId') || session.characterId) || null,
     era: q.get('era') || 'warlords',
     from: q.get('from') || '',
     classId: session.classId,
