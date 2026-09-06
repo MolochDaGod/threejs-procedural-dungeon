@@ -10,7 +10,7 @@ const KEY = 'grudge-dungeon-bag';
 export const BAG_DEFS = {
   wood_scrap: { id: 'wood_scrap', label: 'Wood scrap', icon: `${ICONS_CDN}/game-assets/icons/skills_rpg/skill_bark_skin.png` },
   stone_chip: { id: 'stone_chip', label: 'Stone chip', icon: `${ICONS_CDN}/game-assets/icons/skills_rpg/skill_iron_hide.png` },
-  cloth_scrap: { id: 'cloth_scrap', label: 'Cloth scrap', icon: mat('ability_mana_shield.png') },
+  cloth_scrap: { id: 'cloth_scrap', label: 'Cloth scrap', icon: `${ICONS_CDN}/game-assets/icons/abilities/ability_mana_shield.png` },
   iron_bit: { id: 'iron_bit', label: 'Iron bit', icon: `${ICONS_CDN}/game-assets/icons/skills_rpg/skill_execute.png` },
   lockpick_set: { id: 'lockpick_set', label: 'Lockpicking set', icon: resolveSkillIcon({ id: 'lockpick_set' }) },
   form_page: { id: 'form_page', label: 'Form page', icon: resolveSkillIcon({ id: 'form_page' }) },
