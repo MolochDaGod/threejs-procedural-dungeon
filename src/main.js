@@ -28,6 +28,7 @@ import { preloadDungeonAssets } from './play/assets.js';
 import { stampBossArena, stampCover } from './grid/cells.js';
 import { stampEventPlatformRoom } from './grid/eventPlatform.js';
 import { loadInteriorKits, plantCoverKits, plantRoomScenes, plantWallTorches, plantMagicRocks } from './props/kitPlant.js';
+import { applyBiomeLook } from './props/saharaKit.js';
 import { InstancedFire, gridFireCells } from './vfx/instancedFire.js';
 import { playCharacterId } from './play/ids.js';
 
@@ -1591,25 +1592,42 @@ function buildScene(d){
   }
   meshes.floor = buildMesh(fs, GEO.floor, matStone, 'pop', 0.34, 2);
 
-  /* walls + trim caps */
+  /* walls + trim caps — thin slabs on the room-facing side of WALL cells.
+     Full-cell cubes were covering doorways. Geo is bottom-origin (y=0). */
   const nearFloorBfs = (x,y)=>{ let b=1e4;
     for(let oy=-1;oy<=1;oy++) for(let ox=-1;ox<=1;ox++){
       const nx=x+ox, ny=y+oy;
       if(nx>=0&&ny>=0&&nx<W&&ny<H && bfs[idx(nx,ny)]>=0) b=Math.min(b,bfs[idx(nx,ny)]);
     } return b===1e4?0:b; };
+  const isFloor = (x,y)=> x>=0&&y>=0&&x<W&&y<H && grid[idx(x,y)]===FLOOR;
+  const isWall = (x,y)=> x>=0&&y>=0&&x<W&&y<H && grid[idx(x,y)]===WALL;
+  const thick = (DUNGEON_SI.wallThick || 0.55) / CELL_M;
   const ws = instSet(), cs = instSet();
   const wcol = new THREE.Color();
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
     if(grid[idx(x,y)]!==WALL) continue;
     const h = DUNGEON_SI.wallH / CELL_M + cellRng.f(-0.05, 0.08);
     const dl = nearFloorBfs(x,y)*dStep + 0.30;
+    const runX = isWall(x-1,y) || isWall(x+1,y);
+    const runZ = isWall(x,y-1) || isWall(x,y+1);
+    let sx = runX ? 1.02 : thick;
+    let sz = runZ ? 1.02 : thick;
+    if (!runX && !runZ) { sx = thick; sz = thick; }
+    let ox = 0, oz = 0;
+    const nudge = 0.5 - thick / 2;
+    if (isFloor(x+1,y) && !isFloor(x-1,y)) ox = nudge;
+    else if (isFloor(x-1,y) && !isFloor(x+1,y)) ox = -nudge;
+    if (isFloor(x,y+1) && !isFloor(x,y-1)) oz = nudge;
+    else if (isFloor(x,y-1) && !isFloor(x,y+1)) oz = -nudge;
     wcol.set(TH.wall).multiplyScalar(cellRng.f(0.9,1.08));
-    ws.add(wx(x), h * 0.5, wz(y), 1, h, 1, 0, wcol.getHex(), dl);
+    ws.add(wx(x)+ox, 0, wz(y)+oz, sx, h, sz, 0, wcol.getHex(), dl);
     wcol.set(TH.cap).multiplyScalar(cellRng.f(0.92,1.1));
-    cs.add(wx(x), h, wz(y), 1.04, 0.08, 1.04, 0, wcol.getHex(), dl+0.12);
+    cs.add(wx(x)+ox, h, wz(y)+oz, Math.max(sx, 0.28), 0.08, Math.max(sz, 0.28), 0, wcol.getHex(), dl+0.12);
   }
   meshes.wall    = buildMesh(ws, GEO.wall, matStone, 'rise', 0.42, 1);
   meshes.wallCap = buildMesh(cs, GEO.wallCap, matStone, 'pop', 0.3, 1);
+  applyBiomeLook(d.params?.themeKey || 'ancient', [matStone], { keepInstanceTint: true })
+    .catch((err) => console.warn('[grudge-dungeon] biome look miss', err));
 
   /* prop instance sets */
   const S = { pillar:instSet(), arch:instSet(), archL:instSet(), torchArm:instSet(),

@@ -10,7 +10,7 @@ export const POOL = 3;
 
 export const CELL_M = 2.15;
 export const WALL_HEIGHT_M = 3.85;
-export const WALL_THICK_M = 1.85;
+export const WALL_THICK_M = 0.55;
 export const FLOOR_THICK_M = 0.28;
 
 export const CELL_NAME = { [VOID]: 'void', [FLOOR]: 'floor', [WALL]: 'wall', [POOL]: 'pool' };

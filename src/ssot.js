@@ -117,6 +117,8 @@ export const THEME_ENEMY = {
 export const DUNGEON_SI = {
   cell: 2.15,
   wallH: 3.85,
+  wallThick: 0.55,
+  doorH: 2.4,
   groundY: 0,
   floorH: 0.28,
   gravity: -30,

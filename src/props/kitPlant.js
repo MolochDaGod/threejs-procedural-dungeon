@@ -28,12 +28,12 @@ function findMesh(root, name) {
   let found = null;
   root.traverse((o) => {
     if (found || !o.isMesh) return;
-    if (o.name === name || o.name.startsWith(name) || name.startsWith(o.name)) found = o;
+    if (o.name === name) found = o;
   });
   if (found) return found;
   root.traverse((o) => {
     if (found || !o.isMesh) return;
-    if (o.parent && (o.parent.name === name || o.parent.name.startsWith(name))) found = o;
+    if (o.name.startsWith(name)) found = o;
   });
   return found;
 }
@@ -43,6 +43,11 @@ function fitProp(root, targetH, maxFoot = Infinity) {
   const box = new THREE.Box3().setFromObject(root);
   const size = box.getSize(new THREE.Vector3());
   const h = Math.max(size.y, 0.001);
+  const xz0 = Math.max(size.x, size.z);
+  if (xz0 / h > 2.4 && xz0 > targetH * 1.6) {
+    /* Wide wall slab — do not squash into a floor pancake. */
+    return false;
+  }
   root.scale.multiplyScalar(targetH / h);
   root.updateMatrixWorld(true);
   let planted = new THREE.Box3().setFromObject(root);
@@ -53,6 +58,7 @@ function fitProp(root, targetH, maxFoot = Infinity) {
     planted = new THREE.Box3().setFromObject(root);
   }
   root.position.y -= planted.min.y;
+  return true;
 }
 
 async function loadOne(id, kit) {
@@ -119,7 +125,10 @@ function plantAt(group, src, x, z, yaw, targetH, maxFoot = Infinity) {
   wrap.position.set(x, DUNGEON_SI.groundY, z);
   wrap.rotation.y = yaw;
   group.add(wrap);
-  fitProp(wrap, targetH, maxFoot);
+  if (fitProp(wrap, targetH, maxFoot) === false) {
+    group.remove(wrap);
+    return null;
+  }
   wrap.position.x = x;
   wrap.position.z = z;
   plantObjectOnTerrain(wrap, group.userData?.sampler || group.parent?.userData?.sampler);
@@ -155,6 +164,7 @@ export function plantCoverKits(dungeon, group) {
       const yaw = role === 'barrier' || role === 'ruin' ? (x % 2 ? 0 : Math.PI / 2) : (x + y) * 0.7;
       const foot = (hit.piece.footM || FOOT_M[role] || 0.9) / DUNGEON_SI.cell;
       const wrap = plantAt(group, hit.mesh, wx(x), wz(y), yaw, hit.piece.h / DUNGEON_SI.cell, foot);
+      if (!wrap) continue;
       wrap.name = `cover-${role}-${x}-${y}`;
       wrap.userData = {
         gx: x, gz: y, i, role, stage, packIds,
@@ -240,7 +250,10 @@ export function plantRoomScenes(dungeon, group) {
       wrap.name = `temple-scene-${r.id}`;
       wrap.position.set(X, DUNGEON_SI.groundY, Z);
       group.add(wrap);
-      fitProp(wrap, (temple.kit.sceneH || 5.2) / DUNGEON_SI.cell);
+      if (fitProp(wrap, (temple.kit.sceneH || 5.2) / DUNGEON_SI.cell, 2.4) === false) {
+        group.remove(wrap);
+        continue;
+      }
       wrap.position.set(X, DUNGEON_SI.groundY, Z);
       n++;
     }
@@ -257,7 +270,7 @@ export function plantRoomScenes(dungeon, group) {
       if (!mesh) continue;
       const X = wx(r.cx);
       const Z = wz(r.cy - r.h * 0.18);
-      const wrap = plantAt(group, mesh, X, Z, r.id * 0.4, piece.h / DUNGEON_SI.cell);
+      const wrap = plantAt(group, mesh, X, Z, r.id * 0.4, piece.h / DUNGEON_SI.cell, 1.8);
       wrap.name = `smelter-scene-${r.id}`;
       n++;
     }
@@ -305,7 +318,10 @@ export async function plantDressPlan(stamps, group) {
         wrap.name = `dress-${s.role}-${s.roomId}`;
         wrap.userData = { dress: s.role, role: s.role, block: !!s.block, hp: s.hp || undefined };
         group.add(wrap);
-        fitProp(wrap, s.h || 0.8, s.footM || FOOT_M[s.role] || 1.1);
+        if (fitProp(wrap, s.h || 0.8, s.footM || FOOT_M[s.role] || 1.1) === false) {
+          group.remove(wrap);
+          continue;
+        }
         wrap.position.set(s.x, s.y || DUNGEON_SI.groundY, s.z);
         n++;
         continue;
@@ -318,7 +334,10 @@ export async function plantDressPlan(stamps, group) {
       wrap.rotation.y = s.yaw || 0;
       wrap.userData = { dress: s.role, block: !!s.block, hp: s.hp || undefined, role: s.role };
       group.add(wrap);
-      fitProp(wrap, s.h || 0.8, s.footM || FOOT_M[s.role] || 1.1);
+      if (fitProp(wrap, s.h || 0.8, s.footM || FOOT_M[s.role] || 1.1) === false) {
+        group.remove(wrap);
+        continue;
+      }
       wrap.position.set(s.x, s.y || DUNGEON_SI.groundY, s.z);
       if (s.role === 'carpet') wrap.position.y = 0.02;
       if (s.role === 'wall_art') wrap.position.y = s.y || 1.55;

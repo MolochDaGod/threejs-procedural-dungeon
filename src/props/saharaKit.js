@@ -93,26 +93,38 @@ export function scatterSahara(dungeon, group, rng = Math.random) {
 }
 
 const lookCache = {};
-export async function applyBiomeLook(themeKey, materials = []) {
+function loadLookTex(url, srgb) {
+  if (!url) return Promise.resolve(null);
+  if (lookCache[url]) return lookCache[url];
+  lookCache[url] = new Promise((res) => {
+    texLoader.load(url.startsWith('http') || url.startsWith('/') ? url : `/${url}`, (t) => {
+      if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(2.2, 2.2);
+      t.anisotropy = 8;
+      res(t);
+    }, undefined, () => res(null));
+  });
+  return lookCache[url];
+}
+
+export async function applyBiomeLook(themeKey, materials = [], opts = {}) {
   const look = lookOf(themeKey);
   if (!look?.albedo) return look;
-  if (!lookCache[look.albedo]) {
-    lookCache[look.albedo] = await new Promise((res) => {
-      texLoader.load(look.albedo, (t) => {
-        t.colorSpace = THREE.SRGBColorSpace;
-        t.wrapS = t.wrapT = THREE.RepeatWrapping;
-        t.repeat.set(2.2, 2.2);
-        t.anisotropy = 8;
-        res(t);
-      }, undefined, () => res(null));
-    });
-  }
-  const map = lookCache[look.albedo];
+  const [map, normal] = await Promise.all([
+    loadLookTex(look.albedo, true),
+    loadLookTex(look.normal, false),
+  ]);
   if (!map) return look;
   for (const mat of materials) {
     if (!mat) continue;
     mat.map = map;
-    mat.color.set(look.tint);
+    if (normal) {
+      mat.normalMap = normal;
+      mat.normalScale = mat.normalScale || new THREE.Vector2(0.55, 0.55);
+    }
+    if (!opts.keepInstanceTint) mat.color.set(look.tint);
+    else mat.color.set(0xffffff);
     mat.needsUpdate = true;
   }
   return look;

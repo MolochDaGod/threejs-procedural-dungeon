@@ -38,13 +38,15 @@ function cellCenter(d, gx, gy) {
   };
 }
 
-function rectWorld(d, rx, ry, rw, rh, y, hy) {
+function rectWorld(d, rx, ry, rw, rh, y, hy, inset = 0) {
   const c = DUNGEON_SI.cell;
   const cx = (rx + rw / 2 - d.W / 2) * c;
   const cz = (ry + rh / 2 - d.H / 2) * c;
+  const hx = Math.max(0.12, (rw * c) / 2 - inset);
+  const hz = Math.max(0.12, (rh * c) / 2 - inset);
   return {
     position: [cx, y, cz],
-    collider: { kind: 'box', params: [(rw * c) / 2, hy, (rh * c) / 2] },
+    collider: { kind: 'box', params: [hx, hy, hz] },
   };
 }
 
@@ -113,13 +115,15 @@ export function buildColliderAssets(dungeon) {
   const groundY = DUNGEON_SI.groundY;
   const floorH = DUNGEON_SI.floorH;
 
+  const wallThick = DUNGEON_SI.wallThick || 0.55;
+  const wallInset = Math.max(0, (cell - wallThick) / 2);
   const wallMask = maskEq(grid, W, H, (t) => t === TILE.WALL);
   greedyRects(wallMask, W, H).forEach((r, i) => {
     nodes.push(node(
       `col-wall-${i}`,
       COLLIDER_KIND.wall,
       'Terrain',
-      rectWorld(d, r.x, r.y, r.w, r.h, groundY + wallH / 2, wallH / 2),
+      rectWorld(d, r.x, r.y, r.w, r.h, groundY + wallH / 2, wallH / 2, wallInset),
       { location: { tags: ['dungeon', 'wall'] } },
     ));
   });
@@ -218,7 +222,7 @@ export function buildColliderAssets(dungeon) {
         `col-cover-${i}`,
         COLLIDER_KIND.cover,
         'Terrain',
-        rectWorld(d, r.x, r.y, r.w, r.h, groundY + 1.4, 1.4),
+        rectWorld(d, r.x, r.y, r.w, r.h, groundY + 0.9, 0.9, Math.max(0, (cell - 0.7) / 2)),
         { location: { tags: ['dungeon', 'cover', 'pillar'] } },
       ));
     });

@@ -127,11 +127,12 @@ function coverOk(d, x, y, idx) {
   const W = d.W, H = d.H;
   if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) return false;
   const i = idx(x, y);
-  if (d.grid[i] !== TILE.FLOOR || d.doorway?.[i]) return false;
+  if (d.grid[i] !== TILE.FLOOR || d.doorway?.[i] || d.corridor?.[i]) return false;
   if (d.flags[i] & (CELL_FLAG.SAFE | CELL_FLAG.DAIS | CELL_FLAG.BLOCK | CELL_FLAG.BARRIER)) return false;
   for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     const ni = idx(x + dx, y + dy);
-    if (ni >= 0 && d.doorway?.[ni]) return false;
+    if (ni < 0) continue;
+    if (d.doorway?.[ni] || d.corridor?.[ni]) return false;
   }
   return true;
 }

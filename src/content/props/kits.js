@@ -21,7 +21,7 @@ export const PROP_KITS = {
     biomes: ['ancient', 'molten', 'grim'],
     pieces: [
       { id: 'wall', mesh: 'Brick_Wall__0', role: 'wall', h: 2.55, footM: 2.2, block: true, hp: 110, architecture: true },
-      { id: 'mid', mesh: 'Brick_Mid_Wall__0', role: 'ruin', h: 1.15, footM: 1.15, block: true, hp: 70 },
+      { id: 'mid', mesh: 'Brick_Mid_Wall__0', role: 'wall', h: 1.4, footM: 2.2, block: true, hp: 70, architecture: true },
       { id: 'pillar1', mesh: 'Brick_Pillar_1__0', role: 'pillar', h: 2.55, footM: 0.65, block: true, hp: 88 },
       { id: 'pillar2', mesh: 'Brick_Pillar_2__0', role: 'pillar', h: 2.55, footM: 0.65, block: true, hp: 88 },
       { id: 'fence', mesh: 'Brick_Fence__0', role: 'barrier', h: 0.9, footM: 1.2, block: true, stages: 2 },
