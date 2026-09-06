@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { loadGltf } from './assets.js';
 import { MAGIC_ROCK_DIAMETER_M } from '../content/props/magicRocks.js';
+import { attachStylizedOverlay, spawnStylizedHit } from './stylizedProjectiles.js';
 
 const _n = new THREE.Vector3();
 const _side = new THREE.Vector3();
@@ -91,7 +92,7 @@ export class LinearCastWorld {
   }
 
   /** Line front that advances at constant m/s, optional lightning/fire forks. */
-  line({ origin, dir, color, range = 12, speed = 22, width = 0.28, forks = false, onHit, height = 0.7, meshPath = null, shader = 'bolt' }) {
+  line({ origin, dir, color, range = 12, speed = 22, width = 0.28, forks = false, onHit, height = 0.7, meshPath = null, shader = 'bolt', overlay = null }) {
     _n.copy(dir).setY(0).normalize();
     const root = new THREE.Group();
     const body = new THREE.Mesh(new THREE.BoxGeometry(width, height, 0.55), boltMat(color, shader));
@@ -136,13 +137,19 @@ export class LinearCastWorld {
       onHit,
       hit: new Set(),
       forkCd: 0,
+      overlay,
     };
+    if (overlay) {
+      attachStylizedOverlay(root, overlay, color).then((bits) => {
+        item.styTrail = bits.trail || null;
+      }).catch(() => {});
+    }
     this.items.push(item);
     return item;
   }
 
   /** Traveling slash residual (Getsuga) — band along aim, not a floor sprite. */
-  wave({ origin, dir, color, range = 8, speed = 18, onHit }) {
+  wave({ origin, dir, color, range = 8, speed = 18, onHit, overlay = null }) {
     _n.copy(dir).setY(0);
     if (_n.lengthSq() < 1e-6) _n.set(0, 0, 1);
     else _n.normalize();
@@ -172,7 +179,13 @@ export class LinearCastWorld {
       onHit,
       hit: new Set(),
       forkCd: 0,
+      overlay,
     };
+    if (overlay) {
+      attachStylizedOverlay(root, overlay, color).then((bits) => {
+        item.styTrail = bits.trail || null;
+      }).catch(() => {});
+    }
     this.items.push(item);
     return item;
   }
@@ -274,6 +287,9 @@ export class LinearCastWorld {
       it.root.traverse((o) => {
         if (o.material?.uniforms?.uTime) o.material.uniforms.uTime.value = this.clock;
       });
+      if (it.styTrail?.material?.map) {
+        it.styTrail.material.map.offset.x -= dt * 2.6;
+      }
       if (it.type === 'line') {
         const step = it.vel * dt;
         it.traveled += step;
@@ -284,6 +300,10 @@ export class LinearCastWorld {
           it.forkCd = 0.08;
           this._spawnForks(it.root.position, it.dir, it.color, 1.8, 1);
         }
+      } else if (it.type === 'styhit') {
+        const k = Math.max(0, it.life / it.max);
+        it.root.scale.setScalar((it.grow || 2) * (1.15 - k * 0.45));
+        if (it.root.material) it.root.material.opacity = k;
       } else if (it.type === 'fissure') {
         const k = 1 - it.life / it.max;
         it.root.scale.y = 0.4 + k * 1.2;
@@ -298,6 +318,9 @@ export class LinearCastWorld {
         });
       }
       if (it.life <= 0) {
+        if (it.overlay?.hit && it.type === 'line') {
+          spawnStylizedHit(this.scene, it.root.position.clone(), it.overlay, it.color, this.items);
+        }
         this.scene.remove(it.root);
         it.root.traverse((o) => {
           o.geometry?.dispose?.();
@@ -317,6 +340,9 @@ export class LinearCastWorld {
       if (dx * dx + dz * dz < (radius + e.radius) ** 2) {
         it.hit.add(e);
         it.onHit(e, at);
+        if (it.overlay?.hit) {
+          spawnStylizedHit(this.scene, at.clone ? at.clone() : at, it.overlay, it.color, this.items);
+        }
       }
     }
   }

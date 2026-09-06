@@ -15,6 +15,7 @@ export function classifyId(raw) {
   if (/^ITEM-/i.test(s)) return { kind: 'catalogPrefab', value: s };
   if (/^PFAB-/i.test(s)) return { kind: 'entityPrefab', value: s };
   if (/^ATTR-/i.test(s)) return { kind: 'attributeDef', value: s };
+  if (/^VFX-/i.test(s)) return { kind: 'vfxDef', value: s };
   if (/^ent_/i.test(s)) return { kind: 'sessionEnt', value: s };
   return { kind: 'catalogSlug', value: s };
 }

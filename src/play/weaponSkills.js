@@ -4,6 +4,7 @@
  */
 import { CATALOG_SKILL_PLAY, T8_CLASS_SETS, setByKitId } from './t0ClassSets.js';
 import { resolveSkillIcon } from './skillIcons.js';
+import { overlayForSkill } from './stylizedProjectiles.js';
 
 /** Lab nicknames → catalog ids. Never play as a different skill. */
 const LEGACY_ALIAS = {
@@ -61,6 +62,7 @@ function playKind(meta) {
 function decorate(id, m) {
   const kind = m.kind;
   const meshPath = m.meshPath || meshFor(kind, m.element);
+  const overlay = overlayForSkill(id, kind, m.element);
   return {
     id,
     slot: 1,
@@ -82,6 +84,8 @@ function decorate(id, m) {
     block: !!m.block,
     telegraphSec: m.telegraphSec ?? (kind === 'slash' ? 0.12 : kind === 'nova' || kind === 'zone' ? 0.4 : 0.22),
     meshPath,
+    overlay,
+    castEffectId: overlay?.vfxRef || null,
     anim: kind === 'slash' || kind === 'dash' ? 'attack' : 'cast',
     iconUrl: resolveSkillIcon({ id, iconUrl: m.iconUrl }),
   };

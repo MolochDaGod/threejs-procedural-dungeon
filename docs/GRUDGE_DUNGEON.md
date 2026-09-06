@@ -37,6 +37,7 @@ Start: `https://info.grudge-studio.com/api/v1/uuid-law.json` then `game-data-man
 | Consumables | `consumables.json` → `categories.*.items` + `slug` / `iconPath` | `items[]` |
 | Icons | relative `/icons/…` → `assets.grudge-studio.com` + path | emoji · `/ui/craftpix/icons` |
 | Play mesh | Toon `{race}.glb` | sprites, FBX, Meshy |
+| 3D VFX overlay | `stylized-projectiles.json` (`VFX-STY-*` trail/hit) + orbs `orb-*.glb` | `GRDG-3DFX-*` as new ids · whole `fireball.glb` |
 | JSON host | `info.grudge-studio.com` (objectstore Worker proxies) | `github.io/ObjectStore` · `api.grudge-studio.com` |
 
 ## Play contract

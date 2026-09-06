@@ -41,6 +41,7 @@ function applyRemote(local, remote) {
   if (prefab.vfxRef) local.castEffectId = local.castEffectId || prefab.vfxRef;
   if (prefab.impactRef) local.impactEffectId = local.impactEffectId || prefab.impactRef;
   if (prefab.modelRef && !local.meshPath) local.meshPath = resolvePlayUrl(prefab.modelRef);
+  if (prefab.overlay) local.overlay = { ...(local.overlay || {}), ...prefab.overlay };
 }
 
 function walkSkills(node, fn) {
@@ -61,6 +62,7 @@ export function stampSpell(spell) {
     if (live.telegraphSec != null) spell.telegraphSec = live.telegraphSec;
     if (live.castEffectId) spell.castEffectId = live.castEffectId;
     if (live.impactEffectId) spell.impactEffectId = live.impactEffectId;
+    if (live.overlay) spell.overlay = live.overlay;
     if (live.t8) spell.t8 = live.t8;
     if (live.weaponName) spell.weaponName = live.weaponName;
   }

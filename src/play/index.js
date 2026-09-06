@@ -793,6 +793,7 @@ export class PlaySession {
               origin, dir, color: spell.color, range: spell.range || 12,
               speed: spell.speed || 18, onHit: (e) => this.hurt(e, dealt),
               meshPath: spell.meshPath || null, shader: elementShader(spell.element),
+              overlay: spell.overlay || null,
             });
           } else if (foe) this.hurt(foe, dealt);
           if (foe) this.vfx.impact({ origin: foe.pos.clone().setY(1.1), color: spell.color || 0xe8e0c8 });
@@ -1677,6 +1678,7 @@ export class PlaySession {
       this.linear.line({
         origin, dir, color: def.color, range: def.range, speed: def.speed,
         onHit: (e) => this.hurt(e, def.damage, def),
+        overlay: def.overlay || null,
       });
     } else if (def.kind === 'nova') {
       this.linear.zone({ origin: this.pos, color: def.color, radius: def.range, life: 0.7 });
@@ -1832,7 +1834,7 @@ export class PlaySession {
       const origin = this.pos.clone(); origin.y = 1.2;
       const dir = foe.pos.clone().sub(this.pos).setY(0);
       if (dir.lengthSq() < 1e-6) dir.set(0, 0, 1); else dir.normalize();
-      this.linear.line({ origin, dir, color: 0x9b6cf0, range: 14, speed: 22, onHit: () => {} });
+      this.linear.line({ origin, dir, color: 0x9b6cf0, range: 14, speed: 22, onHit: () => {}, overlay: spell.overlay || null });
       toast(`Marking Marks · ${foe.markStacks}`);
       return;
     }
@@ -1964,7 +1966,7 @@ export class PlaySession {
       if (!foe || foe.pos.distanceTo(origin) > range) return;
       const dir = foe.pos.clone().sub(origin).setY(0).normalize();
       if (spell.kind === 'projectile' || spell.kind === 'beam') {
-        this.linear.line({ origin, dir, color: spell.color, range, speed: spell.speed || 16, onHit: (e) => this.hurt(e, dmg, spell) });
+        this.linear.line({ origin, dir, color: spell.color, range, speed: spell.speed || 16, onHit: (e) => this.hurt(e, dmg, spell), overlay: spell.overlay || null });
       } else this.hitRadius(origin, Math.min(range, 4), dmg);
     }
     if (t.kind === 'blessed' && (spell.heal > 0 || spell.kind === 'nova' && spell.element === 'holy')) {
@@ -2252,7 +2254,7 @@ export class PlaySession {
           this.smashBarriersAlong(dir, spell.range);
           this.hitCone(dir, spell.range, 0.85, roll(spell.damage));
           if ((spell.range || 0) >= 3.2 || (spell.damage || 0) >= 50) {
-            this.linear.wave({ origin, dir, color: spell.color, range: (spell.range || 3) + 2.2, speed: 20, onHit });
+            this.linear.wave({ origin, dir, color: spell.color, range: (spell.range || 3) + 2.2, speed: 20, onHit, overlay: spell.overlay || null });
           }
         },
       });
@@ -2266,6 +2268,7 @@ export class PlaySession {
             speed: spell.speed || 20, forks: !!spell.forks, onHit,
             meshPath: spell.meshPath || null,
             shader: elementShader(spell.element),
+            overlay: spell.overlay || null,
           });
           const travel = spell.range / (spell.speed || 20);
           this.vfx.speedTrail({
@@ -2283,6 +2286,7 @@ export class PlaySession {
         speed: 38, width: 0.22, forks: spell.forks || spell.linear === 'thunder', onHit,
         meshPath: spell.meshPath || null,
         shader: elementShader(spell.element),
+        overlay: spell.overlay || null,
       });
       this.vfx.speedTrail({
         mesh: bolt.root,
