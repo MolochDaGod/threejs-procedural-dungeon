@@ -129,12 +129,41 @@ function coverOk(d, x, y, idx) {
   const i = idx(x, y);
   if (d.grid[i] !== TILE.FLOOR || d.doorway?.[i]) return false;
   if (d.flags[i] & (CELL_FLAG.SAFE | CELL_FLAG.DAIS | CELL_FLAG.BLOCK | CELL_FLAG.BARRIER)) return false;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const ni = idx(x + dx, y + dy);
+    if (ni >= 0 && d.doorway?.[ni]) return false;
+  }
+  return true;
+}
+
+function wallTouch(d, x, y, idx) {
+  let n = 0;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const ni = idx(x + dx, y + dy);
+    if (ni >= 0 && d.grid[ni] === TILE.WALL) n++;
+  }
+  return n;
+}
+
+function shuffleCover(list, raw) {
+  const a = list.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(raw() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function spaced(x, y, taken, min = 2) {
+  for (const t of taken) {
+    if (Math.max(Math.abs(t.x - x), Math.abs(t.y - y)) < min) return false;
+  }
   return true;
 }
 
 /**
- * Pillars / interior wall stubs / debris / smashable barriers for LOS.
- * Keeps FLOOR in the grid (BFS stays valid); play treats BLOCK as solid.
+ * Perimeter cover only — barrels / pillars / fallen ruins along Kenney walls.
+ * Never a mid-room architecture wall. Walk core + doors stay open.
  */
 export function stampCover(d, rng) {
   const rooms = d.rooms || [];
@@ -158,43 +187,44 @@ export function stampCover(d, rng) {
   for (const r of rooms) {
     if (roomRule(r.type).barriers === false) continue;
     if (r.type === 'entrance' || r.type === 'treasure' || r.type === 'shrine') continue;
-    const cx = Math.round(r.cx), cy = Math.round(r.cy);
-    const wallLen = r.type === 'boss' ? 3 : 2;
-    const horiz = raw() < 0.5;
-    const ox = horiz ? 0 : (raw() < 0.5 ? -2 : 2);
-    const oy = horiz ? (raw() < 0.5 ? -2 : 2) : 0;
-    for (let k = -Math.floor(wallLen / 2); k <= Math.floor(wallLen / 2); k++) {
-      const x = cx + ox + (horiz ? k : 0);
-      const y = cy + oy + (horiz ? 0 : k);
-      if (Math.abs(x - cx) < 1 && Math.abs(y - cy) < 1) continue;
-      mark(x, y, CELL_FLAG.BLOCK, 1);
-    }
-
-    const pillars = r.type === 'boss' ? 4 : r.type === 'elite' ? 3 : 2;
-    let placed = 0, guard = 0;
-    while (placed < pillars && guard++ < 40) {
-      const x = Math.round(r.cx + (raw() - 0.5) * (r.w * 0.55));
-      const y = Math.round(r.cy + (raw() - 0.5) * (r.h * 0.55));
-      if (Math.abs(x - cx) < 1 && Math.abs(y - cy) < 1) continue;
-      if (mark(x, y, CELL_FLAG.BLOCK, 2)) placed++;
-    }
-
-    const debris = r.type === 'boss' ? 3 : 2;
-    placed = 0; guard = 0;
-    while (placed < debris && guard++ < 30) {
-      const x = Math.round(r.cx + (raw() - 0.5) * (r.w * 0.62));
-      const y = Math.round(r.cy + (raw() - 0.5) * (r.h * 0.62));
-      if (mark(x, y, CELL_FLAG.BLOCK, 3)) placed++;
-    }
-
-    if (r.type === 'boss' || r.type === 'elite') {
-      const fences = r.type === 'boss' ? 3 : 2;
-      placed = 0; guard = 0;
-      while (placed < fences && guard++ < 30) {
-        const x = Math.round(r.cx + (raw() - 0.5) * (r.w * 0.5));
-        const y = Math.round(r.cy + (raw() - 0.5) * (r.h * 0.5));
-        if (mark(x, y, CELL_FLAG.BARRIER, 4, 0)) placed++;
+    const x0 = Math.max(1, Math.floor(r.cx - r.w / 2));
+    const x1 = Math.min(W - 2, Math.ceil(r.cx + r.w / 2));
+    const y0 = Math.max(1, Math.floor(r.cy - r.h / 2));
+    const y1 = Math.min(H - 2, Math.ceil(r.cy + r.h / 2));
+    const peri = [];
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        if (!coverOk(d, x, y, idx)) continue;
+        if (Math.abs(x - r.cx) < 1.35 && Math.abs(y - r.cy) < 1.35) continue;
+        const walls = wallTouch(d, x, y, idx);
+        if (walls < 1) continue;
+        peri.push({ x, y, walls });
       }
+    }
+    const corners = shuffleCover(peri.filter((c) => c.walls >= 2), raw);
+    const edges = shuffleCover(peri.filter((c) => c.walls === 1), raw);
+    const taken = [];
+    const take = (pool, bits, role, want, minSpace, stage = 0) => {
+      let placed = 0;
+      for (const c of pool) {
+        if (placed >= want) break;
+        if (!spaced(c.x, c.y, taken, minSpace)) continue;
+        if (mark(c.x, c.y, bits, role, stage)) {
+          taken.push(c);
+          placed++;
+        }
+      }
+      return placed;
+    };
+
+    const nPillar = r.type === 'boss' ? 3 : 2;
+    const nRuin = r.type === 'boss' ? 2 : 1;
+    const nDebris = r.type === 'boss' || r.type === 'elite' ? 2 : 1;
+    take(corners, CELL_FLAG.BLOCK, 2, nPillar, 2);
+    take(edges, CELL_FLAG.BLOCK, 1, nRuin, 2);
+    take(edges, CELL_FLAG.BLOCK, 3, nDebris, 2);
+    if (r.type === 'boss' || r.type === 'elite') {
+      take(edges, CELL_FLAG.BARRIER, 4, r.type === 'boss' ? 2 : 1, 3, 0);
     }
   }
   return n;

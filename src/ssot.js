@@ -131,6 +131,8 @@ export const DRESSING = {
   carpet: `${CDN}/game-assets/glb/kaykit/gltf/floorDecoration_wood.glb`,
   crate: `${CDN}/game-assets/glb/kaykit/gltf/crate.glb`,
   barrel: `${CDN}/game-assets/glb/kaykit/gltf/barrel.glb`,
+  pillar: `${CDN}/game-assets/glb/kaykit/gltf/pillar.glb`,
+  ruin: `${CDN}/game-assets/glb/kaykit/gltf/pillar_broken.glb`,
 };
 
 export const PLAY = {

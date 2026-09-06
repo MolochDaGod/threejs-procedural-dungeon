@@ -38,15 +38,21 @@ function findMesh(root, name) {
   return found;
 }
 
-function fitProp(root, targetH) {
+function fitProp(root, targetH, maxFoot = Infinity) {
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root);
   const size = box.getSize(new THREE.Vector3());
   const h = Math.max(size.y, 0.001);
   root.scale.multiplyScalar(targetH / h);
   root.updateMatrixWorld(true);
-  const box2 = new THREE.Box3().setFromObject(root);
-  root.position.y -= box2.min.y;
+  let planted = new THREE.Box3().setFromObject(root);
+  const xz = Math.max(planted.getSize(new THREE.Vector3()).x, planted.getSize(new THREE.Vector3()).z);
+  if (Number.isFinite(maxFoot) && xz > maxFoot && xz > 0.001) {
+    root.scale.multiplyScalar(maxFoot / xz);
+    root.updateMatrixWorld(true);
+    planted = new THREE.Box3().setFromObject(root);
+  }
+  root.position.y -= planted.min.y;
 }
 
 async function loadOne(id, kit) {
@@ -90,7 +96,7 @@ function pieceForRole(packIds, role, stage = 0, salt = 0) {
   for (const id of packIds) {
     const pack = packs[id];
     if (!pack) continue;
-    const pieces = pack.kit.pieces.filter((p) => p.role === role);
+    const pieces = pack.kit.pieces.filter((p) => p.role === role && !p.architecture);
     if (!pieces.length) continue;
     if (role === 'barrier') {
       const staged = pieces.find((p) => p.stage === stage) || pieces[Math.min(stage, pieces.length - 1)];
@@ -105,7 +111,7 @@ function pieceForRole(packIds, role, stage = 0, salt = 0) {
   return null;
 }
 
-function plantAt(group, src, x, z, yaw, targetH) {
+function plantAt(group, src, x, z, yaw, targetH, maxFoot = Infinity) {
   const mesh = src.clone();
   mesh.material = src.material;
   const wrap = new THREE.Group();
@@ -113,14 +119,15 @@ function plantAt(group, src, x, z, yaw, targetH) {
   wrap.position.set(x, DUNGEON_SI.groundY, z);
   wrap.rotation.y = yaw;
   group.add(wrap);
-  fitProp(wrap, targetH);
+  fitProp(wrap, targetH, maxFoot);
   wrap.position.x = x;
   wrap.position.z = z;
   plantObjectOnTerrain(wrap, group.userData?.sampler || group.parent?.userData?.sampler);
   return wrap;
 }
 
-const ROLE_NAME = { 1: 'wall', 2: 'pillar', 3: 'debris', 4: 'barrier' };
+const ROLE_NAME = { 1: 'ruin', 2: 'pillar', 3: 'debris', 4: 'barrier' };
+const FOOT_M = { ruin: 1.15, pillar: 0.75, debris: 0.85, barrier: 1.2, wall: 1.15 };
 
 export function plantCoverKits(dungeon, group) {
   if (!ready || !dungeon?.flags) return 0;
@@ -142,11 +149,12 @@ export function plantCoverKits(dungeon, group) {
       const stage = dungeon.barrierStage?.[i] || 0;
       const salt = x + y * 13;
       const hit = pieceForRole(packIds, role, stage, salt)
-        || pieceForRole(packIds, role === 'wall' ? 'pillar' : role, stage, salt)
-        || pieceForRole(packIds, 'pillar', 0, salt);
+        || (role === 'ruin' ? pieceForRole(packIds, 'debris', stage, salt) : null)
+        || pieceForRole(packIds, role === 'barrier' ? 'barrier' : 'pillar', stage, salt);
       if (!hit) continue;
-      const yaw = role === 'wall' ? (x % 2 ? 0 : Math.PI / 2) : (x + y) * 0.7;
-      const wrap = plantAt(group, hit.mesh, wx(x), wz(y), yaw, hit.piece.h / DUNGEON_SI.cell);
+      const yaw = role === 'barrier' || role === 'ruin' ? (x % 2 ? 0 : Math.PI / 2) : (x + y) * 0.7;
+      const foot = (hit.piece.footM || FOOT_M[role] || 0.9) / DUNGEON_SI.cell;
+      const wrap = plantAt(group, hit.mesh, wx(x), wz(y), yaw, hit.piece.h / DUNGEON_SI.cell, foot);
       wrap.name = `cover-${role}-${x}-${y}`;
       wrap.userData = {
         gx: x, gz: y, i, role, stage, packIds,
@@ -171,7 +179,7 @@ export function plantCoverKits(dungeon, group) {
     mesh.material = hit.mesh.material;
     wrap.add(mesh);
     wrap.userData.stage = stage;
-    fitProp(wrap, hit.piece.h / DUNGEON_SI.cell);
+    fitProp(wrap, hit.piece.h / DUNGEON_SI.cell, (hit.piece.footM || FOOT_M.barrier) / DUNGEON_SI.cell);
     wrap.position.x = wx(gx);
     wrap.position.z = wz(gz);
   };
@@ -295,9 +303,9 @@ export async function plantDressPlan(stamps, group) {
         wrap.position.set(s.x, s.y || DUNGEON_SI.groundY, s.z);
         wrap.rotation.y = s.yaw || 0;
         wrap.name = `dress-${s.role}-${s.roomId}`;
-        wrap.userData = { dress: s.role, block: !!s.block };
+        wrap.userData = { dress: s.role, role: s.role, block: !!s.block, hp: s.hp || undefined };
         group.add(wrap);
-        fitProp(wrap, s.h || 0.8);
+        fitProp(wrap, s.h || 0.8, s.footM || FOOT_M[s.role] || 1.1);
         wrap.position.set(s.x, s.y || DUNGEON_SI.groundY, s.z);
         n++;
         continue;
@@ -308,9 +316,9 @@ export async function plantDressPlan(stamps, group) {
       wrap.name = `dress-${s.role}-${s.roomId}`;
       wrap.position.set(s.x, s.y || DUNGEON_SI.groundY, s.z);
       wrap.rotation.y = s.yaw || 0;
-      wrap.userData = { dress: s.role, block: !!s.block };
+      wrap.userData = { dress: s.role, block: !!s.block, hp: s.hp || undefined, role: s.role };
       group.add(wrap);
-      fitProp(wrap, s.h || 0.8);
+      fitProp(wrap, s.h || 0.8, s.footM || FOOT_M[s.role] || 1.1);
       wrap.position.set(s.x, s.y || DUNGEON_SI.groundY, s.z);
       if (s.role === 'carpet') wrap.position.y = 0.02;
       if (s.role === 'wall_art') wrap.position.y = s.y || 1.55;

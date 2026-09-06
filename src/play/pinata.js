@@ -13,10 +13,12 @@ export const PINATA_HP = {
   barrier: 52,
   table: 28,
   barrel: 36,
+  crate: 28,
   chair: 18,
   pot: 12,
   coffin: 55,
   brick: 40,
+  ruin: 70,
 };
 
 export const PINATA_DROP = {
@@ -26,10 +28,12 @@ export const PINATA_DROP = {
   barrier: 'wood_scrap',
   table: 'wood_scrap',
   barrel: 'wood_scrap',
+  crate: 'wood_scrap',
   chair: 'wood_scrap',
   pot: 'cloth_scrap',
   coffin: 'cloth_scrap',
   brick: 'stone_chip',
+  ruin: 'stone_chip',
 };
 
 const SKIP = new Set(['door', 'chest', 'torch', 'scene', 'trap', 'prop']);
@@ -82,13 +86,20 @@ export class DungeonPinata {
     return n;
   }
 
+  _world(n) {
+    if (!n?.mesh) return null;
+    n.mesh.updateWorldMatrix?.(true, false);
+    return n.mesh.getWorldPosition(new THREE.Vector3());
+  }
+
   splash(origin, radius, dmg, tool = 'any') {
     let hits = 0;
     let broken = 0;
     const r2 = radius * radius;
     for (const n of this.nodes.values()) {
       if (n.broken || !n.mesh.visible) continue;
-      const p = n.mesh.position;
+      const p = this._world(n);
+      if (!p) continue;
       const dx = p.x - origin.x;
       const dz = p.z - origin.z;
       if (dx * dx + dz * dz > r2) continue;
@@ -104,7 +115,9 @@ export class DungeonPinata {
     let d0 = maxDist;
     for (const n of this.nodes.values()) {
       if (n.broken) continue;
-      const d = origin.distanceTo(n.mesh.position);
+      const p = this._world(n);
+      if (!p) continue;
+      const d = origin.distanceTo(p);
       if (d < d0) { d0 = d; best = n; }
     }
     return best;
