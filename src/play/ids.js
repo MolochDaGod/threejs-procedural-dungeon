@@ -10,7 +10,11 @@ export function classifyId(raw) {
   if (UUID_RE.test(s)) return { kind: 'characterUuid', value: s.toLowerCase() };
   if (/^GRUDGE_/i.test(s)) return { kind: 'grudgeId', value: s };
   if (/^GRDG-/i.test(s)) return { kind: 'grudgeCode', value: s };
+  if (/^SKIL-/i.test(s)) return { kind: 'skillDef', value: s };
+  if (/^ICON-/i.test(s)) return { kind: 'iconAsset', value: s };
   if (/^ITEM-/i.test(s)) return { kind: 'catalogPrefab', value: s };
+  if (/^PFAB-/i.test(s)) return { kind: 'entityPrefab', value: s };
+  if (/^ATTR-/i.test(s)) return { kind: 'attributeDef', value: s };
   if (/^ent_/i.test(s)) return { kind: 'sessionEnt', value: s };
   return { kind: 'catalogSlug', value: s };
 }

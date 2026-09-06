@@ -22,6 +22,9 @@
     "skillApi": "https://weapon-skills.grudge-studio.com/api/health + /api/v1/bundle (drafts, not catalog)",
     "trees": "https://info.grudge-studio.com/api/v1/master-skillTrees.json",
     "prefabs": "https://info.grudge-studio.com/api/v1/master-weapon-prefabs.json",
+    "uuidLaw": "https://info.grudge-studio.com/api/v1/uuid-law.json",
+    "manifest": "https://info.grudge-studio.com/api/v1/game-data-manifest.json",
+    "canonicalManifest": "https://info.grudge-studio.com/api/v1/canonical-manifest.json",
     "projectiles": "assets.grudge-studio.com/models/vfx/orbs/orb-{element}.glb SI 0.45 m — never whole fireball.glb",
     "fissure": "isolated magic-rock-N",
     "slashResidual": "linear.wave Getsuga on heavy melee"

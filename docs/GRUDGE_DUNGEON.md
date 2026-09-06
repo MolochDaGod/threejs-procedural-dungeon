@@ -22,6 +22,23 @@
 
 Do **not** vendor Unity FBX into this repo. Do **not** put API keys in the client.
 
+## Info catalogs (AI workers)
+
+Start: `https://info.grudge-studio.com/api/v1/uuid-law.json` then `game-data-manifest.json` (also `canonical-manifest.json`).
+
+| Need | File | Not this |
+|------|------|----------|
+| Play skills | `master-weaponSkills.json` (300, `sword_*`) | `weaponSkills.json` stub · `skills.json` kebab · SkillAPI bundle |
+| T8 kits | `master-weapon-prefabs.json` (`ITEM-*`) | `weapons.json` design |
+| Class trees | `master-skillTrees.json` | invent F ids |
+| Combat math | `master-attributes.json` | `attributes.json` archive |
+| Items | `master-items.json` | `items-database.json` |
+| Materials | `master-materials.json` | flatten `materials.json` as `items[]` |
+| Consumables | `consumables.json` → `categories.*.items` + `slug` / `iconPath` | `items[]` |
+| Icons | relative `/icons/…` → `assets.grudge-studio.com` + path | emoji · `/ui/craftpix/icons` |
+| Play mesh | Toon `{race}.glb` | sprites, FBX, Meshy |
+| JSON host | `info.grudge-studio.com` (objectstore Worker proxies) | `github.io/ObjectStore` · `api.grudge-studio.com` |
+
 ## Play contract
 
 1. Forge a dungeon (or check **Linear crawl** — **7 rooms**, 0 loops). See `docs/CUSTOM_GRUDGE.md`.
