@@ -1770,8 +1770,13 @@ export class PlaySession {
       this.classState.overpowerT = RAIDER_TWO_HAND.overpowerSec;
       toast('Overpower');
     } else if (spell.form) {
-      void this.enterForm(spell.form);
-      toast(spell.name);
+      if (this.classState.form === spell.form) {
+        this.leaveForm();
+        toast(`${spell.name} · off`);
+      } else {
+        void this.enterForm(spell.form);
+        toast(spell.name);
+      }
     } else if (spell.id === 't_invis' || spell.id === 't_marking_marks') {
       this.fireThief0(spell);
     } else if (spell.id === 'r_invis' || spell.id === 'r_shadow_strike') {
@@ -2117,6 +2122,19 @@ export class PlaySession {
     else this._handGlow.children[0].position.set(0.22, 1.1, 0.15);
     if (hands[1] && this._handGlow.children[1]) this._handGlow.children[1].position.copy(this.player.visual.worldToLocal(hands[1].getWorldPosition(new THREE.Vector3())));
     else if (this._handGlow.children[1]) this._handGlow.children[1].position.set(-0.22, 1.1, 0.15);
+  }
+
+  leaveForm() {
+    if (this._formMixer) {
+      this._formMixer.stopAllAction();
+      this._formMixer = null;
+    }
+    if (this._formVis) {
+      this.player?.root.remove(this._formVis);
+      this._formVis = null;
+    }
+    if (this.player?.visual) this.player.visual.visible = true;
+    if (this.classState) this.classState.form = null;
   }
 
   async enterForm(formId) {

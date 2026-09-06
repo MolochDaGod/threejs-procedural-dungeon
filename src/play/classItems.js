@@ -121,7 +121,7 @@ export const WORGE_GRIMOIRE = {
   name: 'Grimoire of Forms',
   starter: T0_STARTERS.worge.t0,
   starterName: T0_STARTERS.worge.name,
-  defaultForm: 'bear',
+  defaultForm: null,
   /** Grimoire form ids that have a forestry claw family (claw-weapon-ssot). */
   forms: ['bear', 'raptor', 'bird', 'wolf', 'cheetah', 'spider'],
   clawSlot4: {
@@ -230,7 +230,7 @@ export function makeClassState(classId) {
       relicId: item.id,
       trinketId: null,
       form: item.grimoire.defaultForm,
-      unlocked: item.grimoire.defaultForm === 'iguana' ? ['iguana'] : ['bear'],
+      unlocked: item.grimoire.defaultForm ? [item.grimoire.defaultForm] : [],
     };
   }
   return { classId, relicId: item.id };

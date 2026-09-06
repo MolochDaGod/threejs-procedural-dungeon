@@ -68,7 +68,7 @@ export const FORMS = {
     id: 'bear',
     name: 'Bear Form',
     classIds: ['worge'],
-    start: true,
+    start: false,
     heightM: WORGE_BEAR_HEIGHT_M,
     meshUrl: WORGE_BEAR_MESH,
     albedo: bearAlbedoUrl,
@@ -94,7 +94,6 @@ export function formUrl(formId, raceId) {
 }
 
 export function defaultFormFor(classId) {
-  if (classId === 'worge') return 'bear';
   if (classId === 'verduror') return 'iguana';
   return null;
 }
