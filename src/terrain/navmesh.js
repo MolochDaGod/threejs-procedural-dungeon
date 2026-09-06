@@ -1,6 +1,7 @@
 /**
  * Dungeon terrain collider + navmesh.
- * three-mesh-bvh (ground ray / capsule) + three-pathfinding (AI clamp).
+ * three-mesh-bvh (ground ray / capsule) + three-pathfinding (AI path_to).
+ * Maze study: https://threejs-games.github.io/examples/35-mazes/pathfind/
  * Walk mesh Y is DUNGEON_SI.groundY — same as visual floor top.
  */
 import * as THREE from 'three';
@@ -58,9 +59,18 @@ function collectCells(d, pred) {
   return out;
 }
 
+function floorOpen(d, t, i) {
+  if (t !== TILE.FLOOR) return false;
+  if (!d.flags) return true;
+  const f = d.flags[i];
+  if (f & 32) return false;
+  if ((f & 64) && (!d.barrierStage || d.barrierStage[i] < 3)) return false;
+  return true;
+}
+
 function buildWalkMesh(d) {
   const y = DUNGEON_SI.groundY;
-  const cells = collectCells(d, (t) => t === TILE.FLOOR);
+  const cells = collectCells(d, (t, i) => floorOpen(d, t, i));
   if (!cells.length) return null;
   return buildIndexedWalk(d, cells, y);
 }
@@ -143,6 +153,45 @@ export function attachDungeonTerrain(dungeon, group = null) {
     },
   };
   return dungeon.terrain;
+}
+
+const _from = new THREE.Vector3();
+const _to = new THREE.Vector3();
+
+/**
+ * threejs-games maze pathfind + three-pathfinding zone.
+ * AI must use this, not a straight line through walls.
+ * Fallback: grid A* on session.nav (gen/navmesh).
+ */
+export function findAiPath(dungeon, from, to) {
+  const t = dungeon?.terrain;
+  const y = t?.groundY ?? DUNGEON_SI.groundY;
+  if (t?.nav && t.zoneOk) {
+    _from.set(from.x, y, from.z);
+    _to.set(to.x, y, to.z);
+    let group = 0;
+    try {
+      group = t.nav.getGroup(t.zone, _from);
+    } catch {
+      group = 0;
+    }
+    try {
+      const path = t.nav.findPath(_from, _to, t.zone, group);
+      if (path && path.length) {
+        return path.map((p) => ({ x: p.x, y: p.y, z: p.z }));
+      }
+    } catch {
+      /* zone group miss */
+    }
+  }
+  return null;
+}
+
+/** After a barrier breaks, rebuild the walk zone so path_to can use the hole. */
+export function rebuildDungeonNav(dungeon, group = null) {
+  const parent = group || dungeon?.terrain?.walk?.parent || null;
+  disposeDungeonTerrain(dungeon);
+  return attachDungeonTerrain(dungeon, parent);
 }
 
 export function disposeDungeonTerrain(dungeon) {

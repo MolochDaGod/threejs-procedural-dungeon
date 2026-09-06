@@ -5,8 +5,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { PROP_KITS } from '../content/props/kits.js';
+import { MAGIC_ROCKS, MAGIC_ROCK_DIAMETER_M } from '../content/props/magicRocks.js';
 import { CELL_FLAG } from '../grid/cells.js';
 import { DUNGEON_SI } from '../ssot.js';
+import { plantObjectOnTerrain } from '../terrain/footPlant.js';
 
 const loader = new GLTFLoader();
 const packs = {};
@@ -113,6 +115,7 @@ function plantAt(group, src, x, z, yaw, targetH) {
   fitProp(wrap, targetH);
   wrap.position.x = x;
   wrap.position.z = z;
+  plantObjectOnTerrain(wrap, group.userData?.sampler || group.parent?.userData?.sampler);
   return wrap;
 }
 
@@ -124,9 +127,8 @@ export function plantCoverKits(dungeon, group) {
   const packIds = kitForBiome(theme);
   if (!packIds.length) return 0;
   const W = dungeon.W, H = dungeon.H;
-  const cell = DUNGEON_SI.cell;
-  const wx = (gx) => (gx - W / 2 + 0.5) * cell;
-  const wz = (gz) => (gz - H / 2 + 0.5) * cell;
+  const wx = (gx) => gx - W / 2 + 0.5;
+  const wz = (gz) => gz - H / 2 + 0.5;
   dungeon.coverMeshes = dungeon.coverMeshes || {};
   let n = 0;
   for (let y = 0; y < H; y++) {
@@ -143,9 +145,13 @@ export function plantCoverKits(dungeon, group) {
         || pieceForRole(packIds, 'pillar', 0, salt);
       if (!hit) continue;
       const yaw = role === 'wall' ? (x % 2 ? 0 : Math.PI / 2) : (x + y) * 0.7;
-      const wrap = plantAt(group, hit.mesh, wx(x), wz(y), yaw, hit.piece.h);
+      const wrap = plantAt(group, hit.mesh, wx(x), wz(y), yaw, hit.piece.h / DUNGEON_SI.cell);
       wrap.name = `cover-${role}-${x}-${y}`;
-      wrap.userData = { gx: x, gz: y, i, role, stage, packIds };
+      wrap.userData = {
+        gx: x, gz: y, i, role, stage, packIds,
+        pieceId: hit.piece.id,
+        hp: hit.piece.hp || undefined,
+      };
       dungeon.coverMeshes[i] = wrap;
       n++;
     }
@@ -164,7 +170,7 @@ export function plantCoverKits(dungeon, group) {
     mesh.material = hit.mesh.material;
     wrap.add(mesh);
     wrap.userData.stage = stage;
-    fitProp(wrap, hit.piece.h);
+    fitProp(wrap, hit.piece.h / DUNGEON_SI.cell);
     wrap.position.x = wx(gx);
     wrap.position.z = wz(gz);
   };
@@ -187,21 +193,20 @@ function cloneRoot(src) {
 export function plantWallTorches(dungeon, group) {
   const pack = packs.torch;
   if (!pack || !dungeon?.torches?.length || !group) return 0;
-  const cell = DUNGEON_SI.cell;
-  const wx = (gx) => (gx - dungeon.W / 2 + 0.5) * cell;
-  const wz = (gz) => (gz - dungeon.H / 2 + 0.5) * cell;
-  const h = pack.kit.pieces[0]?.h || 0.85;
+  const wx = (gx) => gx - dungeon.W / 2 + 0.5;
+  const wz = (gz) => gz - dungeon.H / 2 + 0.5;
+  const h = (pack.kit.pieces[0]?.h || 0.85) / DUNGEON_SI.cell;
   let n = 0;
   for (const t of dungeon.torches) {
     const wrap = cloneRoot(pack.scene);
     const X = wx(t.x) + t.dx * 0.42;
     const Z = wz(t.y) + t.dy * 0.42;
     wrap.name = `torch-${t.x}-${t.y}`;
-    wrap.position.set(X, DUNGEON_SI.groundY + 1.15, Z);
+    wrap.position.set(X, DUNGEON_SI.groundY + 1.15 / DUNGEON_SI.cell, Z);
     wrap.rotation.y = Math.atan2(t.dx, t.dy);
     group.add(wrap);
     fitProp(wrap, h);
-    wrap.position.set(X, DUNGEON_SI.groundY + 1.15, Z);
+    wrap.position.set(X, DUNGEON_SI.groundY + 1.15 / DUNGEON_SI.cell, Z);
     n++;
   }
   return n;
@@ -211,9 +216,8 @@ export function plantWallTorches(dungeon, group) {
 export function plantRoomScenes(dungeon, group) {
   if (!group || !dungeon?.rooms) return 0;
   const theme = dungeon.params?.themeKey || 'ancient';
-  const cell = DUNGEON_SI.cell;
-  const wx = (gx) => (gx - dungeon.W / 2 + 0.5) * cell;
-  const wz = (gz) => (gz - dungeon.H / 2 + 0.5) * cell;
+  const wx = (gx) => gx - dungeon.W / 2 + 0.5;
+  const wz = (gz) => gz - dungeon.H / 2 + 0.5;
   let n = 0;
 
   const temple = packs.temple;
@@ -227,7 +231,7 @@ export function plantRoomScenes(dungeon, group) {
       wrap.name = `temple-scene-${r.id}`;
       wrap.position.set(X, DUNGEON_SI.groundY, Z);
       group.add(wrap);
-      fitProp(wrap, temple.kit.sceneH || 5.2);
+      fitProp(wrap, (temple.kit.sceneH || 5.2) / DUNGEON_SI.cell);
       wrap.position.set(X, DUNGEON_SI.groundY, Z);
       n++;
     }
@@ -244,9 +248,103 @@ export function plantRoomScenes(dungeon, group) {
       if (!mesh) continue;
       const X = wx(r.cx);
       const Z = wz(r.cy - r.h * 0.18);
-      const wrap = plantAt(group, mesh, X, Z, r.id * 0.4, piece.h);
+      const wrap = plantAt(group, mesh, X, Z, r.id * 0.4, piece.h / DUNGEON_SI.cell);
       wrap.name = `smelter-scene-${r.id}`;
       n++;
+    }
+  }
+  return n;
+}
+
+const magicRockScenes = {};
+
+async function loadMagicRock(def) {
+  if (magicRockScenes[def.id]) return magicRockScenes[def.id];
+  const gltf = await new Promise((res, rej) => loader.load(def.glb, res, undefined, rej));
+  gltf.scene.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+      if (o.material?.map) o.material.map.colorSpace = THREE.SRGBColorSpace;
+    }
+  });
+  magicRockScenes[def.id] = gltf.scene;
+  return gltf.scene;
+}
+
+/**
+ * Play-client dress stamps (SI metres). Carpets / wall art / furniture.
+ * Architecture walls stay Kenney TILE.WALL — this never replaces them.
+ */
+export async function plantDressPlan(stamps, group) {
+  if (!group || !stamps?.length) return 0;
+  if (!ready) await loadInteriorKits();
+  let n = 0;
+  for (const s of stamps) {
+    try {
+      if (s.source === 'kit' && s.kitId && s.mesh) {
+        const pack = packs[s.kitId];
+        const mesh = pack ? findMesh(pack.scene, s.mesh) : null;
+        if (!mesh) continue;
+        const src = mesh.clone();
+        src.material = mesh.material;
+        const wrap = new THREE.Group();
+        wrap.add(src);
+        wrap.position.set(s.x, s.y || DUNGEON_SI.groundY, s.z);
+        wrap.rotation.y = s.yaw || 0;
+        wrap.name = `dress-${s.role}-${s.roomId}`;
+        wrap.userData = { dress: s.role, block: !!s.block };
+        group.add(wrap);
+        fitProp(wrap, s.h || 0.8);
+        wrap.position.set(s.x, s.y || DUNGEON_SI.groundY, s.z);
+        n++;
+        continue;
+      }
+      if (!s.url) continue;
+      const gltf = await new Promise((res, rej) => loader.load(s.url, res, undefined, rej));
+      const wrap = cloneRoot(gltf.scene);
+      wrap.name = `dress-${s.role}-${s.roomId}`;
+      wrap.position.set(s.x, s.y || DUNGEON_SI.groundY, s.z);
+      wrap.rotation.y = s.yaw || 0;
+      wrap.userData = { dress: s.role, block: !!s.block };
+      group.add(wrap);
+      fitProp(wrap, s.h || 0.8);
+      wrap.position.set(s.x, s.y || DUNGEON_SI.groundY, s.z);
+      if (s.role === 'carpet') wrap.position.y = 0.02;
+      if (s.role === 'wall_art') wrap.position.y = s.y || 1.55;
+      n++;
+    } catch (err) {
+      console.warn('[grudge-dungeon] dress miss', s.role, err?.message || err);
+    }
+  }
+  return n;
+}
+
+/** Isolated magic rocks as shrine / treasure / boss objects — never the fused pack. */
+export async function plantMagicRocks(dungeon, group) {
+  if (!group || !dungeon?.rooms) return 0;
+  const theme = dungeon.params?.themeKey || 'ancient';
+  const wx = (gx) => gx - dungeon.W / 2 + 0.5;
+  const wz = (gz) => gz - dungeon.H / 2 + 0.5;
+  const pool = MAGIC_ROCKS.filter((r) => (r.biomes || []).includes(theme) || theme === 'ancient');
+  const pick = pool.length ? pool : MAGIC_ROCKS;
+  let n = 0;
+  const rooms = dungeon.rooms.filter((r) => r.type === 'shrine' || r.type === 'treasure' || r.type === 'boss');
+  for (const r of rooms) {
+    const def = pick[Math.abs(r.id) % pick.length];
+    try {
+      const scene = await loadMagicRock(def);
+      const wrap = cloneRoot(scene);
+      const X = wx(r.cx);
+      const Z = wz(r.cy);
+      wrap.name = `magic-rock-${def.id}-${r.id}`;
+      wrap.position.set(X, DUNGEON_SI.groundY, Z);
+      group.add(wrap);
+      fitProp(wrap, (def.h || MAGIC_ROCK_DIAMETER_M) / DUNGEON_SI.cell);
+      wrap.position.set(X, DUNGEON_SI.groundY, Z);
+      n++;
+    } catch (err) {
+      console.warn('[grudge-dungeon] magic-rock miss', def.id, err);
     }
   }
   return n;

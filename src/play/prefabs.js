@@ -2,7 +2,8 @@
  * Warlords Era monster / boss prefabs — Toon-RTS races, equipped loadouts.
  * brain: melee | ranger | mage | warlord
  */
-import { THEME_ENEMY, CLASSES, CLASS_IDS, creaturesForBiome } from '../ssot.js';
+import { CLASSES, CLASS_IDS, creaturesForBiome } from '../ssot.js';
+import { setByKitId } from './t0ClassSets.js';
 
 const P = (o) => ({ equipped: true, ...o });
 
@@ -107,14 +108,21 @@ export function prefabFor(themeKey, roomType, salt = 0) {
 
 export function playerPrefab(raceId, classId = 'worge', weaponId = '1h_tome') {
   const role = CLASS_IDS.includes(classId) ? classId : 'worge';
+  const pack = setByKitId(role, weaponId);
   return {
-    id: `hero_${raceId}_${role}_${weaponId}`,
+    id: `hero_${raceId}_${role}_${pack.id || weaponId}`,
     label: CLASSES[role]?.label || role,
     raceId,
     role,
-    weaponId,
+    classId: role,
+    weaponId: pack.id || weaponId,
+    t8: pack.t8 || null,
+    t8Name: pack.name || null,
+    off: pack.off || null,
+    skills: (pack.skills || []).slice(),
     height: 1.82,
     equipped: true,
+    loader: 'dungeon-spawnActor',
   };
 }
 

@@ -338,9 +338,13 @@ export class VfxWorld {
           it.onTick?.(it);
         }
       } else if (it.type === 'gridFire') {
-        if (this.camera) it.field.update(this.camera, this.clock);
         const k = it.life / it.max;
-        it.field.uniforms.intensity.value = 0.55 + 0.7 * Math.min(1, k * 2);
+        if (it.field?.uniforms?.intensity) {
+          it.field.uniforms.intensity.value = 0.55 + 0.7 * Math.min(1, k * 2);
+        }
+        if (typeof it.field?.update === 'function' && this.camera) {
+          it.field.update(this.camera, this.clock);
+        }
         it.tickAcc = (it.tickAcc || 0) + dt;
         if (it.dps && it.tickAcc >= 0.35) {
           it.tickAcc = 0;

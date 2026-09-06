@@ -6,6 +6,7 @@ import {
   AGGRO, ENEMY_ATTACKS, PLAY, ROLE_ATTACKS, biomeOf,
   enemyFactionRaces, creatureOf,
 } from '../ssot.js';
+import { planFactionPacks } from './factionPacks.js';
 
 function unitFromName(name, room, fallbackKind) {
   const cr = creatureOf(name);
@@ -49,11 +50,15 @@ function unitFromName(name, room, fallbackKind) {
   };
 }
 
-export function planEncounters(dungeon, { linear = true, kind = 'biome', playerRace = 'human' } = {}) {
+export function planEncounters(dungeon, { linear = true, kind = 'biome', playerRace = 'human', level = PLAY.level } = {}) {
   const biome = biomeOf(dungeon.params.themeKey);
   const rooms = linear ? critRooms(dungeon) : dungeon.rooms;
   const plan = [];
   const k = kind || dungeon.params?.kind || 'biome';
+  if (k === 'faction') {
+    const fp = planFactionPacks(dungeon, { playerRace, level, linear });
+    return { biome, kind: k, plan: fp };
+  }
 
   const pushBoss = (r) => {
     const cr = creatureOf(biome.boss);
@@ -108,34 +113,6 @@ export function planEncounters(dungeon, { linear = true, kind = 'biome', playerR
       continue;
     }
     if (k === 'boss') continue;
-
-    if (k === 'faction') {
-      const races = enemyFactionRaces(playerRace);
-      const scale = 1.5;
-      const n = r.type === 'elite' || r.miniboss ? 2 : (r.depth > 2 ? 3 : 2);
-      for (let i = 0; i < n; i++) {
-        const raceId = races[i % races.length];
-        const elite = r.type === 'elite' || r.miniboss || i === 0;
-        plan.push({
-          room: r,
-          name: `${raceId} ${elite ? 'champion' : 'raider'}`,
-          id: `faction-${raceId}-${i}`,
-          kind: elite ? 'miniboss' : 'grunt',
-          role: i === n - 1 ? 'mage' : 'warrior',
-          raceId,
-          height: PLAY.playerHeight * scale * (elite ? 1.08 : 1),
-          hp: elite ? 200 : 90,
-          radius: 0.55 * scale,
-          speed: 2.8,
-          attacks: ROLE_ATTACKS.boss,
-          clips: 'toon',
-          brain: i === n - 1 ? 'kite' : 'pursue',
-          telegraph: i === n - 1 ? 'incoming' : 'cone',
-          scale,
-        });
-      }
-      continue;
-    }
 
     if (r.type === 'elite' || r.miniboss) {
       plan.push(unitFromName(pick(biome.elites, r.id), r, 'miniboss'));

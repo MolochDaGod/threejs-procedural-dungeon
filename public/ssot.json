@@ -5,13 +5,13 @@
   "cdn": "https://assets.grudge-studio.com",
   "combat": "https://combat.grudge-studio.com",
   "info": "https://info.grudge-studio.com",
-  "classes": ["worge", "warrior", "mage", "ranger"],
   "clipDonor": "https://combat.grudge-studio.com/models/toon-clips/wk-knight.glb",
+  "clipRoles": "src/play/clipRoles.js",
   "kit": "https://assets.grudge-studio.com/models/dungeons/warlords-dungeon-kit.json",
   "kitLocal": "./warlords-dungeon-kit.json",
   "nav": "grid-8",
   "cellM": 2.15,
-  "physics": "@dimforge/rapier3d-compat@^0.19.3",
+  "physicsEngine": "@dimforge/rapier3d-compat@^0.19.3",
   "instance": "src/gen/instance.js",
   "characters": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb",
   "anims": {
@@ -21,10 +21,13 @@
     "death": "https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/anim_death.glb"
   },
   "races": ["human", "barbarian", "elf", "dwarf", "orc", "undead"],
-  "classes": ["worge", "warrior", "mage", "ranger"],
-  "spells": ["cleave", "fireball", "frostlance", "thunder", "holy_nova", "void_dash"],
+  "classes": ["warrior", "raider", "mage", "priest", "ranger", "thief", "worge", "verduror"],
+  "spells": "src/play/weaponSkills.js T8 catalog (aliases cleave/fireball only)",
+  "bars": { "weapon": "1-5", "items": "6-7", "mounts": "8", "class0": "F" },
+  "tps": { "distance": 4.6, "file": "src/play/tpsCamera.js" },
   "layout": { "linearRooms": 7, "graphRooms": 42, "roomsMin": 7, "roomsMax": 80, "cellM": 2.15, "wallHM": 3.85, "groundY": 0, "floorHM": 0.28 },
   "physics": {
+    "package": "@dimforge/rapier3d-compat@^0.19.3",
     "capsuleR": 0.32,
     "layers": ["Default", "Terrain", "Player", "NPC", "Item", "Projectile", "Trigger", "Water", "IgnoreRaycast", "UI3D"],
     "colliders": "src/physics/colliders.js"
@@ -46,7 +49,7 @@
   "scriptWorker": "/api/dungeon/script",
   "completeWorker": "/api/dungeon/complete",
   "node": "server/index.mjs",
-  "combat": "src/combat",
+  "combatCode": "src/combat",
   "characterEntry": "src/character/entry.js",
   "content": {
     "era": "src/content/era/warlords.js",
@@ -55,7 +58,6 @@
     "monsters": "src/content/monsters",
     "bosses": "src/content/bosses"
   },
-  "physicsEngine": "@dimforge/rapier3d-compat",
   "d1": { "kit": "models/dungeons/warlords-dungeon-kit.json", "tables": ["gn_assets", "world_dungeons", "dungeon_kit_pieces"] },
   "note": "Production SSOT. Do not vendor Unity FBX. Do not put GEMINI keys in this client."
 }

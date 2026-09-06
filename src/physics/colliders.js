@@ -20,6 +20,9 @@ export const COLLIDER_KIND = {
   doorway: 'doorway',
   room: 'room',
   cover: 'cover',
+  platform: 'platform',
+  vendor: 'vendor',
+  kill: 'kill',
 };
 
 function at(grid, W, H, x, y) {
@@ -121,7 +124,7 @@ export function buildColliderAssets(dungeon) {
     ));
   });
 
-  const voidMask = maskEq(grid, W, H, (t) => t === TILE.VOID);
+  const voidMask = maskEq(grid, W, H, (t, i) => t === TILE.VOID && !(roomId && roomId[i] >= 0));
   greedyRects(voidMask, W, H).forEach((r, i) => {
     nodes.push(node(
       `col-void-${i}`,
@@ -132,14 +135,31 @@ export function buildColliderAssets(dungeon) {
     ));
   });
 
-  const floorMask = maskEq(grid, W, H, (t, i) => t === TILE.FLOOR && !(doorway && doorway[i]));
+  const pitMask = maskEq(grid, W, H, (t, i) => t === TILE.VOID && !!(roomId && roomId[i] >= 0));
+  greedyRects(pitMask, W, H).forEach((r, i) => {
+    nodes.push(node(
+      `col-kill-${i}`,
+      COLLIDER_KIND.kill,
+      'Trigger',
+      rectWorld(d, r.x, r.y, r.w, r.h, groundY - 1.2, 0.4),
+      {
+        solid: false,
+        sensor: true,
+        hazard: true,
+        dps: 40,
+        location: { tags: ['dungeon', 'void', 'kill'] },
+      },
+    ));
+  });
+
+  const floorMask = maskEq(grid, W, H, (t) => t === TILE.FLOOR);
   greedyRects(floorMask, W, H).forEach((r, i) => {
     nodes.push(node(
       `col-floor-${i}`,
       COLLIDER_KIND.floor,
       'Terrain',
       rectWorld(d, r.x, r.y, r.w, r.h, groundY - floorH / 2, floorH / 2),
-      { solid: false, location: { tags: ['dungeon', 'floor'] } },
+      { solid: false, walk: true, location: { tags: ['dungeon', 'floor'] } },
     ));
   });
 
@@ -200,6 +220,71 @@ export function buildColliderAssets(dungeon) {
         'Terrain',
         rectWorld(d, r.x, r.y, r.w, r.h, groundY + 1.4, 1.4),
         { location: { tags: ['dungeon', 'cover', 'pillar'] } },
+      ));
+    });
+
+    const barrierMask = new Uint8Array(W * H);
+    for (let i = 0; i < barrierMask.length; i++) {
+      if (grid[i] !== TILE.FLOOR) continue;
+      if (!(d.flags[i] & 64)) continue;
+      if (d.barrierStage && d.barrierStage[i] >= 3) continue;
+      barrierMask[i] = 1;
+    }
+    greedyRects(barrierMask, W, H).forEach((r, i) => {
+      const cx = r.x + Math.floor(r.w / 2);
+      const cy = r.y + Math.floor(r.h / 2);
+      const cellI = cy * W + cx;
+      nodes.push(node(
+        `col-barrier-${i}`,
+        COLLIDER_KIND.cover,
+        'Terrain',
+        rectWorld(d, r.x, r.y, r.w, r.h, groundY + 1.05, 1.05),
+        {
+          breakable: true,
+          cellI,
+          location: { tags: ['dungeon', 'barrier', 'break'] },
+        },
+      ));
+    });
+  }
+
+  if (d.platforms?.length) {
+    for (const p of d.platforms) {
+      nodes.push(node(
+        `col-${p.role || 'platform'}-${p.id}`,
+        COLLIDER_KIND.platform,
+        'Terrain',
+        {
+          position: [p.x, p.y, p.z],
+          collider: { kind: 'box', params: [p.hx, p.hy, p.hz] },
+        },
+        {
+          solid: true,
+          bounce: !!p.bounce,
+          restitution: p.bounce ? 1.15 : 0.05,
+          roomId: p.roomId,
+          location: { tags: ['dungeon', 'platform', p.role || 'platform'] },
+        },
+      ));
+    }
+  }
+
+  if (d.cellRole) {
+    const vendorMask = new Uint8Array(W * H);
+    for (let i = 0; i < vendorMask.length; i++) {
+      if (d.cellRole[i] === 5) vendorMask[i] = 1;
+    }
+    greedyRects(vendorMask, W, H).forEach((r, i) => {
+      nodes.push(node(
+        `col-vendor-${i}`,
+        COLLIDER_KIND.vendor,
+        'Trigger',
+        rectWorld(d, r.x, r.y, r.w, r.h, groundY + 0.9, 0.9),
+        {
+          solid: false,
+          sensor: true,
+          location: { tags: ['dungeon', 'vendor'] },
+        },
       ));
     });
   }

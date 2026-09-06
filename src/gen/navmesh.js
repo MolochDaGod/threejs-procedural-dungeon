@@ -5,6 +5,16 @@
  */
 import { WALL, POOL, CELL_M, inBounds, worldOf, isWalkableCell } from './cells.js';
 
+function navWalkable(dungeon, x, y) {
+  const i = y * dungeon.W + x;
+  if (!isWalkableCell(dungeon.grid[i])) return false;
+  if (!dungeon.flags) return true;
+  const f = dungeon.flags[i];
+  if (f & 32) return false;
+  if ((f & 64) && (!dungeon.barrierStage || dungeon.barrierStage[i] < 3)) return false;
+  return true;
+}
+
 const DIRS8 = [
   [1, 0, 1],
   [-1, 0, 1],
@@ -24,7 +34,7 @@ export function buildNavMesh(dungeon) {
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = y * W + x;
-      if (!isWalkableCell(grid[i])) continue;
+      if (!navWalkable(dungeon, x, y)) continue;
       indexOf[i] = walkable.length;
       const w = worldOf(dungeon, x, y);
       walkable.push({ x, y, wx: w.x, wz: w.z, i });
@@ -38,8 +48,8 @@ export function buildNavMesh(dungeon) {
       const ny = n.y + dy;
       if (!inBounds(dungeon, nx, ny)) continue;
       if (dx && dy) {
-        if (!isWalkableCell(grid[n.y * W + (n.x + dx)])) continue;
-        if (!isWalkableCell(grid[(n.y + dy) * W + n.x])) continue;
+        if (!navWalkable(dungeon, n.x + dx, n.y)) continue;
+        if (!navWalkable(dungeon, n.x, n.y + dy)) continue;
       }
       const ni = indexOf[ny * W + nx];
       if (ni >= 0) out.push({ i: ni, cost });
@@ -77,7 +87,11 @@ export function nearestNode(nav, wx, wz) {
   return best;
 }
 
-/** A* on the 4-connected floor graph. Returns world-space waypoints (incl. goal). */
+/**
+ * Grid A* fallback (maze path_to).
+ * Live AI prefers three-pathfinding via findAiPath (terrain/navmesh.js)
+ * — same idea as https://threejs-games.github.io/examples/35-mazes/pathfind/
+ */
 export function findPath(nav, fromWx, fromWz, toWx, toWz) {
   const start = nearestNode(nav, fromWx, fromWz);
   const goal = nearestNode(nav, toWx, toWz);

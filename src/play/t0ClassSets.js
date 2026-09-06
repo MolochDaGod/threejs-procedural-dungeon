@@ -347,6 +347,8 @@ export const CATALOG_SKILL_PLAY = {
   sword_parry_counter: sk('Parry Counter', 'slash', 'physical', STL, { cd: 8, range: 2.8, damage: 80, parry: true }),
   sword_deep_wound: sk('Deep Wound', 'slash', 'physical', 0xd8433a, { cd: 4, range: 2.8, damage: 30 }),
   sword_crimson_reprisal: sk('Crimson Reprisal', 'slash', 'physical', 0xd8433a, { cd: 45, range: 4.2, damage: 150, heal: 20 }),
+  sword_shadow_edge: sk('Shadow Edge', 'slash', 'shadow', SHD, { cd: 10, range: 2.8, damage: 55 }),
+  sword_execute: sk('Execute', 'slash', 'physical', 0xd8433a, { cd: 18, range: 2.8, damage: 120 }),
 
   gs_cleave: sk('Cleaving Strike', 'slash', 'physical', PHY, { cd: 0.55, range: 3.2, damage: 55 }),
   gs_whirlwind: sk('Whirlwind Slash', 'nova', 'physical', PHY, { cd: 8, range: 4, damage: 65 }),

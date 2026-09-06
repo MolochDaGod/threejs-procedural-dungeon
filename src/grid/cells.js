@@ -5,6 +5,7 @@
  */
 import { DUNGEON_SI } from '../ssot.js';
 import { TILE } from '../physics/colliders.js';
+import { roomRule } from '../ruleset.js';
 
 export const CELL_FLAG = {
   BREAKABLE: 1,
@@ -97,6 +98,7 @@ export function sampleCellHeight(d, gx, gz) {
   const tile = d.grid[i];
   const f = d.flags ? d.flags[i] : 0;
   const gy = DUNGEON_SI.groundY;
+  if (tile === TILE.VOID) return null;
   if (tile === TILE.POOL || (f & CELL_FLAG.HIDDEN)) return gy - 0.12;
   if (tile === TILE.FLOOR) return (f & CELL_FLAG.DAIS) ? gy + 0.18 : gy;
   return null;
@@ -154,6 +156,7 @@ export function stampCover(d, rng) {
   };
 
   for (const r of rooms) {
+    if (roomRule(r.type).barriers === false) continue;
     if (r.type === 'entrance' || r.type === 'treasure' || r.type === 'shrine') continue;
     const cx = Math.round(r.cx), cy = Math.round(r.cy);
     const wallLen = r.type === 'boss' ? 3 : 2;
@@ -214,10 +217,13 @@ export function damageBarrier(d, gx, gz) {
   return true;
 }
 
-/** Grid DDA — walls, pillars, intact barriers block line of sight. */
-export function lineOpen(d, ax, az, bx, bz) {
+/**
+ * First BLOCK / intact BARRIER / WALL along a world ray (charge / shockwave).
+ * @returns {{ gx:number, gz:number, kind:'wall'|'block'|'barrier' } | null}
+ */
+export function firstObstruction(d, ax, az, bx, bz) {
   const cell = DUNGEON_SI.cell;
-  const steps = Math.max(2, Math.ceil(Math.hypot(bx - ax, bz - az) / (cell * 0.45)));
+  const steps = Math.max(2, Math.ceil(Math.hypot(bx - ax, bz - az) / (cell * 0.4)));
   for (let s = 1; s < steps; s++) {
     const t = s / steps;
     const wx = ax + (bx - ax) * t;
@@ -225,13 +231,79 @@ export function lineOpen(d, ax, az, bx, bz) {
     const gx = Math.round(wx / cell + d.W / 2 - 0.5);
     const gz = Math.round(wz / cell + d.H / 2 - 0.5);
     const i = cellIndex(d, gx, gz);
-    if (i < 0) return false;
-    if (d.grid[i] === TILE.WALL) return false;
+    if (i < 0) return { gx, gz, kind: 'wall' };
+    if (d.grid[i] === TILE.WALL) return { gx, gz, kind: 'wall' };
     const f = d.flags ? d.flags[i] : 0;
-    if (f & CELL_FLAG.BLOCK) return false;
-    if ((f & CELL_FLAG.BARRIER) && d.grid[i] === TILE.FLOOR) return false;
+    if (f & CELL_FLAG.BLOCK) return { gx, gz, kind: 'block' };
+    if ((f & CELL_FLAG.BARRIER) && (!d.barrierStage || d.barrierStage[i] < 3)) {
+      return { gx, gz, kind: 'barrier' };
+    }
   }
+  return null;
+}
+
+/** WoW/Albion: pillar between source and target blocks AoE / shockwave / charge. */
+export function coveredFrom(d, ax, az, bx, bz) {
+  return !!firstObstruction(d, ax, az, bx, bz);
+}
+
+/** Adjacent walkable cell behind cover relative to danger origin. */
+export function coverSpotNear(d, px, pz, ox, oz, maxR = 6) {
+  const me = cellOfWorld(d, px, pz);
+  const origin = cellOfWorld(d, ox, oz);
+  let best = null;
+  let bestScore = 1e9;
+  for (let gz = me.gz - maxR; gz <= me.gz + maxR; gz++) {
+    for (let gx = me.gx - maxR; gx <= me.gx + maxR; gx++) {
+      const i = cellIndex(d, gx, gz);
+      if (i < 0) continue;
+      const f = d.flags ? d.flags[i] : 0;
+      if (!(f & (CELL_FLAG.BLOCK | CELL_FLAG.BARRIER))) continue;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = gx + dx;
+        const nz = gz + dz;
+        if (!isWalkableOpen(d, nx, nz)) continue;
+        if (lineOpen(d, ox, oz, worldX(d, nx), worldZ(d, nz))) continue;
+        const wx = worldX(d, nx);
+        const wz = worldZ(d, nz);
+        const score = Math.hypot(wx - px, wz - pz) + Math.hypot(nx - origin.gx, nz - origin.gz) * 0.15;
+        if (score < bestScore) {
+          bestScore = score;
+          best = { x: wx, z: wz, gx: nx, gz: nz };
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function cellOfWorld(d, wx, wz) {
+  const cell = DUNGEON_SI.cell;
+  return {
+    gx: Math.round(wx / cell + d.W / 2 - 0.5),
+    gz: Math.round(wz / cell + d.H / 2 - 0.5),
+  };
+}
+
+function worldX(d, gx) {
+  return (gx - d.W / 2 + 0.5) * DUNGEON_SI.cell;
+}
+function worldZ(d, gz) {
+  return (gz - d.H / 2 + 0.5) * DUNGEON_SI.cell;
+}
+
+function isWalkableOpen(d, gx, gz) {
+  const i = cellIndex(d, gx, gz);
+  if (i < 0) return false;
+  if (d.grid[i] !== TILE.FLOOR) return false;
+  const f = d.flags ? d.flags[i] : 0;
+  if (f & CELL_FLAG.BLOCK) return false;
+  if ((f & CELL_FLAG.BARRIER) && (!d.barrierStage || d.barrierStage[i] < 3)) return false;
   return true;
+}
+
+export function lineOpen(d, ax, az, bx, bz) {
+  return !firstObstruction(d, ax, az, bx, bz);
 }
 
 export function hideCollider(d, gx, gz) {

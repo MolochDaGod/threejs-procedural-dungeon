@@ -37,6 +37,7 @@ export const ENV_LAYERS = {
       'grave', 'sarco', 'candle', 'bone', 'icicle', 'shardIce', 'roots', 'moss', 'crackD', 'skirt',
       'bannerRod', 'bannerCloth', 'emblem', 'spawn1', 'spawn2', 'spawn3', 'band2', 'band3',
       'crystal', 'ring', 'plinth', 'platform', 'basin', 'bossGlow', 'bossRock',
+      'carpet', 'wallArt', 'furniture',
     ],
   },
   torches: {

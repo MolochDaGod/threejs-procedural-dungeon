@@ -5,6 +5,7 @@
 import { DUNGEON_SI } from '../ssot.js';
 import { TILE } from '../physics/colliders.js';
 import { sampleCellHeight } from '../grid/cells.js';
+import { samplePlatformHeight } from '../grid/eventPlatform.js';
 
 export function cellToWorld(d, gx, gz) {
   const c = DUNGEON_SI.cell;
@@ -34,6 +35,8 @@ export function tileAt(d, wx, wz) {
  */
 export function makeGridSampler(dungeon) {
   return function sampleGround(wx, wz) {
+    const plat = samplePlatformHeight(dungeon, wx, wz);
+    if (plat != null) return plat;
     const { x, z } = worldToCell(dungeon, wx, wz);
     return sampleCellHeight(dungeon, x, z);
   };

@@ -1,51 +1,101 @@
 # Grudge Dungeons — Warlords Era
 
-Playable crawl on top of [Dungeon Forge](https://procedural-dungeon.netlify.app). Same seeded pipeline. Production characters come from the Grudge Toon-RTS / uMMORPG CDN and bind like [Grudge Gladiators](https://combat.grudge-studio.com/) — not from vendored Unity FBX.
+Playable crawl on [Dungeon Forge](https://procedural-dungeon.netlify.app). Same seeded `generateDungeon` (no second generator). Play bodies are Toon-RTS `{race}.glb` from the Grudge CDN, bound like [Grudge Gladiators](https://combat.grudge-studio.com/) — not vendored Unity FBX, not Meshy, not capsules.
 
-**Live:** [https://grudge-dungeons.vercel.app](https://grudge-dungeons.vercel.app)  
-Also: [https://grudge-dungeons-grudgenexus.vercel.app](https://grudge-dungeons-grudgenexus.vercel.app)
+**Live:** [https://grudge-dungeons.vercel.app](https://grudge-dungeons.vercel.app)
 
-**Enter dungeon (`E`)** after a forge. **WASD** move, **1–6** linear spells, **Esc** leave. Full play contract: [`docs/GRUDGE_DUNGEON.md`](docs/GRUDGE_DUNGEON.md).
+Forge → **ENTER DUNGEON** / `E` → indoor shoulder TPS crawl. Full contract: [`docs/GRUDGE_DUNGEON.md`](docs/GRUDGE_DUNGEON.md). Clip names: [`src/play/clipRoles.js`](src/play/clipRoles.js).
 
-Current SSOT: **1.2.4** (`public/ssot.json`) · kit **2.1.1** · nav `grid-8` · `cellM` 2.15.
+| SSOT | Value |
+| --- | --- |
+| Manifest | `public/ssot.json` **1.2.6** |
+| Kit | `warlords-dungeon-kit.json` **2.2.0** |
+| Nav | `grid-8` · cell **2.15 m** · wall **3.85 m** |
+| Physics | Rapier CCT `r=0.32` halfH `0.55` · gravity −30 · lazy WASM |
+| Camera | owned `PlayTpsCamera` boom **4.6 m** — OrbitControls never writes the lens |
+| Mixer | **one** `AnimationMixer` per Actor |
+| Linear crawl | **7 rooms**, 0 loops |
+| Complete | **boss slain** (not empty-enemy) |
 
-Skills are **3D linear / zone / fissure** (LinearAbilityCasting lessons). No 2D sprites. Worge uses the samurai fork + flame sword. **Tab** cycles targets; mouse aims on the ground.
+Do **not** add `three-player-controller` as a package. Harvest gait overlay + hit windows only.
+
+---
+
+## Audit (2026-09-05)
+
+Honest vs shipped. Green = live on `grudge-dungeons.vercel.app`. Yellow = wired but incomplete. Red = do not treat as done.
+
+| Area | Status | Fact |
+| --- | --- | --- |
+| One `generateDungeon` | Green | No second dungeon host / Vercel project |
+| Toon play mesh + `loadRaceKit` wardrobe | Green | `SkeletonUtils.clone` + mesh_ids kit |
+| Rapier CCT + indoor TPS | Green | `src/play/physics.js` + `tpsCamera.js` |
+| T8 weapon catalog (not Cleave/Fireball) | Green | `weaponSkills.js` + aliases (`fireball` → `staff_fire_bolt`) |
+| Combat bar 1–5 / 6–7 items / 8 mounts | Green | ElvUI layout in `hudLayout.js` |
+| F class-0 (taunt, overpower, totems, invis…) | Green | `classSkill0.js` |
+| 8 classes, 4-man fill | Green | warrior/raider, mage/priest, ranger/thief, worge/verduror |
+| Donor clips classified by **exact name** | Green | 55 names in `wk-knight.glb`; skip swim/fish/wall/stairs/torch/cover |
+| Gait overlay + delayed slash/projectile | Green | hit at 0.32× clip · bolt at 0.22× |
+| Ally AI same anim pick + tank parry | Green | `party.js` + `animForSpell` |
+| Session bag unique crafts | Green | lockpick set / form page / tonics / spell pages — **not** Railway yet |
+| Hurt / stun clips | Yellow | **not on donor** — flinch no-ops (never fake `attack`) |
+| Magic / bow unique casts | Yellow | no `magic_cast` / `bow_shot` on donor — reuse `attack` |
+| Death clip | Yellow | donor has none; `anim_death.glb` fill |
+| Warbear / iguana forms | Yellow | Casting warbear URL + local iguana albedos; not Railway `formSkin` |
+| Account bag / character UUID handoff | Red | crawl bag is session yield only |
 
 ---
 
 ## Play
 
-1. Forge a dungeon (or check **Linear crawl** — 16 rooms, 0 loops).
-2. Pick a Warlords Era race: human, barbarian, elf, dwarf, orc, undead.
-3. **ENTER DUNGEON** / `E`.
-4. Walk the critical path (entrance → combat/elite → boss).
-5. Cast from the 6-slot bar (`1–6`). Loadout is picked before the crawl.
+1. Forge (or **Linear crawl** — **7 rooms**, 0 loops).
+2. Lobby: race + **8 classes** + weapon set (`Q` swap).
+3. **ENTER DUNGEON** / `E`. Timer starts on crawl, not lobby.
+4. Critical path: entrance → combat/elite → mini-boss → **boss arena** → portal + chest.
+5. Bars: **1–5** weapon skills · **6–7** items · **8** mounts · **F** class-0.
 
-| Slot | Spell | Motion |
-| --- | --- | --- |
-| 1 | Cleave | Front cone slash |
-| 2 | Fireball | Linear projectile |
-| 3 | Frost Lance | Linear pierce projectile |
-| 4 | Thunder | Instant line / beam |
-| 5 | Holy Nova | Expanding ring |
-| 6 | Void Step | Linear dash + burst |
+Skills are catalog ids (T8 / T0), linear 3D (slash / projectile / beam / nova / dash). No 2D sprites. `cleave` / `fireball` / `thunder` are **aliases**, not the bar.
+
+### Crawl input
+
+| Action | Bind |
+| --- | --- |
+| Move / sprint | WASD · Shift |
+| Jump | Space |
+| Dodge roll | X · **AA / DD** double-tap |
+| Parry (stagger) | **Shift+RMB** (not focus toggle) |
+| Block | **E** (combat) · hold E OOC = class radial |
+| Slide | Ctrl |
+| Weapon skills | 1–5 |
+| Items / mounts | 6–7 / 8 |
+| Class-0 | F |
+| Weapon swap | Q |
+| Focus | RMB |
+| Soft lock | Tab |
+| Leave | Esc |
+
+Forge-only (orthographic, before ENTER): drag pan, `R` reforge, `T` theme, `G` graph, `H` heatmap, `P` post FX, Space skip build anim.
 
 ---
 
-## Characters and assets
+## Characters, clips, TPS
 
-Race GLBs are **full Toon-RTS wardrobes** on one `Bip001` skeleton. Showing every mesh at once is a spiked blob. The dungeon uses the same Gladiators deploy path:
+Race GLBs are **full wardrobes**. One body/head/arms/legs + class weapon. Never show every mesh.
 
 | Piece | Source |
 | --- | --- |
-| Race wardrobe | `https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb` |
-| Clip donor | `https://combat.grudge-studio.com/models/toon-clips/wk-knight.glb` (55 named clips) |
-| Class kits | worge B / warrior A / mage D / ranger C + one weapon (never the full wardrobe) |
-| Retarget | rotation-only, alphanumeric `Bip001` match — **do not** apply donor translation/scale |
-| Fallback clips | `…/glb/anim_{idle,walk,attack,death}.glb` |
-| Dungeon kit | `https://assets.grudge-studio.com/models/dungeons/warlords-dungeon-kit.json` |
+| Race | `assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb` |
+| Clip donor | `combat.grudge-studio.com/models/toon-clips/wk-knight.glb` (55 names) |
+| Classify | `src/play/clipRoles.js` — exact stems, skip unused, no misspell steal |
+| Fallback | `anim_{idle,walk,attack,death}.glb` only if donor missing that role |
+| Retarget | rotation-only alphanumeric `Bip001` — donor translation **crushes** rest pose |
+| Kit | `assets.grudge-studio.com/models/dungeons/warlords-dungeon-kit.json` |
 
-Runtime: `SkeletonUtils.clone` + per-instance `AnimationMixer` on `RootNode` / `Bip001`. Empty clips are a bug.
+**Wired donor roles:** idle/walk/run/sprint, `gs_*` 2H loco, strafe, sneak/crouch, crawl, `sword_attack_a/_c/combo_finisher`, `sword_block`, `shield_bash` (parry), dodge, slide, jump, harvest, plant_seed, unarmed_uppercut, dash/run-attack.
+
+**Not on donor (do not invent):** `hit`, `stun`, `parry` (name), `magic_cast`, `bow_shot`, `death`.
+
+Runtime: `SkeletonUtils.clone` + per-instance mixer on `RootNode` / `Bip001`. Empty clips are a bug.
 
 Do **not** vendor Unity FBX. Do **not** put API keys in this client.
 
@@ -53,10 +103,11 @@ Do **not** vendor Unity FBX. Do **not** put API keys in this client.
 
 ## Instance contract
 
-- Nav: generated `grid-8` walkable cells + string-pull (`src/gen/navmesh.js`)
-- Physics: `@dimforge/rapier3d-compat` kinematic character + cuboid proxies (`src/play/physics.js`)
-- Cell size: 2 m (`CELL_M`)
+- Nav: `grid-8` + string-pull (`src/gen/navmesh.js`)
+- Physics: `@dimforge/rapier3d-compat` CCT + cuboid proxies (`src/play/physics.js`)
+- Cell: **2.15 m** (`DUNGEON_SI.cell`). Plant in cell units — never `wx * CELL` twice.
 - Host: Three.js client + Rapier. No new Vercel project, no new asset bucket.
+- Fire: instanced volumetric (`src/vfx/instancedFire.js`) — must have `update()`.
 
 ---
 
@@ -64,26 +115,24 @@ Do **not** vendor Unity FBX. Do **not** put API keys in this client.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-```
-
-```bash
+npm run dev              # http://localhost:5173
+npm run smoke:mechanic   # Node, no WebGL
 npm run build
-npm run preview    # http://localhost:4173
+npm run preview          # http://localhost:4173
 npm run verify:cdn
 ```
 
 Requires Node 18+.
 
-### Production deploy (existing hosts only)
+### Production (existing hosts only)
 
 ```bash
-npm run deploy     # vite build → HEAD-check CDN → upload kit to R2 → vercel --prod
+npx vercel deploy --prod --yes --scope grudgenexus
 ```
 
-- App: existing Vercel project `grudgenexus/grudge-dungeons`
-- Kit: existing R2 bucket `grudge-assets` → `models/dungeons/warlords-dungeon-kit.json`
-- Characters / clips: existing CDN + Combat host (CORS `*`)
+- App: `grudgenexus/grudge-dungeons` → https://grudge-dungeons.vercel.app
+- Kit: R2 `grudge-assets` → `models/dungeons/warlords-dungeon-kit.json`
+- Characters / clips: CDN + Combat host (CORS `*`)
 
 ---
 
@@ -91,26 +140,24 @@ npm run deploy     # vite build → HEAD-check CDN → upload kit to R2 → verc
 
 ```
 threejs-procedural-dungeon/
-├── index.html
 ├── public/
-│   ├── ssot.json                 # production SSOT 1.2.2
-│   └── warlords-dungeon-kit.json # fleet kit 2.1.1
-├── scripts/
-│   ├── deploy.mjs
-│   ├── upload-kit.mjs
-│   └── verify-cdn.mjs
+│   ├── ssot.json                      # 1.2.6
+│   ├── warlords-dungeon-kit.json      # 2.2.0
+│   └── api/v1/dungeon-play-contract.json
+├── scripts/smoke-mechanic.mjs
 ├── src/
-│   ├── ssot.js                   # CDN + Combat donor + spells + kits
-│   ├── main.js                   # Dungeon Forge pipeline + forge cast
-│   ├── gen/                      # cells, navmesh, instance payload
-│   ├── play/
-│   │   ├── characters.js         # wardrobe + rotation-only mixer
-│   │   ├── index.js              # crawl, casts, feel
-│   │   ├── prefabs.js            # theme monster / boss kits
-│   │   ├── physics.js            # Rapier
-│   │   ├── telegraph.js          # cone / line / aoe windup
-│   │   └── …
-│   └── ui/styles.css
+│   ├── ssot.js                        # CDN, SI, PLAY.tps / dodge / parry / block
+│   ├── main.js                        # forge pipeline + ENTER
+│   ├── gen/                           # cells, nav, dressPlan, instance
+│   └── play/
+│       ├── clipRoles.js               # donor names + classify + hit windows
+│       ├── characters.js              # wardrobe + one mixer + gait overlay
+│       ├── tpsCamera.js               # indoor shoulder TPS
+│       ├── index.js                   # crawl, hitQ, skills
+│       ├── party.js                   # 3 AI allies
+│       ├── weaponSkills.js            # T8 catalog
+│       ├── physics.js                 # Rapier CCT
+│       └── …
 └── docs/GRUDGE_DUNGEON.md
 ```
 
@@ -181,7 +228,7 @@ single number, so any seed rebuilds the exact same dungeon.** Rendered live with
 | Toggle graph overlay | `G` |
 | Toggle difficulty heatmap | `H` |
 | Toggle post FX | `P` |
-| Skip build animation | `space` |
+| Skip build animation | `space` (forge only — crawl Space is jump) |
 | Enter dungeon | `E` or **ENTER DUNGEON** |
 | Leave crawl | `Esc` |
 

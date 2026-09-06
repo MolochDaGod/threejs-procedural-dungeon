@@ -8,15 +8,17 @@ Playable layer on [Dungeon Forge](https://procedural-dungeon.netlify.app): the s
 
 | What | Where |
 |------|--------|
-| Manifest | `public/ssot.json` (1.2.3) |
-| Fleet kit | `public/warlords-dungeon-kit.json` → R2 `models/dungeons/warlords-dungeon-kit.json` |
+| Manifest | `public/ssot.json` (1.2.6) |
+| Fleet kit | `public/warlords-dungeon-kit.json` **2.2.0** → R2 `models/dungeons/warlords-dungeon-kit.json` |
 | Characters | `https://assets.grudge-studio.com/asset-packs/toon-rts-characters/glb/characters/{race}.glb` |
-| Clip donor | `https://combat.grudge-studio.com/models/toon-clips/wk-knight.glb` |
-| Fallback clips | `…/glb/anim_{idle,walk,attack,death}.glb` |
+| Clip donor | `https://combat.grudge-studio.com/models/toon-clips/wk-knight.glb` (55 names) |
+| Clip classify | `src/play/clipRoles.js` — exact stems, skip unused, `hit` never aliases `attack` |
+| Fallback clips | `…/glb/anim_{idle,walk,attack,death}.glb` if donor missing that role |
 | Race list | human, barbarian, elf, dwarf, orc, undead |
-| Class kits | `ROLE_KITS` in `src/ssot.js` (worge / warrior / mage / ranger) |
+| Classes | 8: warrior, raider, mage, priest, ranger, thief, worge, verduror |
 | Combat math | `https://info.grudge-studio.com/api/v1/master-attributes.json` |
-| Spell catalog | `src/ssot.js` (aligned with `warlord-genesis/data/vfx/vfx-skill-types.json`) |
+| Spell catalog | `src/play/weaponSkills.js` T8 ids (aliases `cleave`/`fireball` only) |
+| Camera | `src/play/tpsCamera.js` indoor boom 4.6 m — no OrbitControls in crawl |
 
 Do **not** vendor Unity FBX into this repo. Do **not** put API keys in the client.
 
@@ -26,30 +28,23 @@ Do **not** vendor Unity FBX into this repo. Do **not** put API keys in the clien
 2. Pick a Warlords Era race.
 3. **ENTER DUNGEON** / `E`.
 4. Walk the **critical path** (entrance → combat/elite → boss).
-5. Cast from the **6-slot bar** (keys `1–6`). Loadout is selected before the crawl.
+5. Combat bar: **1–5** weapon catalog · **6–7** items · **8** mounts · **F** class-0. `Q` weapon set.
 
-### Linear spells
+### Linear skills
 
-Worge is the knight class. Weapon two (forge chips): **1H+Tome**, **Nature Staff**, or **Arcane Staff**.
+Loadouts live in `src/play/weaponSkills.js` (T8 / T0 catalog ids). Example warrior `sword_shield`: `sword_vengeful_slash` … not `cleave`. Mage `fire_staff`: `staff_fire_bolt` (alias `fireball`).
 
-Class loadouts live in `src/play/weaponSkills.js`. Worge 1H+Tome default:
+No 2D sprites. Aim: camera look / Tab soft-lock. Indoor TPS owns the lens.
 
-| Slot | Skill | Delivery |
-|------|--------|----------|
-| 1 | Twin Slash | 3D cone (samurai combo) |
-| 2 | Shadow Step | Teleport strike |
-| 3 | Slashing Dash | Line dash |
-| 4 | Flame Sword | Forked 3D fissure |
-| 5 | Storm Lance | Linear thunder + forks |
-| 6 | Holy Nova | 3D zone cylinder |
-
-No 2D sprites. Aim: mouse on ground plane, **Tab** soft-lock. Camera looks ahead along aim.
+Hit windows: slash **0.32 × clip duration**, projectile spawn **0.22 ×**. `src/play/clipRoles.js`.
 
 ## Character deploy
 
 Race GLBs are full wardrobes. Apply Gladiators class visibility (one body / head / arms / legs + class weapon). Never show every mesh.
 
 `SkeletonUtils.clone` + per-instance `AnimationMixer`. Bind clips from the Combat `wk-knight.glb` donor with **rotation-only** retarget (`Bip001_Pelvis` → `Bip001 Pelvis`). Donor translation/scale tracks crush the race rest pose. Empty clips are rejected.
+
+Gait overlay (idle/walk/run/sprint, `gs_*` on 2H, sneak/crawl/strafe) stays under overlay one-shots (attack combo, dodge, parry=`shield_bash`, block hold=`sword_block`, jump, slide). Missing `hit`/`stun` **no-ops** — do not play `attack` as flinch. Do not add `three-player-controller`.
 
 ## Instance
 

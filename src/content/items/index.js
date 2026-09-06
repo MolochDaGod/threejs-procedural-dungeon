@@ -6,6 +6,11 @@ export const ITEMS = {
   shrine: { id: 'shrine', kind: 'shrine', use: 'KeyE', once: true, restoreHp: true, restoreMana: true },
   chest_common: { id: 'chest_common', kind: 'chest', rarity: 'common', mesh: 'kaykit_chest_common' },
   chest_rare: { id: 'chest_rare', kind: 'chest', rarity: 'rare', mesh: 'kaykit_chest_rare' },
+  magic_rock: { id: 'magic_rock', kind: 'object', mesh: 'magic-rock-3', catalog: 'MAGIC_ROCKS', note: 'isolated MagicRock_N — never fused pack' },
+  wood_scrap: { id: 'wood_scrap', kind: 'mat', pinata: true, from: ['table', 'barrel', 'chair', 'debris'] },
+  stone_chip: { id: 'stone_chip', kind: 'mat', pinata: true, from: ['wall', 'pillar', 'brick'] },
+  cloth_scrap: { id: 'cloth_scrap', kind: 'mat', pinata: true, from: ['pot', 'coffin'] },
+  iron_bit: { id: 'iron_bit', kind: 'mat', pinata: true, from: ['barrier'] },
 };
 
 export const WORGE_WEAPONS = {

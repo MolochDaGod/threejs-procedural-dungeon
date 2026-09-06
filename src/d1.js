@@ -28,6 +28,17 @@ export async function loadDungeonKit() {
   return kitPromise;
 }
 
+/** Play-kit pieces only. D1 index is larger; games load purpose=play. */
+export function playKitPieces(kit, category = null) {
+  const list = (kit?.pieces || []).filter((p) => {
+    const purpose = p.purpose || (p.gameReady ? 'play' : 'skip');
+    if (purpose !== 'play' || p.gameReady === false) return false;
+    if (category && p.category !== category) return false;
+    return true;
+  });
+  return list;
+}
+
 export function pieceUrl(piece) {
   if (!piece?.glb) return null;
   if (/^https?:/i.test(piece.glb)) return piece.glb;

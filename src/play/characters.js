@@ -8,6 +8,16 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { ANIM_URLS, CLIP_DONOR, PLAY, RACES, ROLE_KITS, WEAPON_KITS, WORGE_WEAPONS, raceCharacterUrl } from '../ssot.js';
 import { loadGltf } from './assets.js';
 import { plantFeet } from '../terrain/footPlant.js';
+import {
+  LOCO_KEYS,
+  animForSpell,
+  classifyClips,
+  clipStem,
+  hitWindowSec,
+  resolveClipName,
+} from './clipRoles.js';
+
+export { animForSpell, classifyClips, clipStem, hitWindowSec, resolveClipName };
 
 const RACE_PREFIXES = ['WK_', 'BRB_', 'ELF_', 'DWF_', 'ORC_', 'UD_'];
 
@@ -282,19 +292,7 @@ function isolateMeshes(root, hide, keep) {
   });
 }
 
-function classifyClips(clips) {
-  const out = { idle: null, walk: null, run: null, attack: null, cast: null, death: null, dodge: null };
-  const hit = (re) => clips.find((c) => re.test(c.name));
-  out.idle   = hit(/^idle(_\d+)?$/i) || hit(/gs_idle|idle|stand|breath|metarig|scene|poselib|^pose$/i);
-  out.walk   = hit(/^walk(_\d+)?$/i) || hit(/gs_walk|bow_walk|magic_walk|walk|move(?!2)|locomot/i);
-  out.run    = hit(/^run(_\d+)?$/i) || hit(/gs_run|run|sprint|rush/i) || out.walk;
-  out.attack = hit(/^attack/i) || hit(/sword_attack|slash|melee|strike|combat|stab|slice/i);
-  out.cast   = hit(/magic_cast|^cast$|bow_shot|spell|shoot|shout/i) || out.attack;
-  out.death  = hit(/death|die|dead/i);
-  out.dodge  = hit(/dodge|roll|dash|evade|sidestep/i) || out.run;
-  if (!out.idle && clips[0]) out.idle = clips[0];
-  return out;
-}
+
 
 function visibleBox(root) {
   const box = new THREE.Box3();
@@ -332,10 +330,15 @@ export class Actor {
     this.root = new THREE.Group();
     this.visual = null;
     this.mixer = null;
+    this.clipBank = [];
     this.clips = { idle: null, walk: null, run: null, attack: null, cast: null, death: null };
     this.actions = {};
+    this.loco = {};
     this.gait = 'idle';
+    this.gaitW = Object.fromEntries(LOCO_KEYS.map((k) => [k, k === 'idle' ? 1 : 0]));
     this.busy = 0;
+    this.moveLock = 0;
+    this._hold = null;
     this.alive = true;
     this.ready = false;
     this.groundSampler = null;
@@ -345,47 +348,104 @@ export class Actor {
     this.groundSampler = sampler || null;
   }
 
-  play(name, fade = 0.12, loop = true) {
-    const clip = this.clips[name] || this.clips.idle;
+  _locoAction(name) {
+    const clip = this.clips[name];
     if (!this.mixer || !clip) return null;
+    if (!this.loco[name]) {
+      const a = this.mixer.clipAction(clip);
+      a.setLoop(THREE.LoopRepeat, Infinity);
+      a.enabled = true;
+      a.play();
+      a.setEffectiveWeight(0);
+      this.loco[name] = a;
+    }
+    return this.loco[name];
+  }
+
+  play(name, fade = 0.12, loop = true) {
+    const resolved = resolveClipName(this.clips, name) || name;
+    const clip = this.clips[resolved];
+    if (!this.mixer || !clip) return null;
+    if (loop && LOCO_KEYS.includes(resolved)) {
+      this._locoAction(resolved);
+      return this.loco[resolved];
+    }
     const next = this.mixer.clipAction(clip);
-    if (this.actions.cur === next && next.isRunning()) return next;
+    if (this.actions.overlay && this.actions.overlay !== next) {
+      this.actions.overlay.fadeOut(fade);
+    }
     next.reset();
     next.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
     next.clampWhenFinished = !loop;
     next.enabled = true;
-    if (this.actions.cur && this.actions.cur !== next) this.actions.cur.fadeOut(fade);
+    next.setEffectiveWeight(1);
     next.fadeIn(fade).play();
-    this.actions.cur = next;
+    this.actions.overlay = next;
     return next;
   }
 
   requestOneShot(name, duration = 0.45) {
-    if (!this.alive) return;
-    this.busy = duration;
-    this.play(name, 0.06, false);
+    if (!this.alive) return null;
+    const resolved = resolveClipName(this.clips, name);
+    if (!resolved) return null;
+    const clip = this.clips[resolved];
+    const dur = clip?.duration > 0.05 ? clip.duration : duration;
+    this._hold = null;
+    this.busy = dur;
+    this.moveLock = Math.min(0.28, dur * 0.42);
+    return this.play(resolved, 0.08, false);
   }
 
-  setGait(moving, sprint) {
-    if (!this.alive || this.busy > 0) return;
-    const next = !moving ? 'idle' : sprint ? 'run' : 'walk';
-    if (next === this.gait) return;
+  setHold(name, on) {
+    if (!this.alive) return;
+    if (on) {
+      const resolved = resolveClipName(this.clips, name);
+      if (!resolved) return;
+      if (this._hold !== resolved) {
+        this.play(resolved, 0.1, true);
+        this._hold = resolved;
+      }
+    } else if (this._hold) {
+      this.actions.overlay?.fadeOut(0.12);
+      this._hold = null;
+    }
+  }
+
+  setGait(moving, sprint, opts = {}) {
+    if (!this.alive) return;
+    let next = 'idle';
+    if (opts.downed) next = this.clips.crawl ? 'crawl' : 'walk';
+    else if (opts.sneak) next = moving ? (this.clips.sneak ? 'sneak' : 'walk') : (this.clips.crouch ? 'crouch' : 'idle');
+    else if (opts.strafe === 'left' && moving && this.clips.strafeL) next = 'strafeL';
+    else if (opts.strafe === 'right' && moving && this.clips.strafeR) next = 'strafeR';
+    else if (!moving) next = 'idle';
+    else if (sprint) next = this.clips.sprint ? 'sprint' : 'run';
+    else next = 'walk';
     this.gait = next;
-    const act = this.play(next, 0.14, true);
-    if (act && next === 'run' && !this.clips.run) act.timeScale = 1.35;
-    else if (act) act.timeScale = next === 'walk' ? 1.05 : 1;
+    for (const key of LOCO_KEYS) {
+      if (this.clips[key]) this._locoAction(key);
+    }
   }
 
   update(dt) {
+    if (this.moveLock > 0) this.moveLock -= dt;
     if (this.busy > 0) {
       this.busy -= dt;
-      if (this.busy <= 0 && this.alive) {
-        this.gait = '';
-        this.setGait(false, false);
-      }
+      if (this.busy <= 0 && !this._hold) this.actions.overlay = null;
+    }
+    const overlayOn = (this.busy > 0 || this._hold) ? 0.28 : 1;
+    const want = Object.fromEntries(LOCO_KEYS.map((k) => [k, 0]));
+    const gait = this.clips[this.gait] ? this.gait : 'idle';
+    want[gait] = overlayOn;
+    const k = 1 - Math.exp(-12 * dt);
+    for (const key of LOCO_KEYS) {
+      this.gaitW[key] = this.gaitW[key] ?? 0;
+      this.gaitW[key] += (want[key] - this.gaitW[key]) * k;
+      const a = this.loco[key];
+      if (a) a.setEffectiveWeight(Math.max(0, this.gaitW[key]));
     }
     this.mixer?.update(dt);
-    if (this.groundSampler) plantFeet(this.root, this.groundSampler);
+    if (this.groundSampler && !this.airborne) plantFeet(this.root, this.groundSampler);
   }
 
   dispose() {
@@ -403,6 +463,11 @@ export class Actor {
 async function gatherClips(gltf, boneMap) {
   const native = (gltf.animations || []).filter((c) => c.tracks?.length);
   const extra = [];
+  const have = new Set();
+  const remember = (c) => {
+    const s = clipStem(c.name).toLowerCase();
+    if (s) have.add(s);
+  };
   const tryUrl = async (url, forceName = null) => {
     const g = await loadGltf(url);
     for (const c of g.animations || []) {
@@ -410,7 +475,10 @@ async function gatherClips(gltf, boneMap) {
       const copy = remapClipTracks(c, boneMap);
       if (!copy.tracks.length) continue;
       if (forceName) copy.name = forceName;
+      const stem = clipStem(copy.name).toLowerCase();
+      if (have.has(stem)) continue;
       extra.push(copy);
+      remember(copy);
     }
   };
   try {
@@ -418,12 +486,13 @@ async function gatherClips(gltf, boneMap) {
   } catch {
     /* donor optional */
   }
-  if (extra.length < 3) {
-    await Promise.all(Object.entries(ANIM_URLS).map(async ([key, url]) => {
-      try { await tryUrl(url, key); } catch { /* optional */ }
-    }));
-  }
-  return [...native.map((c) => remapClipTracks(c, boneMap)).filter((c) => c.tracks.length), ...extra];
+  await Promise.all(Object.entries(ANIM_URLS).map(async ([key, url]) => {
+    if (have.has(key)) return;
+    try { await tryUrl(url, key); } catch { /* optional death/idle fill */ }
+  }));
+  const remapped = native.map((c) => remapClipTracks(c, boneMap)).filter((c) => c.tracks.length);
+  for (const c of remapped) remember(c);
+  return [...remapped, ...extra];
 }
 
 export async function spawnActor({
@@ -468,7 +537,8 @@ export async function spawnActor({
   const clips = nativeMesh
     ? (gltf.animations || []).map((c) => stripPositionTracks(c.clone()))
     : await gatherClips(gltf, collectBoneMap(visual));
-  actor.clips = classifyClips(clips);
+  actor.clipBank = clips;
+  actor.clips = classifyClips(clips, wid);
   if (!actor.clips.idle) {
     console.warn('[grudge-dungeon] no idle clip for', rid);
   } else {
@@ -483,15 +553,41 @@ export async function spawnActor({
     loader: 'dungeon-spawnActor',
     race: rid,
     classId: r,
+    weaponId: wid,
+    t8: prefab?.t8 || null,
     mixerCount: 1,
     skeleton: 'Bip001',
     face: 'toon-plusZ',
     ground: 'bone-box-feet',
     mesh: url,
+    capsule: false,
   };
   actor.root.userData.warlordsPlayContract = stamp;
   visual.userData.warlordsPlayContract = stamp;
   return actor;
+}
+
+/** Re-apply mesh_ids kit on the same mixer/root — Q swap / lobby weapon pick. */
+export function reequipActor(actor, classId, weaponId) {
+  if (!actor?.visual) return;
+  const raceId = actor.prefab?.raceId || 'human';
+  applyWardrobe(actor.visual, classId || actor.prefab?.role, true, raceId, weaponId);
+  if (actor.prefab) {
+    actor.prefab.weaponId = weaponId;
+    actor.prefab.role = classId || actor.prefab.role;
+    actor.prefab.classId = classId || actor.prefab.classId;
+  }
+  if (actor.clipBank?.length) {
+    actor.clips = classifyClips(actor.clipBank, weaponId);
+    actor.loco = {};
+    actor.gait = 'idle';
+    actor.play('idle', 0.08, true);
+  }
+  const stamp = actor.root?.userData?.warlordsPlayContract;
+  if (stamp) {
+    stamp.weaponId = weaponId;
+    stamp.classId = classId || stamp.classId;
+  }
 }
 
 function makeFallback(actor, height, color) {

@@ -17,8 +17,9 @@ export const DUNGEON_KINDS = {
   faction: {
     id: 'faction',
     label: 'FACTION',
-    blurb: 'Enemy-faction Toon units 1.5× with boss-like attacks.',
-    heroScale: 1.5,
+    blurb: 'AI players at your level (flat nerf). Packs 2/3/5/6. Boss 1.8× faction hero.',
+    heroScale: 1.8,
+    packSizes: [2, 3, 5, 6],
   },
   boss: {
     id: 'boss',

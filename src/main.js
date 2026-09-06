@@ -945,13 +945,17 @@ function setupRTs(){
 }
 let curBg = new THREE.Color(canvasBg);
 const _cBg = new THREE.Color();
+function playLens(){
+  return play.playCamera?.() || cam;
+}
 function renderFrame(){
+  const lens = playLens();
   if(!POST.enabled){
     /* straight-to-canvas debug path: let three apply sRGB + its ACES tone map */
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setClearColor(curBg);
     renderer.setRenderTarget(null);
-    renderer.render(scene, cam);
+    renderer.render(scene, lens);
     return;
   }
   setupRTs();
@@ -961,7 +965,7 @@ function renderFrame(){
   /* rtScene stores raw linear HDR (three skips tone-map + colour conversion when
      the target isn't the canvas); the post shaders tone-map and gamma-encode it. */
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-  renderer.setRenderTarget(POST.rtScene); renderer.render(scene, cam);
+  renderer.setRenderTarget(POST.rtScene); renderer.render(scene, lens);
   POST.thresh.uniforms.tS.value = POST.rtScene.texture;
   renderer.setRenderTarget(POST.rtA); renderer.render(POST.sThresh, POST.qcam);
   POST.blur.uniforms.uRes.value.set(POST.w>>2, POST.h>>2);
@@ -2489,7 +2493,7 @@ function tick(){
     if(animT > animEnd + 0.35) finishAnim();
   }
   liveUpdate(elapsed, animating ? animT - 2.3 : Infinity);
-  fx.fire?.update(cam, elapsed);
+  if (typeof fx.fire?.update === 'function') fx.fire.update(cam, elapsed);
   dressing.update(elapsed);
   forgeCast.update(dt);
   play.update(dt);
@@ -2509,12 +2513,14 @@ function tick(){
 const cnv = renderer.domElement;
 let dragging=false, orbiting=false, lastX=0, lastY=0;
 cnv.addEventListener('pointerdown', e=>{
+  if (play.playCamera?.()) return;
   orbiting = e.button===2 || (e.button===0 && e.shiftKey);
   dragging = e.button===0 && !e.shiftKey;
   lastX = e.clientX; lastY = e.clientY;
   cnv.setPointerCapture(e.pointerId);
 });
 cnv.addEventListener('pointermove', e=>{
+  if (play.playCamera?.()) return;
   if(play.active && !orbiting) return;
   if(!dragging && !orbiting) return;
   const dx = e.clientX - lastX, dy = e.clientY - lastY;
@@ -2535,6 +2541,7 @@ cnv.addEventListener('pointerup', endDrag);
 cnv.addEventListener('pointercancel', endDrag);
 cnv.addEventListener('contextmenu', e=>e.preventDefault());
 cnv.addEventListener('wheel', e=>{
+  if (play.playCamera?.()) return;
   e.preventDefault();
   cam.zoom = Math.min(6, Math.max(0.12, cam.zoom*Math.exp(-e.deltaY*0.0012)));
   cam.updateProjectionMatrix();
@@ -2599,7 +2606,7 @@ document.getElementById('collapse').addEventListener('click', e=>{
 
 addEventListener('keydown', e=>{
   const tag = e.target.tagName;
-  if(tag==='BUTTON') return;
+  if(tag==='BUTTON' || tag==='SELECT' || tag==='TEXTAREA') return;
   if(tag==='INPUT' && e.target.type!=='range' && e.target.type!=='checkbox') return;
   if(play.active && (e.code==='KeyW'||e.code==='KeyA'||e.code==='KeyS'||e.code==='KeyD'||e.code==='Space'||e.code.startsWith('Digit')||e.code==='Escape')) return;
   if(e.code==='KeyE'){
@@ -2608,7 +2615,10 @@ addEventListener('keydown', e=>{
     enterDungeon();
     return;
   }
-  if(e.code==='KeyR'){ if(play.active) play.exit(); el.seed.value = 1 + Math.floor(Math.random()*999999); forge(true); }
+  if(e.code==='KeyR'){
+    if (play.active) return;
+    el.seed.value = 1 + Math.floor(Math.random()*999999); forge(true);
+  }
   else if(e.code==='KeyG'){ el.tGraph.checked = !el.tGraph.checked; if(!animating) setOverlayStatic(); }
   else if(e.code==='KeyH'){ el.tHeat.checked = !el.tHeat.checked; applyHeat(el.tHeat.checked); }
   else if(e.code==='KeyT'){
@@ -2626,6 +2636,7 @@ addEventListener('resize', ()=>{
   cam.top = BASE_HALF; cam.bottom = -BASE_HALF;
   cam.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  play.tps?.resize?.();
 });
 
 /* -------- go -------- */

@@ -19,6 +19,27 @@ export function groundRoot(root, sampler, wx, wz) {
 /**
  * mixer.update first, then this. Lifts foot bones that sank under the slab.
  */
+/**
+ * Sit a prop (chest, barrier, turret) on the same sampler as feet.
+ * Uses world AABB min.y — works under a scaled forge group.
+ */
+export function plantObjectOnTerrain(obj, sampler) {
+  if (!obj) return;
+  obj.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(obj);
+  if (!Number.isFinite(box.min.y)) return;
+  const wx = (box.min.x + box.max.x) * 0.5;
+  const wz = (box.min.z + box.max.z) * 0.5;
+  const g = sampler ? sampler(wx, wz) : DUNGEON_SI.groundY;
+  const gy = g == null ? DUNGEON_SI.groundY : g;
+  let scaleY = 1;
+  if (obj.parent) {
+    obj.parent.updateWorldMatrix(true, false);
+    scaleY = obj.parent.getWorldScale(_t).y || 1;
+  }
+  obj.position.y += (gy - box.min.y) / scaleY;
+}
+
 export function plantFeet(root, sampler) {
   if (!root || !sampler) return;
   root.updateMatrixWorld(true);

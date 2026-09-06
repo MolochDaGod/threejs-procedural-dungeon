@@ -1,69 +1,38 @@
 import { loadoutFor, weaponsForClass, WEAPON_LABEL } from './weaponSkills.js';
 import { CLASS_IDS, CLASSES, PLAY, ROLE_KITS, portraitFallback, portraitUrl } from '../ssot.js';
+import { CRAFTPIX_SLOT_BG, resolveSkillIcon } from './skillIcons.js';
 import { T8_CLASS_SETS, starterForClass } from './t0ClassSets.js';
-import { SKILL_ICON_CDN } from './skillIconCdn.js';
-
-const UI = '/ui/craftpix';
-
-const SKILL_ICON = {
-  t0_sword_practice_slash: 'sword',
-  t0_sword_guard_stance: 'shield',
-  t0_sword_quick_thrust: 'sword',
-  t0_sword_wide_sweep: 'sword',
-  sword_heroic_cleave: 'sword',
-  sword_blood_rush: 'sword',
-  staff_fire_bolt: 'fireball',
-  staff_flame_wave: 'fireball',
-  staff_meteor_strike: 'fireball',
-  staff_frost_bolt: 'arrows',
-  staff_ice_nova: 'arrows',
-  staff_holy_light: 'holy',
-  staff_radiant_heal: 'holy',
-  t0_bow_practice_shot: 'bow',
-  bow_quick_shot: 'bow',
-  t0_gun_practice_shot: 'bow',
-  gun_grudge_shot: 'bow',
-  t0_dagger_practice_stab: 'sword',
-  t0_hammer_practice_smash: 'shield',
-  t0_staff_vine_lash: 'nature',
-  staff_natures_fury: 'nature',
-  t0_staff_healing_sprout: 'holy',
-  cleave: 'sword',
-  shield_bash: 'shield',
-  gs_samurai_combo: 'sword',
-  gs_samurai_dash: 'sword',
-  gs_samurai_teleport: 'void',
-  flame_sword: 'fireball',
-  fireball: 'fireball',
-  frostlance: 'arrows',
-  thunder: 'storm',
-  holy_beam: 'holy',
-  holy_nova: 'holy',
-  glacier: 'nature',
-  snare: 'tome',
-  void_dash: 'void',
-};
+import { classItemFor, RANGER_LOG, THIEF_SATCHEL } from './classItems.js';
+import { craftsForClass } from './classCrafts.js';
+import { classSkill0 } from './classSkill0.js';
+import { classTreeOf } from './classSkills.js';
+import { bagSlots } from './bag.js';
+import { applyHudPositions, bindHudEdit, keyLabel, loadHudLayout, resolveBarSlots } from './hudLayout.js';
 
 function iconFor(spell) {
-  if (spell?.iconUrl) return spell.iconUrl;
-  if (spell?.icon && String(spell.icon).startsWith('/icons/')) {
-    return `https://assets.grudge-studio.com${spell.icon}`;
-  }
-  if (spell?.id && SKILL_ICON_CDN[spell.id]) return SKILL_ICON_CDN[spell.id];
-  const sid = spell.id || '';
-  const id = SKILL_ICON[sid]
-    || (/tower_|shield|guard|parry|block|endure/.test(sid) ? 'shield'
-      : /bow_|arrow/.test(sid) ? 'bow'
-      : /gun_/.test(sid) ? 'bow'
-      : /staff_fire|flame|meteor|inferno/.test(sid) ? 'fireball'
-      : /staff_frost|ice|glacial|blizzard/.test(sid) ? 'arrows'
-      : /staff_holy|radiant|divine|beacon/.test(sid) ? 'holy'
-      : /staff_nature|vine|sprout|natures/.test(sid) ? 'nature'
-      : /gs_|sword_|cleave|stab|thrust|hammer_/.test(sid) ? 'sword'
-      : spell.kind === 'slash' ? 'sword'
-      : spell.kind === 'projectile' ? 'fireball'
-      : 'tome');
-  return `${UI}/icons/${id}.png`;
+  return resolveSkillIcon(spell);
+}
+
+function treeHtml(classId, trees, classState, vial) {
+  const relic = classItemFor(classId);
+  const f0 = classSkill0(classId);
+  const tree = trees ? classTreeOf(trees, classId) : null;
+  const tiers = (tree?.tiers || []).slice(0, 6).map((t) => {
+    const names = (t.skills || []).slice(0, 8).map((s) => s.name || s.id).join(' · ');
+    return `<div class="eq-tier"><i>Lv ${t.requiredLevel || 1}</i><span>${names}</span></div>`;
+  }).join('');
+  const book = (classState?.earned || relic?.wand?.earnedDefault || []).join(' · ');
+  const log = relic?.log ? `<p class="eq-wep">Ranger Log · poison ${RANGER_LOG.poison.unlocks.join(', ')} · traps ${RANGER_LOG.traps.unlocks.join(', ')} · stealth ${RANGER_LOG.stealth.unlocks.join(', ')}</p>` : '';
+  const satchel = relic?.satchel ? `<p class="eq-wep">Satchel of Tools · ${THIEF_SATCHEL.unlocks.join(', ')}</p>` : '';
+  const wand = relic?.wand ? `<p class="eq-wep">Spell book · ${relic.name} · ${book || 'empty'}</p>` : '';
+  const forms = relic?.tank
+    ? `<p class="eq-wep">Battle Forms · ${classState?.form || ''} · R cycles</p>`
+    : relic?.twoHand ? `<p class="eq-wep">Two-Hand · block can auto-parry</p>` : '';
+  const crafts = craftsForClass(classId).map((c) => c.name).join(' · ');
+  const craftLine = crafts ? `<p class="eq-wep">Unique craft · ${crafts} (hold R · offer in bag)</p>` : '';
+  const vialLine = vial ? `<p class="eq-wep">Tonic vial · ${vial.id} · ${Math.round(vial.charge || 0)}/${vial.max || 100} (fills in combat)</p>` : '';
+  const trinket = `<p class="eq-wep">Trinket (WoW relic slot) · ${classState?.trinketId || 'empty'}</p>`;
+  return `<header class="eq-bag-h">CLASS ITEM · ${relic?.name || classId}${f0 ? ` · F ${f0.name}` : ''}</header>${forms}${wand}${log || ''}${satchel || ''}${craftLine}${vialLine}${trinket}${tiers || '<p class="eq-wep">Tree loads with crawl</p>'}`;
 }
 
 export function mountHud() {
@@ -100,16 +69,31 @@ export function mountHud() {
         <div class="ph-meter hp"><div class="track"><i></i></div></div>
       </div>
     </div>
-    <div class="ph-defend" id="ph-defend"><span>X dodge</span><span>C parry</span><span>E shrine</span></div>
+    <div class="ph-defend" id="ph-defend"><span>X dodge</span><span>C parry</span><span>E block</span></div>
+    <button type="button" class="ph-hud-edit" id="ph-hud-edit">EDIT HUD</button>
+    <div class="ph-tray" id="ph-tray" hidden></div>
+    <div class="ph-radial" id="ph-radial" hidden></div>
+    <div class="ph-mounts" id="ph-mounts" hidden></div>
+    <div class="ph-radial ph-item-radial" id="ph-item-radial" hidden></div>
     <div class="ph-lock" id="ph-lock" hidden>
       <b>LOCKPICK</b>
       <em id="ph-lock-lab">Dungeon latch</em>
       <div class="ph-lock-dial"><i id="ph-lock-pin"></i><s id="ph-lock-sweet"></s></div>
       <div class="ph-lock-hold"><i id="ph-lock-bar"></i></div>
     </div>
+    <div class="ph-bar-class" id="ph-bar-class"></div>
     <div class="ph-bar6" id="ph-bar6"></div>
     <div class="ph-cast" id="ph-cast" hidden><i></i><b id="ph-cast-name"></b></div>
     <div class="ph-toast" id="ph-toast"></div>
+    <div class="ph-timer" id="ph-timer" hidden>0:00</div>
+    <div class="ph-revive" id="ph-revive" hidden><i></i><b>HOLD E · LIFT</b></div>
+    <div class="ph-load" id="ph-load" hidden><i></i><b>Loading dungeon…</b></div>
+    <div class="ph-lobby" id="ph-lobby" hidden>
+      <header>FOUR HEROES · pick class &amp; weapon · then enter</header>
+      <div class="ph-lobby-rooms" id="ph-lobby-rooms"></div>
+      <div class="ph-lobby-cards" id="ph-lobby-cards"></div>
+      <button type="button" class="btn primary" id="ph-enter-crawl">ENTER CRAWL</button>
+    </div>
     <div class="ph-end" id="ph-end" hidden>
       <h2 id="ph-end-title">CLEARED</h2>
       <p id="ph-end-sub"></p>
@@ -121,26 +105,133 @@ export function mountHud() {
   return el;
 }
 
+function paintSlot(s, keyLabel) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'ph-slot';
+  b.dataset.slot = String(s.slot);
+  if (s.id) b.dataset.id = s.id;
+  if (s.heal) b.classList.add('heal');
+  if (s.classSkill) b.classList.add('class');
+  if (s.item) b.classList.add('item');
+  if (s.mount) b.classList.add('mount');
+  b.style.backgroundImage = `url("${CRAFTPIX_SLOT_BG}")`;
+  const src = iconFor(s);
+  const extra = s.n != null ? ` ×${s.n}` : '';
+  b.innerHTML = `<img class="ico" alt="" src="${src}" /><i class="ring"></i><kbd>${keyLabel}</kbd><span>${s.name || ''}${extra}</span>`;
+  const img = b.querySelector('img');
+  img.addEventListener('error', () => {
+    img.onerror = null;
+    img.src = resolveSkillIcon({ id: '' });
+  }, { once: true });
+  return b;
+}
+
 export function setHudSkills(hud, skills) {
+  const binds = loadHudLayout().binds;
   const bar = hud.querySelector('#ph-bar6');
   if (!bar) return;
   bar.innerHTML = '';
   for (const s of skills) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'ph-slot';
-    b.dataset.slot = String(s.slot);
-    if (s.heal) b.classList.add('heal');
-    b.innerHTML = `<img class="ico" alt="" src="${iconFor(s)}" /><i class="ring"></i><kbd>${s.slot}</kbd><span>${s.name}</span>`;
-    bar.appendChild(b);
+    const key = s.slot <= 5 ? binds[`w${s.slot}`] : s.slot === 8 ? binds.m8 : binds[`i${s.slot}`];
+    bar.appendChild(paintSlot(s, keyLabel(key || String(s.slot))));
   }
 }
 
-export function bindHud(hud, { onCast, onExit, onHealFocus }) {
+export function setHudClassSkills(hud, skills) {
+  const binds = loadHudLayout().binds;
+  const bar = hud.querySelector('#ph-bar-class');
+  if (!bar) return;
+  bar.innerHTML = '';
+  for (const s of skills) {
+    bar.appendChild(paintSlot(s, keyLabel(binds[`c${s.slot}`] || (s.slot === 0 ? 'F' : ''))));
+  }
+}
+
+export function paintMountMenu(hud, mounts, current, open) {
+  const el = hud?.querySelector('#ph-mounts');
+  if (!el) return;
+  el.hidden = !open;
+  if (!open) return;
+  el.innerHTML = `<b>MOUNTS</b>${(mounts || []).map((m) =>
+    `<button type="button" data-mount="${m.id}" class="${m.id === current ? 'on' : ''}">${m.name}</button>`).join('')}`;
+}
+
+export function paintItemRadial(hud, opts, open) {
+  const el = hud?.querySelector('#ph-item-radial');
+  if (!el) return;
+  el.hidden = !open;
+  if (!open) return;
+  el.innerHTML = (opts || []).map((s, i) => `<button type="button" data-item-slot="${i}">
+    <kbd>R${i ? i + 1 : ''}</kbd>${s.name || s.id}
+  </button>`).join('') || '<em>No class item options</em>';
+}
+
+export function paintClassRadial(hud, classSkills, open) {
+  const el = hud?.querySelector('#ph-radial');
+  if (!el) return;
+  el.hidden = !open;
+  if (!open) return;
+  const opts = (classSkills || []).slice(1, 6);
+  el.innerHTML = opts.map((s, i) => `<button type="button" data-class-slot="${i + 1}">
+    <kbd>⇧${i + 1}</kbd>${s.name || s.id}
+  </button>`).join('') || '<em>No class options</em>';
+}
+
+export function paintMappedBars(hud, loadout, classSkills, extra = {}) {
+  const L = loadHudLayout();
+  const bars = resolveBarSlots(L, loadout, classSkills);
+  const items = extra.items || [];
+  const mount = extra.mount || { id: 'none', name: 'Mount' };
+  const combat = [
+    ...bars.weapon.slice(0, 5),
+    { slot: 6, item: true, ...(items[0] || { id: 'empty', name: 'Item' }) },
+    { slot: 7, item: true, ...(items[1] || { id: 'empty', name: 'Item' }) },
+    { slot: 8, mount: true, id: mount.id, name: mount.name },
+  ];
+  setHudSkills(hud, combat);
+  setHudClassSkills(hud, bars.class);
+  applyHudPositions(hud, L);
+  const def = hud.querySelector('#ph-defend');
+  if (def) {
+    def.innerHTML = `<span>${keyLabel(L.binds.dodge)} dodge</span><span>${keyLabel(L.binds.parry)} parry</span><span>${keyLabel(L.binds.block)} block</span>`;
+  }
+}
+
+export function bindHud(hud, { onCast, onClassCast, onUseItem, onMount, onMountMenu, onItemRadial, onExit, onHealFocus, onEnterCrawl, onPickClass, onPickWeapon, onPickAlly, onHudLayout, getSkillPool }) {
   hud.querySelector('#ph-bar6').addEventListener('click', (e) => {
     const slot = e.target.closest('.ph-slot');
     if (!slot) return;
-    onCast(Number(slot.dataset.slot));
+    const n = Number(slot.dataset.slot);
+    if (n === 8) onMount?.();
+    else if (n === 6 || n === 7) onUseItem?.(n - 6);
+    else onCast(n);
+  });
+  hud.querySelector('#ph-bar6').addEventListener('contextmenu', (e) => {
+    const slot = e.target.closest('.ph-slot');
+    if (!slot || Number(slot.dataset.slot) !== 8) return;
+    e.preventDefault();
+    onMountMenu?.();
+  });
+  hud.querySelector('#ph-bar-class')?.addEventListener('click', (e) => {
+    const slot = e.target.closest('.ph-slot');
+    if (!slot) return;
+    onClassCast?.(Number(slot.dataset.slot));
+  });
+  hud.querySelector('#ph-mounts')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mount]');
+    if (!b) return;
+    onMount?.(b.dataset.mount);
+  });
+  hud.querySelector('#ph-item-radial')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-item-slot]');
+    if (!b) return;
+    onItemRadial?.(Number(b.dataset.itemSlot));
+  });
+  hud.querySelector('#ph-radial')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-class-slot]');
+    if (!b) return;
+    onClassCast?.(Number(b.dataset.classSlot));
   });
   hud.querySelector('#ph-party')?.addEventListener('click', (e) => {
     const mate = e.target.closest('.ph-mate');
@@ -157,11 +248,85 @@ export function bindHud(hud, { onCast, onExit, onHealFocus }) {
     }
     onExit?.();
   });
+  hud.querySelector('#ph-enter-crawl')?.addEventListener('click', () => onEnterCrawl?.());
+  bindHudEdit(hud, {
+    onLayout: onHudLayout,
+    getPool: getSkillPool,
+  });
+  hud.querySelector('#ph-lobby-cards')?.addEventListener('change', (e) => {
+    const sel = e.target.closest('select');
+    if (!sel) return;
+    const kind = sel.dataset.kind;
+    const who = sel.dataset.who;
+    if (kind === 'class' && who === 'player') onPickClass?.(sel.value);
+    else if (kind === 'weapon' && who === 'player') onPickWeapon?.(sel.value);
+    else if (kind === 'class' && who != null) onPickAlly?.(Number(who), sel.value);
+  });
+}
+
+let lobbySig = '';
+
+function classOptions(selected) {
+  return CLASS_IDS.map((id) => {
+    const on = id === selected ? ' selected' : '';
+    const role = CLASSES[id]?.role || '';
+    return `<option value="${id}"${on}>${(CLASSES[id]?.label || id).toUpperCase()} · ${role}</option>`;
+  }).join('');
+}
+
+function weaponOptions(classId, selected) {
+  return weaponsForClass(classId).map((id) => {
+    const on = id === selected ? ' selected' : '';
+    return `<option value="${id}"${on}>${WEAPON_LABEL[id] || id}</option>`;
+  }).join('');
+}
+
+function paintLobby(hud, state) {
+  const lobby = hud.querySelector('#ph-lobby');
+  if (!lobby) return;
+  lobby.hidden = state.phase !== 'lobby';
+  if (state.phase !== 'lobby') {
+    lobbySig = '';
+    return;
+  }
+  const rooms = state.rooms || [];
+  const sig = [
+    state.classId, state.weaponId,
+    ...(state.party || []).map((p) => `${p.id}:${p.classId}:${p.weaponId || ''}`),
+    rooms.join(','),
+  ].join('|');
+  if (sig === lobbySig) return;
+  lobbySig = sig;
+  const roomEl = hud.querySelector('#ph-lobby-rooms');
+  if (roomEl) {
+    roomEl.textContent = rooms.length
+      ? `CLEAR ${rooms.length} listed halls · then the warlord`
+      : 'Clear listed halls · count foes · slay the warlord';
+  }
+  const cards = hud.querySelector('#ph-lobby-cards');
+  if (!cards || !state.party) return;
+  cards.innerHTML = state.party.map((p) => {
+    const skills = (p.skills || []).slice(0, 6).map((s) => s.name || s.id).join(' · ');
+    const role = CLASSES[p.classId]?.role || '';
+    const classSel = p.you
+      ? `<select data-kind="class" data-who="player">${classOptions(p.classId)}</select>
+         <select data-kind="weapon" data-who="player">${weaponOptions(p.classId, state.weaponId)}</select>`
+      : `<select data-kind="class" data-who="${p.id}">${classOptions(p.classId)}</select>`;
+    return `<article class="ph-lcard${p.you ? ' you' : ''}">
+      <img src="${portraitUrl(p.raceId, p.classId)}" alt="" width="48" height="48" />
+      <b>${p.you ? 'YOU' : p.name}</b>
+      <em>${String(p.classId || '').toUpperCase()} · ${role}</em>
+      ${classSel}
+      <span>${skills || '6-slot catalog'}</span>
+    </article>`;
+  }).join('');
 }
 
 export function renderHud(state) {
   const hud = document.getElementById('play-hud');
   if (!hud || hud.hidden) return;
+  const end = hud.querySelector('#ph-end');
+  if (end && state.phase !== 'over') end.hidden = true;
   const setMeter = (sel, cur, max) => {
     const el = hud.querySelector(sel);
     if (!el) return;
@@ -191,17 +356,29 @@ export function renderHud(state) {
     mark.textContent = String(state.className || 'W').charAt(0).toUpperCase();
   }
   hud.querySelector('#ph-obj').textContent = state.objective;
-  hud.querySelectorAll('.ph-slot').forEach((el) => {
+  hud.querySelectorAll('#ph-bar6 .ph-slot').forEach((el) => {
     const slot = Number(el.dataset.slot);
     const cd = state.cds[slot] || 0;
     const max = state.cdMax[slot] || 1;
     el.classList.toggle('cd', cd > 0);
-    el.classList.toggle('on', state.activeSlot === slot);
+    el.classList.toggle('on', state.activeSlot === slot && !state.classActive);
     const pct = cd > 0 ? Math.round(100 * cd / max) : 0;
-    el.querySelector('.ring').style.background =
-      pct > 0
-        ? `conic-gradient(#000c ${pct}%, transparent ${pct}%)`
-        : 'transparent';
+    const ring = el.querySelector('.ring');
+    if (ring) ring.style.background = pct > 0
+      ? `conic-gradient(#000c ${pct}%, transparent ${pct}%)`
+      : 'transparent';
+  });
+  hud.querySelectorAll('#ph-bar-class .ph-slot').forEach((el) => {
+    const slot = Number(el.dataset.slot);
+    const cd = (state.classCds || {})[slot] || 0;
+    const max = (state.classCdMax || {})[slot] || 1;
+    el.classList.toggle('cd', cd > 0);
+    el.classList.toggle('on', state.classActive === slot);
+    const pct = cd > 0 ? Math.round(100 * cd / max) : 0;
+    const ring = el.querySelector('.ring');
+    if (ring) ring.style.background = pct > 0
+      ? `conic-gradient(#000c ${pct}%, transparent ${pct}%)`
+      : 'transparent';
   });
   const cast = hud.querySelector('#ph-cast');
   if (state.casting > 0) {
@@ -244,6 +421,23 @@ export function renderHud(state) {
     def.classList.toggle('ifr', !!(state.dashing || (state.iframes || 0) > 0));
     def.classList.toggle('par', (state.parryT || 0) > 0);
   }
+  const load = hud.querySelector('#ph-load');
+  if (load) load.hidden = state.phase !== 'loading';
+  paintLobby(hud, state);
+  const timer = hud.querySelector('#ph-timer');
+  if (timer) {
+    if (state.phase === 'crawl' && state.timer0) {
+      const sec = Math.max(0, Math.floor((performance.now() - state.timer0) / 1000));
+      timer.hidden = false;
+      timer.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+    } else timer.hidden = true;
+  }
+  const rev = hud.querySelector('#ph-revive');
+  if (rev) {
+    const show = (state.reviveT || 0) > 0.05;
+    rev.hidden = !show;
+    if (show) rev.querySelector('i').style.width = `${Math.min(100, (state.reviveT / 2) * 100)}%`;
+  }
   const lock = hud.querySelector('#ph-lock');
   if (lock) {
     const lp = state.lockpick;
@@ -276,7 +470,7 @@ export function showEnd(win, text, opts = {}) {
   }
 }
 
-export function fillEquipPanel({ raceId = 'human', classId = 'worge', weaponId, level = PLAY.level, sheet } = {}) {
+export function fillEquipPanel({ raceId = 'human', classId = 'worge', weaponId, level = PLAY.level, sheet, bag = {}, classState, trees, vial } = {}) {
   const body = document.getElementById('equip-body');
   if (!body) return;
   const kit = ROLE_KITS[classId] || ROLE_KITS.warrior;
@@ -287,13 +481,20 @@ export function fillEquipPanel({ raceId = 'human', classId = 'worge', weaponId, 
     const on = id === classId ? ' on' : '';
     return `<div class="eq-row${on}"><b>${(CLASSES[id]?.label || id).toUpperCase()}</b><span>${k.body}/${k.arms}/${k.legs} · ${ws}</span></div>`;
   }).join('');
+  const slots = bagSlots(bag).map((s) => `
+    <div class="eq-loot"><img src="${s.icon || '/ui/craftpix/icons/tome.png'}" alt="" width="28" height="28" /><b>${s.label}</b><span>×${s.n}</span></div>
+  `).join('') || '<p class="eq-wep">Bag empty · break tables, barrels, walls (F / skills)</p>';
   body.innerHTML = `
     <p class="eq-hero">${String(raceId).toUpperCase()} · ${(CLASSES[classId]?.label || classId).toUpperCase()} · Lv ${level}</p>
     <p class="eq-stat">HP ${sheet?.hpMax ?? '—'} · MP ${sheet?.manaMax ?? '—'} · AR ${sheet?.armor ?? kit.body}</p>
     <p class="eq-slot">BODY ${kit.body} · ARMS ${kit.arms} · LEGS ${kit.legs} · HEAD ${kit.head} · SHOULDERS ${kit.shoulders}</p>
     <p class="eq-wep">T8 ${ (T8_CLASS_SETS[classId] || []).map((s) => s.name || s.id).join('  /  ')} · armed ${WEAPON_LABEL[weaponId] || weaponId || sets[0]} · Q swap</p>
     <p class="eq-wep">T0 start ${starterForClass(classId).name} (${starterForClass(classId).t0})</p>
+    <p class="eq-wep">F ${classSkill0(classId)?.name || '—'} · item ${classItemFor(classId)?.name || '—'} · R tap / hold R</p>
+    <div class="eq-tree">${treeHtml(classId, trees, classState, vial)}</div>
     <div class="eq-all">${rows}</div>
+    <header class="eq-bag-h">BAG · session yield</header>
+    <div class="eq-bag">${slots}</div>
   `;
 }
 

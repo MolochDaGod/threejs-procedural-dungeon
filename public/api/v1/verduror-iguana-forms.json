@@ -1,0 +1,21 @@
+{
+  "id": "verduror-iguana-forms",
+  "version": "2026-09-05.faction-albedo",
+  "note": "ONE iguana body (human.glb bake). Three FantasyPack1 albedos by faction. Race = slight material.color multiply. Saved as classState.formSkin.",
+  "mesh": "/models/forms/iguana/human.glb",
+  "normal": "/models/forms/iguana/tex/Iguana_nrml.png",
+  "heightM": 1.65,
+  "factions": {
+    "Crusade": { "albedo": "/models/forms/iguana/tex/Iguana_green.png", "races": ["human", "barbarian"] },
+    "Fabled": { "albedo": "/models/forms/iguana/tex/Iguana_pink.png", "races": ["elf", "dwarf"] },
+    "Legion": { "albedo": "/models/forms/iguana/tex/Iguana_blue.png", "races": ["orc", "undead"] }
+  },
+  "raceTint": {
+    "human": "0xffffff",
+    "barbarian": "0xffe0c4",
+    "elf": "0xfff0ff",
+    "dwarf": "0xd8b8c8",
+    "orc": "0xc8e8c0",
+    "undead": "0xc0d0ff"
+  }
+}

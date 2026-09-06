@@ -5,22 +5,50 @@
 import { CATALOG_SKILL_PLAY, T8_CLASS_SETS, setByKitId } from './t0ClassSets.js';
 import { SKILL_ICON_CDN } from './skillIconCdn.js';
 
-const LEGACY_SKILLS = [
-  { id: 'cleave',              slot: 1, name: 'Cleave',         kind: 'slash',     linear: null,      element: 'physical', color: 0xe8e0c8, mana: 0,  stamina: 8,  cd: 0.45, range: 2.8,  damage: 18, telegraphSec: 0.12 },
-  { id: 'gs_samurai_combo',    slot: 1, name: 'Twin Slash',     kind: 'slash',     linear: null,      element: 'physical', color: 0xe8e0c8, mana: 0,  stamina: 8,  cd: 0.50, range: 3.1,  damage: 22, telegraphSec: 0.10, anim: 'attack' },
-  { id: 'gs_samurai_teleport', slot: 2, name: 'Shadow Step',    kind: 'teleport',  linear: null,      element: 'shadow',   color: 0x9b6cf0, mana: 8,  stamina: 16, cd: 6.00, range: 8.5,  damage: 26, telegraphSec: 0.18, anim: 'attack' },
-  { id: 'gs_samurai_dash',     slot: 3, name: 'Slashing Dash',  kind: 'dash',      linear: 'meteor',  element: 'physical', color: 0xffc878, mana: 0,  stamina: 12, cd: 4.00, range: 6.2,  damage: 24, telegraphSec: 0.14, anim: 'attack' },
-  { id: 'flame_sword',         slot: 4, name: 'Flame Sword',    kind: 'fissure',   linear: 'meteor',  element: 'fire',     color: 0xff6a22, mana: 18, stamina: 10, cd: 8.00, range: 12,   damage: 32, telegraphSec: 0.35, forks: true, anim: 'cast', meshPath: 'models/vfx/rocks/magic-rock-1.glb' },
-  { id: 'fireball',            slot: 2, name: 'Cinder Fall',    kind: 'projectile',linear: 'meteor',  element: 'fire',     color: 0xff6a22, mana: 12, stamina: 0,  cd: 0.70, range: 16,   damage: 28, speed: 18, telegraphSec: 0.22 },
-  { id: 'frostlance',          slot: 3, name: 'Frost Lance',    kind: 'projectile',linear: 'ice',     element: 'ice',      color: 0x8fd4ff, mana: 14, stamina: 0,  cd: 0.85, range: 18,   damage: 24, speed: 22, pierce: true, telegraphSec: 0.2, meshPath: 'models/vfx/rocks/magic-rock-2.glb' },
-  { id: 'thunder',             slot: 4, name: 'Storm Lance',    kind: 'beam',      linear: 'thunder', element: 'storm',    color: 0xc8e6ff, mana: 18, stamina: 0,  cd: 1.10, range: 14,   damage: 32, telegraphSec: 0.35, forks: true },
-  { id: 'holy_beam',           slot: 5, name: 'Nova Beam',      kind: 'beam',      linear: 'beam',    element: 'holy',     color: 0xffe08a, mana: 20, stamina: 0,  cd: 2.40, range: 15,   damage: 30, telegraphSec: 0.32, meshPath: 'models/vfx/rocks/magic-rock-5.glb' },
-  { id: 'holy_nova',           slot: 5, name: 'Holy Nova',      kind: 'nova',      linear: 'beam',    element: 'holy',     color: 0xffe08a, mana: 22, stamina: 0,  cd: 4.00, range: 4.5,  damage: 20, telegraphSec: 0.4 },
-  { id: 'glacier',             slot: 5, name: 'Glacier Wall',   kind: 'zone',      linear: 'glacier', element: 'nature',   color: 0x7fd4c8, mana: 20, stamina: 0,  cd: 5.00, range: 3.6,  damage: 18, telegraphSec: 0.4, meshPath: 'models/vfx/rocks/magic-rock-3.glb' },
-  { id: 'snare',               slot: 6, name: 'Voltaic Snare',  kind: 'zone',      linear: 'snare',   element: 'arcane',   color: 0xb070ff, mana: 16, stamina: 0,  cd: 4.20, range: 3.2,  damage: 16, telegraphSec: 0.38, meshPath: 'models/vfx/rocks/magic-rock-6.glb' },
-  { id: 'void_dash',           slot: 6, name: 'Void Step',      kind: 'dash',      linear: null,      element: 'shadow',   color: 0x9b6cf0, mana: 16, stamina: 12, cd: 3.20, range: 6.5,  damage: 10, telegraphSec: 0.15 },
-  { id: 'shield_bash',         slot: 2, name: 'Shield Bash',    kind: 'slash',     linear: null,      element: 'physical', color: 0xc9cedb, mana: 0,  stamina: 14, cd: 2.20, range: 2.4,  damage: 16, telegraphSec: 0.16 },
-];
+/** Lab nicknames → catalog ids. Never play as a different skill. */
+const LEGACY_ALIAS = {
+  cleave: 'sword_vengeful_slash',
+  shield_bash: 'tower_fortress',
+  gs_samurai_combo: 'gs_cleave',
+  gs_samurai_dash: 'gs_judgement',
+  gs_samurai_teleport: 'dagger_phantom_dash',
+  flame_sword: 'staff_flame_wave',
+  fireball: 'staff_fire_bolt',
+  frostlance: 'staff_frost_bolt',
+  thunder: 'staff_fire_bolt',
+  holy_beam: 'staff_holy_light',
+  holy_nova: 'staff_radiant_heal',
+  glacier: 'staff_blizzard',
+  snare: 'bow_bear_trap',
+  void_dash: 'dagger_phantom_dash',
+};
+
+const CDN = 'https://assets.grudge-studio.com';
+const ORB = {
+  fire: `${CDN}/models/vfx/orbs/orb-fire.glb`,
+  ice: `${CDN}/models/vfx/orbs/orb-ice.glb`,
+  frost: `${CDN}/models/vfx/orbs/orb-ice.glb`,
+  nature: `${CDN}/models/vfx/orbs/orb-nature.glb`,
+  storm: `${CDN}/models/vfx/orbs/orb-storm.glb`,
+  holy: `${CDN}/models/vfx/orbs/orb-holy.glb`,
+  arcane: `${CDN}/models/vfx/orbs/orb-arcane.glb`,
+  shadow: `${CDN}/models/vfx/orbs/orb-arcane.glb`,
+};
+const ROCK = {
+  fire: 'models/vfx/rocks/magic-rock-1.glb',
+  ice: 'models/vfx/rocks/magic-rock-2.glb',
+  frost: 'models/vfx/rocks/magic-rock-2.glb',
+  nature: 'models/vfx/rocks/magic-rock-3.glb',
+  holy: 'models/vfx/rocks/magic-rock-5.glb',
+  arcane: 'models/vfx/rocks/magic-rock-6.glb',
+  shadow: 'models/vfx/rocks/magic-rock-6.glb',
+};
+
+function meshFor(kind, element) {
+  if (kind === 'fissure') return ROCK[element] || ROCK.nature;
+  if ((kind === 'projectile' || kind === 'beam') && ORB[element]) return ORB[element];
+  return null;
+}
 
 function playKind(meta) {
   if (meta.kind === 'projectile') return 'meteor';
@@ -30,13 +58,14 @@ function playKind(meta) {
   return null;
 }
 
-export const SKILLS = [
-  ...LEGACY_SKILLS,
-  ...Object.entries(CATALOG_SKILL_PLAY).map(([id, m]) => ({
+function decorate(id, m) {
+  const kind = m.kind;
+  const meshPath = m.meshPath || meshFor(kind, m.element);
+  return {
     id,
     slot: 1,
     name: m.name,
-    kind: m.kind,
+    kind,
     linear: playKind(m),
     element: m.element,
     color: m.color,
@@ -48,32 +77,43 @@ export const SKILLS = [
     speed: m.speed,
     heal: m.heal || 0,
     poison: !!m.poison,
-    telegraphSec: m.kind === 'slash' ? 0.12 : 0.22,
-  })),
-];
+    taunt: !!m.taunt,
+    parry: !!m.parry,
+    block: !!m.block,
+    telegraphSec: m.telegraphSec ?? (kind === 'slash' ? 0.12 : kind === 'nova' || kind === 'zone' ? 0.4 : 0.22),
+    meshPath,
+    anim: kind === 'slash' || kind === 'dash' ? 'attack' : 'cast',
+    iconUrl: SKILL_ICON_CDN[id] || m.iconUrl || null,
+  };
+}
 
-/** info.* class → 6-slot bar. Worge (knight) swaps bar with weapon two. */
-export const CLASS_LOADOUTS = {
-  worge:    ['gs_samurai_combo', 'thunder', 'glacier', 'holy_beam', 'snare', 'void_dash'],
-  verduror: ['holy_nova', 'glacier', 'holy_beam', 'frostlance', 'snare', 'void_dash'],
-  warrior:  ['cleave', 'shield_bash', 'gs_samurai_dash', 'flame_sword', 'thunder', 'holy_nova'],
-  raider:   ['gs_samurai_combo', 'gs_samurai_dash', 'flame_sword', 'cleave', 'void_dash', 'holy_nova'],
-  mage:     ['fireball', 'frostlance', 'thunder', 'holy_beam', 'glacier', 'snare'],
-  priest:   ['holy_beam', 'holy_nova', 'snare', 'glacier', 'void_dash', 'thunder'],
-  ranger:   ['frostlance', 'fireball', 'void_dash', 'thunder', 'holy_nova', 'cleave'],
-  thief:    ['gs_samurai_combo', 'gs_samurai_teleport', 'void_dash', 'cleave', 'snare', 'holy_nova'],
-};
+export const SKILLS = Object.entries(CATALOG_SKILL_PLAY).map(([id, m]) => decorate(id, m));
 
-export const WORGE_LOADOUTS = {
-  '1h_tome':      ['cleave', 'thunder', 'glacier', 'holy_beam', 'snare', 'void_dash'],
-  nature_staff:   ['frostlance', 'glacier', 'thunder', 'holy_beam', 'holy_nova', 'snare'],
-  arcane_staff:   ['fireball', 'thunder', 'holy_beam', 'snare', 'glacier', 'void_dash'],
-};
+/** Canonical 6-slot bars = T8 set 0. No lab nicknames. */
+export const CLASS_LOADOUTS = Object.fromEntries(
+  Object.entries(T8_CLASS_SETS).map(([cls, sets]) => [cls, (sets[0]?.skills || []).slice(0, 6)]),
+);
+
+export const WORGE_LOADOUTS = Object.fromEntries(
+  (T8_CLASS_SETS.worge || []).map((s) => [s.id, s.skills]),
+);
 
 const byId = new Map(SKILLS.map((s) => [s.id, s]));
 
 export function skillById(id) {
-  return byId.get(id) || SKILLS[0];
+  if (byId.has(id)) return byId.get(id);
+  const alias = LEGACY_ALIAS[id];
+  if (alias && byId.has(alias)) return { ...byId.get(alias), id: alias };
+  const kind = /heal|ward|beacon|radiant|holy_light/i.test(id) ? 'nova'
+    : /bolt|shot|arrow|javelin|lance/i.test(id) ? 'projectile'
+    : /dash|charge|pounce|sprint|teleport/i.test(id) ? 'dash'
+    : /nova|storm|whirl|slam|stomp/i.test(id) ? 'nova'
+    : /wave|fissure|meteor/i.test(id) ? 'fissure'
+    : 'slash';
+  const row = decorate(id, { name: id.replace(/_/g, ' '), kind, element: 'physical', color: 0xe8e0c8, cd: 1, range: 3, damage: 20 });
+  byId.set(id, row);
+  SKILLS.push(row);
+  return row;
 }
 
 /**
@@ -141,7 +181,8 @@ export function loadoutFor(classId = 'worge', weaponId = '1h_tome') {
   const pack = setByKitId(classId, wid);
   const ids = pack.skills || LOADOUT_BY_WEAPON[wid] || CLASS_LOADOUTS[classId] || CLASS_LOADOUTS.worge;
   return ids.map((id, i) => {
-    const s = { ...skillById(id) };
+    const resolved = skillById(id);
+    const s = { ...resolved, id: resolved.id };
     s.slot = i + 1;
     s.weaponId = wid;
     s.t8 = pack.t8 || null;

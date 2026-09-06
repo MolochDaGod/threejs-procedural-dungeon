@@ -6,11 +6,14 @@ import * as THREE from 'three';
 import { ANIM_URLS, CLIP_DONOR, DRESSING, RACE_IDS, raceCharacterUrl } from '../ssot.js';
 import { CELL_M } from '../gen/cells.js';
 import { loadPlayGltf } from '../loaders/gltfPlay.js';
+import { resolvePlayUrl } from './playUrl.js';
+
+export { resolvePlayUrl };
 
 const cache = loadPlayGltf._cache;
 
 export function loadGltf(url) {
-  return loadPlayGltf(url, cache);
+  return loadPlayGltf(resolvePlayUrl(url), cache);
 }
 
 export function bakedUrls() {
@@ -36,15 +39,17 @@ export function preloadDungeonAssets() {
 
 export function instanceCatalog(dungeon) {
   return {
-    version: 2,
+    version: 3,
     cellM: CELL_M,
     nav: 'grid-8',
     renderer: 'three',
     physics: 'rapier3d-compat',
+    three: 'r185',
     baked: bakedUrls(),
     seed: dungeon?.seed ?? null,
     theme: dungeon?.params?.themeKey ?? null,
     rooms: dungeon?.rooms?.length ?? 0,
+    nodes: ['Terrain', 'Cover', 'Dress', 'Actors', 'Vfx', 'Pinata'],
   };
 }
 

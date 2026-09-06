@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { CLASSES, PLAY, RACE_IDS, RACES, dungeonFill, loadoutFor } from '../ssot.js';
 import { groundRoot } from '../terrain/footPlant.js';
 import { passiveFor } from './passives.js';
+import { animForSpell, hitWindowSec } from './clipRoles.js';
 
 const _dir = new THREE.Vector3();
 
@@ -57,6 +58,36 @@ export function makeAlly(actor, { classId, raceId, pos }) {
 export function tickAlly(a, dt, host) {
   a.actor.update(dt);
   if (!a.alive) return;
+  if (a.status) {
+    a.status.flinch = Math.max(0, (a.status.flinch || 0) - dt);
+    a.status.stun = Math.max(0, (a.status.stun || 0) - dt);
+    if ((a.status.stun || 0) > 0 || (a.status.freeze || 0) > 0) {
+      a.actor.setGait(false, false);
+      return;
+    }
+  }
+  if (a.downed) {
+    a.actor.setGait(true, false, { downed: true });
+    if (host.playerDowned && host.playerPos) {
+      _dir.copy(host.playerPos).sub(a.pos).setY(0);
+      if (_dir.length() > 0.4) {
+        _dir.normalize();
+        stepToward(a, _dir, 0.9, dt, host);
+      }
+    }
+    return;
+  }
+  if (host.playerDowned) {
+    _dir.copy(host.playerPos).sub(a.pos).setY(0);
+    const d = _dir.length();
+    if (d > 0.5) {
+      _dir.normalize();
+      stepToward(a, _dir, a.speed, dt, host);
+      a.actor.setGait(true, false);
+    }
+    a.actor.root.position.copy(a.pos);
+    return;
+  }
   a.casting = Math.max(0, a.casting - dt);
   a.mana = Math.min(PLAY.mana, a.mana + PLAY.manaRegen * dt);
   a.hp = Math.min(a.hpMax, a.hp + PLAY.hpRegen * 0.6 * dt);
@@ -74,11 +105,13 @@ export function tickAlly(a, dt, host) {
   }
 
   a.parryT = Math.max(0, (a.parryT || 0) - dt);
+  a.dodgeCd = Math.max(0, (a.dodgeCd || 0) - dt);
   if (a.role === 'tank' && foe && dist < 3.2) {
     a.parryCd = (a.parryCd || 0) - dt;
     if ((a.parryCd || 0) <= 0) {
       a.parryCd = 2.4;
       a.parryT = PLAY.parry.window;
+      a.actor.requestOneShot('parry', PLAY.parry.window);
     }
   }
 
@@ -111,9 +144,29 @@ export function tickAlly(a, dt, host) {
         return;
       }
     }
+    const dx = a.pos.x - (danger.x || 0);
+    const dz = a.pos.z - (danger.z || 0);
+    if ((a.dodgeCd || 0) <= 0 && dx * dx + dz * dz < 3.4 * 3.4) {
+      a.dodgeCd = 1.6;
+      a.actor.requestOneShot('dodge', 0.4);
+      _dir.set(dx, 0, dz);
+      if (_dir.lengthSq() > 0.01) {
+        _dir.normalize();
+        stepToward(a, _dir, a.speed * 1.4, dt, host);
+      }
+    }
   }
 
-  if (toPlayer > 14) {
+  if (a.role === 'peel' && foe) {
+    const mx = player.x * 0.62 + foe.pos.x * 0.38;
+    const mz = player.z * 0.62 + foe.pos.z * 0.38;
+    _dir.set(mx - a.pos.x, 0, mz - a.pos.z);
+    if (_dir.lengthSq() > 0.16) {
+      _dir.normalize();
+      stepToward(a, _dir, a.speed, dt, host);
+      moving = true;
+    }
+  } else if (toPlayer > 14) {
     _dir.copy(player).sub(a.pos).setY(0).normalize();
     stepToward(a, _dir, a.speed * 1.15, dt, host);
     moving = true;
@@ -131,7 +184,7 @@ export function tickAlly(a, dt, host) {
 
   a.actor.root.position.copy(a.pos);
   groundRoot(a.actor.root, a.actor.groundSampler, a.pos.x, a.pos.z);
-  a.actor.setGait(moving, toPlayer > 10);
+  a.actor.setGait(moving, toPlayer > 10, { sneak: a.classId === 'thief' && a.hidden });
 
   if (a.role === 'tank' && foe) {
     a.tauntCd = (a.tauntCd || 0) - dt;
@@ -150,12 +203,16 @@ export function tickAlly(a, dt, host) {
     }
   }
   if (a.casting > 0) return;
+  if ((a.actor.busy || 0) > 0.12) return;
   const spell = pickReadySpell(a, foe, host);
   if (!spell) return;
   a.cds[spell.id] = spell.cd;
   a.mana -= spell.mana;
-  a.casting = Math.max(0.16, spell.telegraphSec || 0.18);
-  a.actor.requestOneShot(spell.kind === 'slash' ? 'attack' : 'cast', a.casting + 0.12);
+  a._combo = ((a._combo || 0) + 1) % 3;
+  const anim = animForSpell(a.actor.clips, spell, { comboStage: a._combo });
+  const shotDur = a.actor.clips?.[anim]?.duration || 0.42;
+  a.casting = Math.max(hitWindowSec(shotDur, 0.55), spell.telegraphSec || 0.18);
+  a.actor.requestOneShot(anim, a.casting + 0.12);
   if (a.role === 'tank') a.threat += 18;
   host.castFrom(a, spell, foe);
 }

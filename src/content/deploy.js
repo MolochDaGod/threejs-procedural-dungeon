@@ -12,11 +12,11 @@ export const DUNGEON_PLAY_CONTRACT = {
     'attachDungeonTerrain → sampler + BVH + navmesh at groundY=0',
     'ENTER → Rapier WASM lazy + character entry (Toon or creature GLB)',
     'planEncounters(kind) → biome | faction 1.5× | boss-only',
-    'PlaySession: WASD, 1–6, X dodge, C parry, START/COMPLETE objective, telegraphs cone/linear/aoe',
+    'PlaySession: WASD TPS, 1–5 weapon / 6–7 items / 8 mounts / F class-0, AA-DD roll, Shift+RMB parry, E block, START/COMPLETE, telegraphs',
   ],
   loads: {
     player: 'CDN Toon {race}.glb + anim_idle/walk/attack/death + combat donor',
-    allies: 'other three classes, any remaining races — tank taunt/parry, priest heal, ranger DPS, worge utility',
+    allies: 'purpose-driven 4-man: tank (warrior/raider) + healer (priest/verduror) + kite DPS (ranger/mage) + peel (thief/worge)',
     biomeMobs: 'Toon biome.race OR public/models/creatures/*.glb native clips; units may appear in multiple biomes',
     factionMobs: 'hostile faction Toon kits × 1.5, ROLE_ATTACKS.boss',
     boss: 'biome warlord (Toon, taller) or authored troll/rock as elite',

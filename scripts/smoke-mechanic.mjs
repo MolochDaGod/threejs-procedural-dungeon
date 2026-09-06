@@ -4,6 +4,7 @@
  */
 import { buildColliderAssets, greedyRects, hitsSolid, TILE } from '../src/physics/colliders.js';
 import { compileMechanics, compileDungeonScript } from '../src/mechanic/compile.js';
+import { bindScript, tickScript } from '../src/play/scriptRuntime.js';
 import { readFileSync } from 'node:fs';
 import { CLASS_IDS, CLASS_WEAPON_SETS, COMBAT_DEPLOY, DUNGEON_KINDS, DUNGEON_SI, HERO_24, PIRATE_FACES, PLAY, PLAY_DEFAULTS, PROP_KITS, creatureOf, creaturesForBiome, loadoutFor, skillById } from '../src/ssot.js';
 import { allyRaces } from '../src/play/party.js';
@@ -20,10 +21,23 @@ import { PUFF, puffPreset } from '../src/vfx/particles.js';
 import { fallbackSheet } from '../src/play/infoCombat.js';
 import { compileDressPlan, ROOM_DRESS } from '../src/gen/dressPlan.js';
 import { CATALOG_SKILL_PLAY, T0_STARTERS, T8_CLASS_SETS } from '../src/play/t0ClassSets.js';
+import { resolveSkillIcon } from '../src/play/skillIcons.js';
+import { classLoadoutFor, compileClassSkill } from '../src/play/classSkills.js';
+import { CLASS_SKILL_0 } from '../src/play/classSkill0.js';
+import { WORGE_BEAR_MESH, bearAlbedoUrl, iguanaAlbedoUrl, iguanaTint } from '../src/play/forms.js';
+import { CLASS_ITEM, RAIDER_TWO_HAND, PRIEST_WAND, THIEF_SATCHEL } from '../src/play/classItems.js';
+import { CLASS_CRAFTS, craftsForClass, canRefillTonic } from '../src/play/classCrafts.js';
+import { resolvePlayUrl } from '../src/play/playUrl.js';
+import { HUD_BINDS_DEFAULT, optimalSlots } from '../src/play/hudLayout.js';
+import { GAP_CLOSE, MELEE_COMBO } from '../src/play/meleeCombo.js';
+import { CLIP_DONOR_NAMES, CLIP_SKIP, classifyClips, resolveClipName, animForSpell, hitWindowSec } from '../src/play/clipRoles.js';
+import { canAct, inferCc, makeStatus } from '../src/play/status.js';
+import { playerPrefab } from '../src/play/prefabs.js';
 import { RANGER_LOG, WARRIOR_TANK, WORGE_GRIMOIRE, MAGE_WAND, makeClassState, craftWorgeForm } from '../src/play/classItems.js';
 import { createLockpickSession, attemptLockpickTumble, pinInSweetZone, setLockpickPinAngle } from '../src/play/lockpick.js';
 import { applyTaunt, topThreatKey, THREAT } from '../src/play/aggro.js';
 import { playKitPieces } from '../src/d1.js';
+import { FACTION_NERF, PACK_COMPS, packSizeForRoom, planFactionPacks } from '../src/play/factionPacks.js';
 
 const W = 12, H = 10;
 const grid = new Uint8Array(W * H);
@@ -160,6 +174,32 @@ report.factionAllies = allyRaces('human').every((id) => id === 'human' || id ===
   && allyRaces('orc').every((id) => id === 'orc' || id === 'undead');
 report.playDefaults = PLAY_DEFAULTS.rooms === 7 && PLAY_DEFAULTS.kind === 'biome' && PLAY_DEFAULTS.yuka === true;
 report.combatDonor = COMBAT_DEPLOY.clipDonor.includes('combat.grudge-studio.com') && COMBAT_DEPLOY.telegraphWarning.includes('telegraph_warning');
+const donorClips = CLIP_DONOR_NAMES.map((name) => ({ name }));
+const swordRoles = classifyClips(donorClips, 'sword_shield');
+const gsRoles = classifyClips(donorClips, 'two_hand');
+report.clipDonorCount = CLIP_DONOR_NAMES.length >= 50;
+report.clipSword = swordRoles.attack?.name === 'sword_attack_a'
+  && swordRoles.attack2?.name === 'sword_attack_c'
+  && swordRoles.attack3?.name === 'sword_combo_finisher'
+  && swordRoles.block?.name === 'sword_block'
+  && swordRoles.parry?.name === 'shield_bash'
+  && swordRoles.dodge?.name === 'dodge'
+  && swordRoles.crawl?.name === 'crawl'
+  && swordRoles.slide?.name === 'slide_start'
+  && swordRoles.jump?.name === 'jump'
+  && swordRoles.sprint?.name === 'sprint';
+report.clipJumpNotWall = swordRoles.jump?.name !== 'wall_jump_start' && !CLIP_SKIP.includes('dodge');
+report.clipHitNoAttack = resolveClipName(swordRoles, 'hit') === null && !swordRoles.hit;
+report.clipParryChain = resolveClipName(swordRoles, 'parry') === 'parry';
+report.clipGsLoco = gsRoles.idle?.name === 'gs_idle' && gsRoles.walk?.name === 'gs_walk';
+report.animSlash = animForSpell(swordRoles, { kind: 'slash' }, { comboStage: 0 }) === 'attack';
+report.animCombo = animForSpell(swordRoles, { kind: 'slash' }, { comboStage: 2 }) === 'attack3';
+report.animDash = animForSpell(swordRoles, { kind: 'dash' }) === 'dashAtk';
+report.hitWindow = Math.abs(hitWindowSec(1, 0.32) - 0.32) < 1e-6;
+const playSrc = readFileSync(new URL('../src/play/index.js', import.meta.url), 'utf8');
+report.hitQTick = playSrc.includes('this.hitQ.filter') && playSrc.includes('h.fn()');
+report.parryClip = playSrc.includes("requestOneShot?.('parry'") && playSrc.includes("requestOneShot?.('hit'");
+report.noFlinchAttack = !playSrc.includes("requestOneShot?.('attack', 0.16)");
 report.dungeonKinds = DUNGEON_KINDS.biome && DUNGEON_KINDS.faction && DUNGEON_KINDS.boss;
 report.flareBoss = flareBossForTheme('molten').id === 'flare_fireworm'
   && flareOf('flare_skel_warrior')?.mesh.startsWith(FLARE_HOST)
@@ -175,7 +215,7 @@ report.t8Bar6 = Object.values(T8_CLASS_SETS).every((sets) => sets.every((s) => s
 report.t8SkillsKnown = Object.values(T8_CLASS_SETS).flat().every((s) => s.skills.every((id) => CATALOG_SKILL_PLAY[id]));
 report.t0Wand = T0_STARTERS.mage.t0 === 't0-wand';
 report.t0Sapling = T0_STARTERS.worge.t0 === 't0-nature-staff';
-report.warriorTank = WARRIOR_TANK.autoParry && WARRIOR_TANK.block && WARRIOR_TANK.tauntSkillId === 'tower_fortress';
+report.warriorTank = WARRIOR_TANK.autoParry && WARRIOR_TANK.block && WARRIOR_TANK.tauntSkillId === 'w_taunt';
 report.rangerLog = RANGER_LOG.lockpick && RANGER_LOG.poison.coatSkillId === 'bow_poison_arrow';
 report.mageWand = MAGE_WAND.starter === 't0-wand' && MAGE_WAND.schools.includes('fire');
 report.worgeForms = WORGE_GRIMOIRE.forms.includes('bear') && craftWorgeForm(makeClassState('worge'), 'raptor').unlocked.includes('raptor');
@@ -187,6 +227,28 @@ const foe = { alive: true, threatTable: new Map(), aggro: 0 };
 applyTaunt(foe, 'player', 0);
 report.tauntHolds = topThreatKey(foe, 0) === 'player' && THREAT.taunt >= 10000;
 report.playLevel = PLAY.level;
+report.tpsIndoor = PLAY.tps.distance >= 2.5 && PLAY.tps.distance <= 8 && PLAY.tps.minDistance < PLAY.tps.distance && PLAY.tps.followLambda >= 8;
+report.fleetDodge = PLAY.dodge.iframeEnd === 0.34 && PLAY.dodge.doubleTapSec > 0 && PLAY.block.key === 'KeyE' && PLAY.parry.shiftRmb === true;
+report.hudBinds = HUD_BINDS_DEFAULT.w1 === 'Digit1' && HUD_BINDS_DEFAULT.i6 === 'Digit6' && HUD_BINDS_DEFAULT.m8 === 'Digit8' && HUD_BINDS_DEFAULT.c0 === 'KeyF';
+report.hudOptimal = optimalSlots([{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }, { id: 'ult' }], [{ id: 'c' }]).weapon.length === 5;
+const comboIds = Object.values(MELEE_COMBO).flat();
+report.comboKnown = comboIds.every((id) => CATALOG_SKILL_PLAY[id]);
+report.gapKnown = Object.values(GAP_CLOSE).every((id) => CATALOG_SKILL_PLAY[id]);
+const st = makeStatus();
+st.stun = 1;
+report.statusStun = canAct(st) === false;
+report.ccFreeze = !!inferCc({ id: 'staff_ice_nova', name: 'Ice Nova', element: 'ice' }).freeze;
+report.slideCtrl = PLAY.slide.key === 'ControlLeft';
+report.parryStun = PLAY.parry.stun >= 1;
+report.f0 = CLASS_SKILL_0.warrior.id === 'w_taunt' && CLASS_SKILL_0.warrior.cd === 15 && CLASS_SKILL_0.mage.totem === 'spell' && CLASS_SKILL_0.priest.totem === 'blessed' && CLASS_SKILL_0.raider.id === 'rd_overpower' && CLASS_SKILL_0.ranger.id === 'r_invis' && CLASS_SKILL_0.ranger.shadowStrike.id === 'r_shadow_strike' && CLASS_SKILL_0.ranger.invisSec === 8;
+report.warbear = WORGE_BEAR_MESH.includes('wk-warbear.glb') && bearAlbedoUrl('human').includes('/tex/WK.png') && bearAlbedoUrl('orc').includes('/tex/ORC.jpg');
+report.iguanaFaction = iguanaAlbedoUrl('human').includes('Iguana_green') && iguanaAlbedoUrl('elf').includes('Iguana_pink') && iguanaAlbedoUrl('orc').includes('Iguana_blue') && iguanaTint('human') === 0xffffff && iguanaTint('undead') === 0xc0d0ff;
+report.verdurorF = CLASS_SKILL_0.verduror?.form === 'iguana';
+report.thiefF = CLASS_SKILL_0.thief?.id === 't_invis' && CLASS_SKILL_0.thief.mark?.id === 't_marking_marks' && CLASS_ITEM.thief === 'THIEF_SATCHEL';
+report.classCrafts = craftsForClass('ranger').some((c) => c.id === 'lockpick_set') && craftsForClass('worge').some((c) => c.id === 'form_page') && canRefillTonic('warrior') && !canRefillTonic('mage') && CLASS_CRAFTS.tonic_blood.refill.includes('raider') && craftsForClass('mage').some((c) => c.id === 'spell_page') && craftsForClass('priest').some((c) => c.id === 'spell_page_portal');
+report.classItems4 = CLASS_ITEM.warrior === 'WARRIOR_BATTLE_FORMS' && CLASS_ITEM.raider === 'RAIDER_TWO_HAND' && CLASS_ITEM.mage === 'MAGE_WAND' && CLASS_ITEM.priest === 'PRIEST_WAND' && PRIEST_WAND.starterName === 'Sapling Wand' && RAIDER_TWO_HAND.autoParry === true;
+const nameDup = Object.values(CATALOG_SKILL_PLAY).map((s) => s.name);
+report.skillNames = nameDup.every((n) => n && n.length > 1);
 report.lv20hp = fallbackSheet('human', 'warrior').hpMax > PLAY.hp;
 const dress = compileDressPlan(dungeon);
 report.dress = dress.length;
@@ -199,11 +261,90 @@ report.playWallArt = playKitPieces(kitJson, 'wall_art').length;
 report.playFurniture = playKitPieces(kitJson, 'furniture').length;
 const script = compileDungeonScript(dungeon, { linear: true, kindId: 'instance' });
 report.scriptOk = script.ok && script.completeOn === 'boss-slain' && script.pass === 'dungeon-complete';
+const fakeSession = {
+  d: dungeon,
+  pos: { x: mid.x, z: mid.z },
+  enemies: [],
+  phase: 'loading',
+};
+bindScript(fakeSession, dungeon, { linear: true });
+tickScript(fakeSession);
+report.noClearOnLoad = fakeSession.script.complete !== true;
+fakeSession.phase = 'lobby';
+tickScript(fakeSession);
+report.noClearOnLobby = fakeSession.script.complete !== true;
+fakeSession.phase = 'crawl';
+tickScript(fakeSession);
+report.noClearEmptyBoss = fakeSession.script.complete !== true;
+fakeSession.enemies = [{ boss: true, alive: true, hp: 100, hpMax: 100 }];
+tickScript(fakeSession);
+report.noClearLivingBoss = fakeSession.script.complete !== true;
+const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
+report.endHiddenCss = css.includes('#play-hud [hidden]') && css.includes('display:none!important');
+report.lobbyCss = css.includes('.ph-lobby') && css.includes('.ph-timer') && css.includes('.ph-revive');
 report.scriptEvents = (script.events || []).length;
 report.scriptBosses = (script.bosses || []).length;
 const cols2 = buildColliderAssets(dungeon);
 report.platformCols = cols2.filter((n) => n.kind === 'platform').length;
-if (!mech.ok || !report.scriptOk || !report.floorWalkable || !report.voidBlocked || rects.length < 1 || floorY !== DUNGEON_SI.groundY || !report.troll || !report.smash || !report.barrierGone || report.heroes24 !== 24 || report.spiderSeeds < 2 || !report.modularWall || report.smelterVersions !== 5 || !report.carveLava || !report.carveVoid || !report.eventRoom || report.eventPlatforms < 4 || !report.eventSockets || report.platformCols < 2 || !report.puffHeal || !report.puffFire || report.puffKit.length < 6 || report.classSpecs !== 8 || !report.dualWeapons || report.playLevel !== 20 || !report.lv20hp || report.dress < 1 || !report.playCarpets || !report.playWallArt || report.playFurniture < 2 || !report.t8Warrior || !report.t8Raider || !report.t8Mage || !report.t8Priest || !report.t8Worge || !report.t8Verduror || !report.t8Claws || !report.t8Bar6 || !report.t8SkillsKnown || !report.t0Wand || !report.t0Sapling || !report.warriorTank || !report.rangerLog || !report.mageWand || !report.worgeForms || !report.lockpickSweet || !report.lockpickOpen || !report.tauntHolds || !report.holyHeal || !report.radiantHeal || !report.priestBarHeal || !report.factionAllies || !report.playDefaults || !report.combatDonor || !report.dungeonKinds || !report.flareBoss || !report.flareIndoor) {
+report.factionPacks = Object.keys(PACK_COMPS).map(Number);
+report.factionNerf = FACTION_NERF.trash;
+report.factionBossScale = DUNGEON_KINDS.faction.heroScale;
+const fp = planFactionPacks({
+  ...dungeon,
+  rooms: [
+    { id: 0, type: 'combat', depth: 1, cx: 3, cy: 3, w: 4, h: 4 },
+    { id: 1, type: 'combat', depth: 3, cx: 5, cy: 5, w: 4, h: 4 },
+    { id: 2, type: 'elite', depth: 2, cx: 6, cy: 6, w: 5, h: 5 },
+    { id: 3, type: 'elite', depth: 4, cx: 7, cy: 7, w: 5, h: 5 },
+    { id: 4, type: 'boss', depth: 5, cx: 8, cy: 8, w: 6, h: 6 },
+  ],
+  params: { themeKey: 'molten' },
+}, { playerRace: 'human', level: 20, linear: false });
+report.factionAiPlayers = fp.filter((u) => u.aiPlayer).length;
+report.factionBoss18 = fp.some((u) => u.boss && u.scale === 1.8);
+report.pack2 = packSizeForRoom({ type: 'combat', depth: 1 }) === 2;
+report.pack3 = packSizeForRoom({ type: 'combat', depth: 3 }) === 3;
+report.pack5 = packSizeForRoom({ type: 'elite', depth: 2 }) === 5;
+report.pack6 = packSizeForRoom({ type: 'elite', depth: 3 }) === 6;
+const warBar = loadoutFor('warrior', 'sword_shield');
+report.canonWarrior = warBar[0].id === 'sword_vengeful_slash' && warBar.every((s) => !['cleave', 'fireball', 'thunder'].includes(s.id));
+report.canonMage = loadoutFor('mage', 'fire_staff')[0].id === 'staff_fire_bolt';
+report.canonAlias = skillById('fireball').id === 'staff_fire_bolt';
+report.canonMesh = !!skillById('staff_fire_bolt').meshPath;
+report.orbFire = String(skillById('staff_fire_bolt').meshPath || '').includes('orb-fire');
+report.orbIce = String(skillById('staff_frost_bolt').meshPath || '').includes('orb-ice');
+const skillApiSrc = readFileSync(new URL('../src/play/skillApi.js', import.meta.url), 'utf8');
+report.skillApiHealth = skillApiSrc.includes('/api/health') && skillApiSrc.includes('master-weaponSkills.json');
+const linearSrc = readFileSync(new URL('../src/play/linearCast.js', import.meta.url), 'utf8');
+report.linearWave = linearSrc.includes('wave({') && linearSrc.includes('orb-');
+report.rockCdn = resolvePlayUrl('models/vfx/rocks/magic-rock-1.glb').startsWith('https://assets.grudge-studio.com/models/');
+const heroPf = playerPrefab('human', 'warrior', 'sword_shield');
+report.prefabT8 = typeof heroPf.t8 === 'string' && heroPf.t8.startsWith('ITEM-') && Array.isArray(heroPf.skills) && heroPf.skills.length === 6;
+const warIcon = loadoutFor('warrior', 'sword_shield')[0];
+report.weaponIconCdn = /^https:\/\/assets\.grudge-studio\.com\//.test(resolveSkillIcon(warIcon));
+report.noCraftpixIcon = !resolveSkillIcon(warIcon).includes('/ui/craftpix/icons/');
+const stubTree = {
+  skillTrees: {
+    warrior: {
+      tiers: [{
+        requiredLevel: 1,
+        skills: [
+          { id: 'w_taunt', name: 'Taunt', iconUrl: '/icons/skill_nobg/Warriorskill_01_nobg.png', grantedAbility: { id: 'taunt', name: 'Taunt', type: 'debuff', staminaCost: 12, cooldown: 8 } },
+          { id: 'w_life_drain', name: 'Life Drain', iconUrl: '/icons/skill_nobg/Warriorskill_09_nobg.png', grantedAbility: { id: 'life_drain_strike', name: 'Life Drain', type: 'physical', damage: 1.4, staminaCost: 20, cooldown: 3 } },
+        ],
+      }],
+    },
+  },
+};
+const clsBar = classLoadoutFor('warrior', stubTree, 20);
+report.classBar = clsBar[0].id === 'w_taunt' && clsBar[0].cd === 15 && clsBar.some((s) => s.kind === 'slash');
+report.classIconCdn = /^https:\/\/assets\.grudge-studio\.com\//.test(clsBar[1].iconUrl || '');
+report.classCompile = compileClassSkill(stubTree.skillTrees.warrior.tiers[0].skills[1], 1).catalogSkillId === 'life_drain_strike';
+const fireSrc = readFileSync(new URL('../src/vfx/instancedFire.js', import.meta.url), 'utf8');
+report.fireHasUpdate = /update\s*\(/.test(fireSrc) && fireSrc.includes('uniforms');
+const mainSrc = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+report.fireTickGuarded = mainSrc.includes("typeof fx.fire?.update === 'function'");
+if (!mech.ok || !report.scriptOk || !report.floorWalkable || !report.voidBlocked || rects.length < 1 || floorY !== DUNGEON_SI.groundY || !report.troll || !report.smash || !report.barrierGone || report.heroes24 !== 24 || report.spiderSeeds < 2 || !report.modularWall || report.smelterVersions !== 5 || !report.carveLava || !report.carveVoid || !report.eventRoom || report.eventPlatforms < 4 || !report.eventSockets || report.platformCols < 2 || !report.puffHeal || !report.puffFire || report.puffKit.length < 6 || report.classSpecs !== 8 || !report.dualWeapons || report.playLevel !== 20 || !report.tpsIndoor || !report.fleetDodge || !report.hudBinds || !report.hudOptimal || !report.comboKnown || !report.gapKnown || !report.statusStun || !report.ccFreeze || !report.slideCtrl || !report.parryStun || !report.f0 || !report.warbear || !report.iguanaFaction || !report.verdurorF || !report.thiefF || !report.classCrafts || !report.classItems4 || !report.skillNames || !report.lv20hp || report.dress < 1 || !report.playCarpets || !report.playWallArt || report.playFurniture < 2 || !report.t8Warrior || !report.t8Raider || !report.t8Mage || !report.t8Priest || !report.t8Worge || !report.t8Verduror || !report.t8Claws || !report.t8Bar6 || !report.t8SkillsKnown || !report.t0Wand || !report.t0Sapling || !report.warriorTank || !report.rangerLog || !report.mageWand || !report.worgeForms || !report.lockpickSweet || !report.lockpickOpen || !report.tauntHolds || !report.holyHeal || !report.radiantHeal || !report.priestBarHeal || !report.factionAllies || !report.playDefaults || !report.combatDonor || !report.clipDonorCount || !report.clipSword || !report.clipJumpNotWall || !report.clipHitNoAttack || !report.clipParryChain || !report.clipGsLoco || !report.animSlash || !report.animCombo || !report.animDash || !report.hitWindow || !report.hitQTick || !report.parryClip || !report.noFlinchAttack || !report.dungeonKinds || !report.flareBoss || !report.flareIndoor || !report.pack2 || !report.pack3 || !report.pack5 || !report.pack6 || !report.factionBoss18 || report.factionAiPlayers < 8 || !report.canonWarrior || !report.canonMage || !report.canonAlias || !report.canonMesh || !report.orbFire || !report.orbIce || !report.skillApiHealth || !report.linearWave || !report.rockCdn || !report.prefabT8 || !report.weaponIconCdn || !report.noCraftpixIcon || !report.classBar || !report.classIconCdn || !report.classCompile || !report.fireHasUpdate || !report.fireTickGuarded || !report.noClearOnLoad || !report.noClearOnLobby || !report.noClearEmptyBoss || !report.noClearLivingBoss || !report.endHiddenCss || !report.lobbyCss) {
   console.error('SMOKE FAIL', report);
   process.exit(1);
 }

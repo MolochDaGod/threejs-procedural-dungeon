@@ -23,6 +23,7 @@ function glow(color, opacity = 0.88) {
 function shaderMode(shader) {
   if (shader === 'fire') return 1;
   if (shader === 'smoke') return 2;
+  if (shader === 'ice') return 3;
   return 0;
 }
 
@@ -66,10 +67,15 @@ function boltMat(color, shader = 'bolt') {
           float tongue = 0.55 + 0.45 * sin(vUv.y * 22.0 - uTime * 18.0 + n * 6.28);
           a = core * flick * tongue;
           col = uColor * (0.45 + 1.35 * core);
-        } else {
+        } else if (uMode < 2.5) {
           float soft = pow(max(shaft, 0.0), 0.55);
           a = soft * (0.38 + 0.22 * n);
           col = uColor * 0.72;
+        } else {
+          float core = pow(max(shaft, 0.0), 1.2);
+          float spark = step(0.82, n);
+          a = core * 0.85 + spark * 0.35;
+          col = uColor * (0.7 + core);
         }
         gl_FragColor = vec4(col, a);
       }
@@ -102,8 +108,9 @@ export class LinearCastWorld {
         const box = new THREE.Box3().setFromObject(rock);
         const size = box.getSize(new THREE.Vector3());
         const longest = Math.max(size.x, size.y, size.z, 0.001);
-        rock.scale.multiplyScalar(MAGIC_ROCK_DIAMETER_M / longest);
-        rock.position.y = MAGIC_ROCK_DIAMETER_M * 0.5;
+        const si = /orb-/.test(meshPath) ? 0.45 : MAGIC_ROCK_DIAMETER_M;
+        rock.scale.multiplyScalar(si / longest);
+        rock.position.y = si * 0.35;
         rock.traverse((o) => {
           if (o.isMesh) {
             o.castShadow = true;
@@ -125,6 +132,42 @@ export class LinearCastWorld {
       range,
       width,
       forks,
+      color,
+      onHit,
+      hit: new Set(),
+      forkCd: 0,
+    };
+    this.items.push(item);
+    return item;
+  }
+
+  /** Traveling slash residual (Getsuga) — band along aim, not a floor sprite. */
+  wave({ origin, dir, color, range = 8, speed = 18, onHit }) {
+    _n.copy(dir).setY(0);
+    if (_n.lengthSq() < 1e-6) _n.set(0, 0, 1);
+    else _n.normalize();
+    const root = new THREE.Group();
+    const band = new THREE.Mesh(
+      new THREE.TorusGeometry(0.55, 0.07, 8, 18, Math.PI * 1.15),
+      glow(color, 0.95),
+    );
+    band.rotation.y = Math.PI / 2;
+    band.position.y = 1.05;
+    root.add(band);
+    root.position.copy(origin);
+    root.rotation.y = Math.atan2(_n.x, _n.z);
+    this.scene.add(root);
+    const item = {
+      type: 'line',
+      root,
+      body: band,
+      dir: _n.clone(),
+      vel: speed,
+      life: range / speed,
+      traveled: 0,
+      range,
+      width: 0.7,
+      forks: false,
       color,
       onHit,
       hit: new Set(),

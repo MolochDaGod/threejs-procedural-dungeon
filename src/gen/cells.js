@@ -45,20 +45,29 @@ export function isWalkableCell(t) {
   return t === FLOOR;
 }
 
+/** BLOCK=32 BARRIER=64 — same bits as grid/cells CELL_FLAG (no circular import). */
+function flagsBlockMove(d, x, y) {
+  if (!d.flags) return false;
+  const i = y * d.W + x;
+  const f = d.flags[i];
+  if (f & 32) return true;
+  if ((f & 64) && (!d.barrierStage || d.barrierStage[i] < 3)) return true;
+  return false;
+}
+
 export function walkableWorld(d, wx, wz, radius = 0) {
-  if (radius <= 0) {
-    const { x, y } = cellOf(d, wx, wz);
-    return isWalkableCell(cellAt(d, x, y));
-  }
-  const pts = [
-    [wx, wz],
-    [wx + radius, wz],
-    [wx - radius, wz],
-    [wx, wz + radius],
-    [wx, wz - radius],
-  ];
-  return pts.every(([px, pz]) => {
+  const ok = (px, pz) => {
     const { x, y } = cellOf(d, px, pz);
-    return isWalkableCell(cellAt(d, x, y));
-  });
+    if (!isWalkableCell(cellAt(d, x, y))) return false;
+    if (flagsBlockMove(d, x, y)) return false;
+    return true;
+  };
+  if (radius <= 0) return ok(wx, wz);
+  return (
+    ok(wx, wz) &&
+    ok(wx + radius, wz) &&
+    ok(wx - radius, wz) &&
+    ok(wx, wz + radius) &&
+    ok(wx, wz - radius)
+  );
 }

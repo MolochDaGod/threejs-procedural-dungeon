@@ -104,15 +104,29 @@ export function tickScript(session, { toastFn, onPhase, onComplete } = {}) {
     }
   }
 
-  const bossDead = boss ? !boss.alive : session.enemies.filter((e) => e.boss).every((e) => !e.alive);
-  const hadBoss = session.enemies.some((e) => e.boss) || (rt.script.bosses || []).length > 0;
-  if (hadBoss && bossDead && session.phase === 'crawl') {
+  if (session.phase !== 'crawl') return rt;
+
+  const bosses = session.enemies.filter((e) => e.boss);
+  if (!bosses.length) return rt;
+  const bossDead = bosses.every((e) => !e.alive);
+  if (!bossDead) return rt;
+
+  const listed = (rt.script.path || []).filter((p) => p.type === 'combat' || p.type === 'elite' || p.type === 'boss');
+  const roomsNeed = listed.length || 1;
+  const roomsHave = listed.filter((p) => rt.cleared.has(p.id)).length;
+  rt.roomsNeed = roomsNeed;
+  rt.roomsHave = roomsHave;
+  if (roomsHave < roomsNeed) {
     const bossRoom = session.d.boss;
     if (bossRoom != null) clearRoom(session, bossRoom, { toastFn });
-    rt.complete = true;
-    rt.pass = rt.script.pass || PASS_INSTANCE;
-    onComplete?.(rt);
+    if (listed.filter((p) => rt.cleared.has(p.id)).length < roomsNeed) return rt;
   }
+
+  const bossRoom = session.d.boss;
+  if (bossRoom != null) clearRoom(session, bossRoom, { toastFn });
+  rt.complete = true;
+  rt.pass = rt.script.pass || PASS_INSTANCE;
+  onComplete?.(rt);
   return rt;
 }
 
