@@ -1,18 +1,16 @@
 /**
- * Team lobby on the downloaded cave-mountain overlook.
- * Disk: D:\Games\Models\3_evil_rock_mountains_with_cave_stylized.glb
- * Kit: triad_mountain (public/warlords-dungeon-kit.json). 142 MB — lazy, SI 14 m.
- * Five glowing pads: player + 3 allies + dungeon mouth. Camera looks at the cave.
+ * Team lobby overlook. Mesh: kit triad_mountain on CDN (lazy).
+ * Never Vite /@fs disk paths. Five pads: player + 3 allies + mouth.
  */
 import * as THREE from 'three';
+import { CDN } from '../ssot.js';
 import { loadGltf } from './assets.js';
 
 export const LOBBY_PAD_COUNT = 5;
 export const MOUNTAIN_HEIGHT_M = 14;
 
 export const MOUNTAIN_URLS = [
-  '/@fs/D:/Games/Models/3_evil_rock_mountains_with_cave_stylized.glb',
-  '/models/props/cave-gate.glb',
+  `${CDN}/models/evil_rock_mountains_triad.glb`,
 ];
 
 const PAD_COLOR = [0xffe08a, 0x3fd0bb, 0x9b6cf0, 0x5a8fe8, 0xe8973f];
@@ -46,6 +44,7 @@ export class TeamLobby {
 
     let mountain = null;
     for (const url of MOUNTAIN_URLS) {
+      if (!url) continue;
       try {
         const gltf = await loadGltf(url);
         if (!gltf?.scene) continue;

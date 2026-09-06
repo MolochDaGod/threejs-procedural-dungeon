@@ -352,7 +352,7 @@ export class VfxWorld {
         }
       } else if (it.type === 'puff') {
         const k = Math.max(0, it.life / it.max);
-        it.field.update(dt, { life01: k });
+        it.field?.update?.(dt, { life01: k });
       } else if (it.type === 'fade') {
         const k = it.life / it.max;
         const mats = it.root.material
@@ -367,9 +367,9 @@ export class VfxWorld {
       }
       if (it.life <= 0) {
         if (it.type === 'puff' && it.field) {
-          this.scene.remove(it.field.mesh);
-          it.field.dispose();
-        } else if (it.field) it.field.dispose();
+          if (it.field.mesh) this.scene.remove(it.field.mesh);
+          it.field.dispose?.();
+        } else if (it.field && typeof it.field.dispose === 'function') it.field.dispose();
         else {
           this.scene.remove(it.root);
           it.root.traverse((o) => {
@@ -385,9 +385,9 @@ export class VfxWorld {
   clear() {
     for (const it of this.items) {
       if (it.type === 'puff' && it.field) {
-        this.scene.remove(it.field.mesh);
-        it.field.dispose();
-      } else if (it.field) it.field.dispose();
+        if (it.field.mesh) this.scene.remove(it.field.mesh);
+        it.field.dispose?.();
+      } else if (it.field && typeof it.field.dispose === 'function') it.field.dispose();
       else {
         this.scene.remove(it.root);
         it.root.traverse((o) => {

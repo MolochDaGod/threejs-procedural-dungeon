@@ -48,4 +48,11 @@ export class PuffField {
   update() {
     if (this._follow?.position) this.mesh.position.copy(this._follow.position);
   }
+
+  dispose() {
+    this.mesh.parent?.remove(this.mesh);
+    this.mesh.geometry?.dispose?.();
+    this.mesh.material?.dispose?.();
+    this._follow = null;
+  }
 }

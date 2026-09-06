@@ -358,8 +358,8 @@ export function renderHud(state) {
   hud.querySelector('#ph-obj').textContent = state.objective;
   hud.querySelectorAll('#ph-bar6 .ph-slot').forEach((el) => {
     const slot = Number(el.dataset.slot);
-    const cd = state.cds[slot] || 0;
-    const max = state.cdMax[slot] || 1;
+    const cd = (state.cds || {})[slot] || 0;
+    const max = (state.cdMax || {})[slot] || 1;
     el.classList.toggle('cd', cd > 0);
     el.classList.toggle('on', state.activeSlot === slot && !state.classActive);
     const pct = cd > 0 ? Math.round(100 * cd / max) : 0;
@@ -381,10 +381,11 @@ export function renderHud(state) {
       : 'transparent';
   });
   const cast = hud.querySelector('#ph-cast');
-  if (state.casting > 0) {
+  if (cast && state.casting > 0) {
     cast.hidden = false;
     cast.classList.toggle('heal', !!state.castHeal);
-    cast.querySelector('i').style.width = `${100 * (1 - state.casting / state.castMax)}%`;
+    const fill = cast.querySelector('i');
+    if (fill) fill.style.width = `${100 * (1 - state.casting / Math.max(0.01, state.castMax || 1))}%`;
     const nm = hud.querySelector('#ph-cast-name');
     if (nm) nm.textContent = state.castName || (state.castHeal ? 'Heal' : '');
   } else {

@@ -13,7 +13,9 @@ export { resolvePlayUrl };
 const cache = loadPlayGltf._cache;
 
 export function loadGltf(url) {
-  return loadPlayGltf(resolvePlayUrl(url), cache);
+  const abs = resolvePlayUrl(url);
+  if (!abs) return Promise.reject(new Error('empty play url'));
+  return loadPlayGltf(abs, cache);
 }
 
 export function bakedUrls() {

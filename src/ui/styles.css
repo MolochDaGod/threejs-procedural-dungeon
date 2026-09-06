@@ -130,7 +130,7 @@
   body.playing #panel{opacity:.55}
   body.playing #panel:hover,body.playing #panel:focus-within{opacity:1}
   body.playing canvas{
-    cursor: url('/ui/craftpix/cursors/Cursor_Normal.png') 2 2, crosshair;
+    cursor: crosshair;
   }
   body.playing-tps canvas{
     cursor: none;
@@ -154,14 +154,16 @@
     box-shadow:inset 0 0 0 2px #1c160c;
     display:flex;align-items:center;justify-content:center;
     position:relative;overflow:hidden;
-    background-image:url('/ui/craftpix/frames/avatar_bg.png');
+    background-image:url('https://assets.grudge-studio.com/ui/craftpix/Action%20Bar/Slots/AB_MainSlot_Background.png');
     background-size:cover;
   }
   .ph-portrait img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
   .ph-portrait b{font-family:var(--serif);font-size:26px;color:var(--gold);letter-spacing:.04em;position:relative;z-index:1}
   .ph-crosshair{
     position:absolute;left:50%;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;
-    background:url('/ui/craftpix/cursors/crosshair.png') center/contain no-repeat;
+    background:none;
+    box-shadow:inset 0 0 0 1px #e8c48a88, 0 0 0 1px #0008;
+    border-radius:50%;
     opacity:.72;pointer-events:none;z-index:1;
   }
   .ph-party{display:flex;flex-direction:column;gap:4px;min-width:148px}
@@ -277,8 +279,8 @@
   .ph-slot.heal{border-color:#5a8a58}
   .ph-slot.heal kbd{color:#8fd4a0}
   .ph-slot.cd{color:#6d7386}
-  .ph-cast{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);width:220px;height:10px;background:#12141f;border:1px solid #2c3042;border-radius:4px;overflow:hidden;background-image:url('/ui/craftpix/bars/cast_bg.png');background-size:100% 100%}
-  .ph-cast i{display:block;height:100%;background:var(--ember);background-image:url('/ui/craftpix/bars/cast_fill.png');background-size:cover}
+  .ph-cast{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);width:220px;height:10px;background:#12141f;border:1px solid #2c3042;border-radius:4px;overflow:hidden}
+  .ph-cast i{display:block;height:100%;background:var(--ember)}
   .ph-cast.heal i{background:#6bc46a;background-image:none}
   .ph-cast b{position:absolute;left:0;right:0;top:-14px;text-align:center;font-size:10px;letter-spacing:.08em;color:#eef0f6;text-shadow:0 1px 6px #000}
   .ph-toast{

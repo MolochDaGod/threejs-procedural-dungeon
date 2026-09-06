@@ -9,6 +9,7 @@ import { MAGIC_ROCKS, MAGIC_ROCK_DIAMETER_M } from '../content/props/magicRocks.
 import { CELL_FLAG } from '../grid/cells.js';
 import { DUNGEON_SI } from '../ssot.js';
 import { plantObjectOnTerrain } from '../terrain/footPlant.js';
+import { loadGltf } from '../play/assets.js';
 
 const loader = new GLTFLoader();
 const packs = {};
@@ -260,7 +261,8 @@ const magicRockScenes = {};
 
 async function loadMagicRock(def) {
   if (magicRockScenes[def.id]) return magicRockScenes[def.id];
-  const gltf = await new Promise((res, rej) => loader.load(def.glb, res, undefined, rej));
+  const gltf = await loadGltf(def.glb);
+  if (!gltf?.scene) throw new Error(`magic-rock miss ${def.id}`);
   gltf.scene.traverse((o) => {
     if (o.isMesh) {
       o.castShadow = true;
