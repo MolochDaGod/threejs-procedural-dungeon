@@ -1,6 +1,6 @@
 import { loadoutFor, weaponsForClass, WEAPON_LABEL } from './weaponSkills.js';
 import { CLASS_IDS, CLASSES, PLAY, ROLE_KITS, portraitFallback, portraitUrl } from '../ssot.js';
-import { CRAFTPIX_SLOT_BG, resolveSkillIcon } from './skillIcons.js';
+import { CRAFTPIX_SLOT_BG, CRAFTPIX_SLOT_BORDER, resolveSkillIcon } from './skillIcons.js';
 import { T8_CLASS_SETS, starterForClass } from './t0ClassSets.js';
 import { classItemFor, RANGER_LOG, THIEF_SATCHEL } from './classItems.js';
 import { craftsForClass } from './classCrafts.js';
@@ -131,7 +131,7 @@ function paintSlot(s, keyLabel) {
   const extra = s.n != null ? ` ×${s.n}` : '';
   const label = s.name || s.id || '';
   b.title = [label, s.t8Name || s.weaponName, s.t8].filter(Boolean).join(' · ');
-  b.innerHTML = `<img class="ico" alt="${label}" src="${src}" /><i class="ring"></i><kbd>${keyLabel}</kbd><span>${label}${extra}</span>`;
+  b.innerHTML = `<img class="ico" alt="${label}" src="${src}" /><img class="slot-border" alt="" src="${CRAFTPIX_SLOT_BORDER}" /><i class="ring"></i><kbd>${keyLabel}</kbd><span>${label}${extra}</span>`;
   const img = b.querySelector('img');
   img.addEventListener('error', () => {
     img.onerror = null;

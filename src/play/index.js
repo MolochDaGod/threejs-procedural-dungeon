@@ -41,6 +41,7 @@ import { CLASS_CRAFTS, canRefillTonic, craftsForClass } from './classCrafts.js';
 import { bindHud, fillEquipPanel, mountHud, paintClassRadial, paintItemRadial, paintMappedBars, paintMountMenu, renderHud, setHudClassSkills, setHudSkills, showEnd, toast } from './hud.js';
 import { classSkill0 } from './classSkill0.js';
 import { classifyFormClip, defaultFormFor, fitFormToSi, FORMS, formUrl } from './forms.js';
+import { overlayForSkill } from './stylizedProjectiles.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 
 import { makeTotemMesh, TOTEM_LIFE, TOTEM_PULSE, TOTEM_RANGE_BONUS, TOTEM_SHIELD_MAX, TOTEM_SHIELD_TICK, TOTEM_STR } from './totems.js';
@@ -601,14 +602,14 @@ export class PlaySession {
     if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) { fx += Math.cos(yaw); fz -= Math.sin(yaw); }
     const moving = fx * fx + fz * fz > 0.01;
     const looking = !!(this.focusEnabled || (this.tps?.enabled && (this.tps._rmb || this.tps._locked?.())));
-    if (this.aiming?.target) {
+    if (this.tps?.enabled && this.phase === 'crawl') {
+      this.tps.getLookDirection(this.aim);
+      this.aim.y = 0;
+      if (this.aim.lengthSq() > 1e-6) this.aim.normalize();
+    } else if (this.aiming?.target) {
       this.aim.copy(this.aiming.dir);
     } else if (looking || this.casting > 0 || this.blocking) {
-      if (this.tps?.enabled) {
-        this.tps.getLookDirection(this.aim);
-        this.aim.y = 0;
-        if (this.aim.lengthSq() > 1e-6) this.aim.normalize();
-      }
+      this.aim.set(Math.sin(yaw), 0, Math.cos(yaw));
     } else if (moving) {
       this.aim.set(fx, 0, fz).normalize();
     }
@@ -749,6 +750,7 @@ export class PlaySession {
       this._wasAir = this._air;
       if (this._formMixer) {
         this._formMixer.update(dt);
+        if (!this._formBusy()) this._syncFormGait(moving, this.downed ? false : sprint);
       }
       if (this.classState?.form === 'iguana' && !this.downed) {
         this._iguanaHotT = (this._iguanaHotT || 0) - dt;
@@ -1434,8 +1436,8 @@ export class PlaySession {
     this.tps.enable();
     this.tps.resize();
     if (this.aiming) {
-      this.aiming.hasPointer = false;
       this.aiming.camera = this.tps.camera;
+      this.aiming.setPointer(0, 0);
     }
   }
 
@@ -2174,10 +2176,21 @@ export class PlaySession {
     if (this.classState) this.classState.form = null;
   }
 
+  _formBusy() {
+    const acts = this._formActions;
+    if (!acts) return false;
+    for (const k of ['attack', 'attack2', 'skill', 'skillReturn', 'hit', 'stun']) {
+      const a = acts[k];
+      if (a?.isRunning?.() && a.loop === THREE.LoopOnce) return true;
+    }
+    return false;
+  }
+
   _syncFormGait(moving, sprint) {
     const acts = this._formActions;
     if (!acts?.idle) return;
-    const next = !moving ? 'idle' : (sprint && acts.run ? 'run' : (acts.walk ? 'walk' : 'idle'));
+    if (this._formBusy()) return;
+    const next = !moving ? 'idle' : (sprint && acts.run ? 'run' : (acts.walk ? 'walk' : (acts.run ? 'run' : 'idle')));
     if (this._formGait === next) return;
     const prev = acts[this._formGait];
     const cur = acts[next];
@@ -2191,12 +2204,15 @@ export class PlaySession {
   }
 
   _formOneShot(role) {
-    const act = this._formActions?.[role];
-    if (!act) return;
+    const act = this._formActions?.[role] || this._formActions?.attack;
+    if (!act || !this._formMixer) return;
+    const gait = this._formActions[this._formGait];
+    if (gait && gait !== act) gait.fadeOut(0.08);
     act.reset();
     act.setLoop(THREE.LoopOnce, 1);
     act.clampWhenFinished = true;
     act.fadeIn(0.08).play();
+    this._formGait = null;
   }
 
   async enterForm(formId) {
@@ -2209,7 +2225,6 @@ export class PlaySession {
       vis.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
       vis.position.set(0, 0, 0);
       vis.scale.set(1, 1, 1);
-      fitFormToSi(vis, FORMS[formId]?.heightM || 2);
       const spec = FORMS[formId];
       if (spec?.albedo) {
         const albedo = typeof spec.albedo === 'function' ? spec.albedo(this.raceId) : spec.albedo;
@@ -2245,6 +2260,7 @@ export class PlaySession {
       this._formGait = null;
       if (clips.length) {
         this._formMixer = new THREE.AnimationMixer(vis);
+        this._formMixer.addEventListener('finished', () => { this._formGait = null; });
         for (const raw of clips) {
           const clip = raw.clone();
           clip.tracks = clip.tracks.filter((t) => !/\.position$/i.test(t.name) || !/^(Armature|Warbear|Bip001|_rootJoint)/i.test(t.name.split('.')[0]));
@@ -2252,13 +2268,19 @@ export class PlaySession {
           const role = classifyFormClip(clip.name);
           if (role && !this._formActions[role]) this._formActions[role] = act;
         }
+        if (!this._formActions.run && this._formActions.walk) this._formActions.run = this._formActions.walk;
+        if (!this._formActions.walk && this._formActions.run) this._formActions.walk = this._formActions.run;
+        if (!this._formActions.attack2 && this._formActions.attack) this._formActions.attack2 = this._formActions.attack;
+        if (!this._formActions.skill && this._formActions.attack) this._formActions.skill = this._formActions.attack;
         const idle = this._formActions.idle;
         if (idle) {
           idle.setLoop(THREE.LoopRepeat, Infinity);
           idle.play();
           this._formGait = 'idle';
+          this._formMixer.update(0);
         }
       }
+      fitFormToSi(vis, spec?.heightM || 2);
       this.classState.form = formId;
       if (formId === 'iguana') this._iguanaHotT = 0.4;
       toast(`Form · ${FORMS[formId]?.name || formId}`);
@@ -2269,6 +2291,7 @@ export class PlaySession {
 
   fireSpell(spell) {
     stampSpell(spell);
+    if (!spell.overlay) spell.overlay = overlayForSkill(spell.id, spell.kind, spell.element);
     const origin = this.pos.clone();
     origin.y = 1.15;
     const dir = new THREE.Vector3();
@@ -2276,12 +2299,23 @@ export class PlaySession {
     else dir.copy(this.aim).setY(0);
     if (dir.lengthSq() < 1e-6) dir.set(0, 0, 1);
     else dir.normalize();
+    const flat = dir.clone().setY(0);
+    if (flat.lengthSq() < 1e-6) {
+      const yaw = this.tps?.enabled ? this.tps.yaw : 0;
+      flat.set(Math.sin(yaw), 0, Math.cos(yaw));
+    } else flat.normalize();
     origin.addScaledVector(dir, 0.45);
     this.aiming?.setRanges(1.1, spell.range, spell.kind === 'zone' || spell.kind === 'nova' ? 'zone' : 'line');
     const sprinting = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
     const animName = animForSpell(this.player?.clips, spell, { comboStage: this.comboStage || 0, sprint: sprinting });
     const shotDur = this.player?.clips?.[animName]?.duration || 0.42;
-    if (this._formVis) this._formOneShot(spell.kind === 'slash' || spell.kind === 'dash' ? 'attack' : (spell.heal ? 'idle' : 'attack'));
+    if (this._formVis) {
+      const melee = spell.kind === 'slash' || spell.kind === 'dash';
+      const formShot = !melee && this._formActions?.skill
+        ? 'skill'
+        : (this._formActions?.attack2 && (this.comboStage || 0) >= 1 ? 'attack2' : 'attack');
+      this._formOneShot(formShot);
+    }
     else this.player?.requestOneShot(animName, shotDur);
     playSfx(spell.kind === 'slash' || spell.kind === 'dash' ? 'combat_hit' : 'combat_spell', { volume: 0.32 });
     this.vfx.aura({ origin: this.pos.clone(), color: spell.color, life: 0.28 });
@@ -2289,7 +2323,7 @@ export class PlaySession {
     this.casting = Math.max(0.16, tel);
     this.castMax = this.casting;
     if (spell.kind === 'slash') {
-      this.vfx.cone({ origin: this.pos, dir, color: spell.color, range: spell.range, half: 0.85, life: tel });
+      this.vfx.cone({ origin: this.pos, dir: flat, color: spell.color, range: spell.range, half: 0.85, life: tel });
     } else if (spell.kind === 'nova' || spell.kind === 'zone') {
       this.linear.zone({ origin: this.pos, color: spell.color, radius: spell.range, life: tel });
     } else {
@@ -2337,15 +2371,19 @@ export class PlaySession {
       this.hitQ.push({
         t: win,
         fn: () => {
-          this.vfx.slash({ origin, dir, color: spell.color, range: spell.range });
-          this.smashBarriersAlong(dir, spell.range);
-          this.hitCone(dir, spell.range, 0.85, roll(spell.damage));
-          if ((spell.range || 0) >= 3.2 || (spell.damage || 0) >= 50) {
-            this.linear.wave({ origin, dir, color: spell.color, range: (spell.range || 3) + 2.2, speed: 20, onHit, overlay: spell.overlay || null });
-          }
+          this.vfx.slash({ origin, dir: flat, color: spell.color, range: spell.range });
+          this.smashBarriersAlong(flat, spell.range);
+          this.hitCone(flat, spell.range, 0.85, roll(spell.damage));
+          this.linear.wave({
+            origin, dir, color: spell.color,
+            range: (spell.range || 3) + 1.6,
+            speed: 22,
+            onHit,
+            overlay: spell.overlay || null,
+          });
         },
       });
-      if (!this.downed) this.dashAlong(dir, 0.42);
+      if (!this.downed) this.dashAlong(flat, 0.42);
     } else if (spell.kind === 'projectile') {
       this.hitQ.push({
         t: hitWindowSec(shotDur, 0.22),
@@ -2364,7 +2402,7 @@ export class PlaySession {
             life: travel + 0.12,
             kind: elementTrailKind(spell.element),
           });
-          this.smashBarriersAlong(dir, spell.range);
+          this.smashBarriersAlong(flat, spell.range);
         },
       });
     } else if (spell.kind === 'beam') {
@@ -2381,14 +2419,14 @@ export class PlaySession {
         life: spell.range / 38 + 0.1,
         kind: elementTrailKind(spell.element),
       });
-      this.smashBarriersAlong(dir, spell.range);
-      this.hitLine(dir, spell.range, 0.55, roll(spell.damage));
+      this.smashBarriersAlong(flat, spell.range);
+      this.hitLine(flat, spell.range, 0.55, roll(spell.damage));
       this.punch(70, 0.35);
     } else if (spell.kind === 'fissure') {
-      this.linear.fissure({ origin: this.pos, dir, color: spell.color, range: spell.range, onHit, meshPath: spell.meshPath || null });
+      this.linear.fissure({ origin: this.pos, dir: flat, color: spell.color, range: spell.range, onHit, meshPath: spell.meshPath || null });
       this.vfx.fire({ origin: this.pos.clone().setY(0.7), color: spell.color, duration: 'long', life: 1.4 });
-      this.smashBarriersAlong(dir, spell.range);
-      this.hitLine(dir, spell.range, 0.85, roll(spell.damage));
+      this.smashBarriersAlong(flat, spell.range);
+      this.hitLine(flat, spell.range, 0.85, roll(spell.damage));
       this.punch(80, 0.45);
     } else if (spell.kind === 'nova' || spell.kind === 'zone') {
       this.linear.zone({ origin: this.pos, color: spell.color, radius: spell.range, life: 0.7 });
@@ -2402,7 +2440,7 @@ export class PlaySession {
       this.punch(80, 0.4);
     } else if (spell.kind === 'dash' || spell.kind === 'teleport') {
       const from = this.pos.clone().setY(0.95);
-      this.dashAlong(dir, spell.range);
+      this.dashAlong(flat, spell.range);
       this.vfx.speedTrail({
         from,
         to: this.pos.clone().setY(0.95),
@@ -3107,6 +3145,7 @@ export class PlaySession {
     this.linear.update(gdt, this.enemies);
     const armed = this.loadout[this.activeSlot - 1];
     this.aiming?.setRanges(1.1, armed?.range || 10, armed?.kind === 'zone' || armed?.kind === 'nova' ? 'zone' : 'line');
+    if (this.tps?.enabled) this.aiming?.setPointer(0, 0);
     this.aiming?.update(this.pos, this.aim, this.enemies);
     this.aiming?.lookAhead(this.look, 2.6);
     const aimLock = this.aiming?.target;

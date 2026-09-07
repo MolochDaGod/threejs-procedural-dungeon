@@ -8,7 +8,7 @@ import { RACES } from '../ssot.js';
 
 export const CASTING = 'https://casting.grudge.studio';
 export const WORGE_BEAR_MESH = `${CASTING}/models/class-forms/worge-bear/wk-warbear.glb`;
-/** Standing SI — larger than orc 2.0 m. AABB of the whole GLB is not this. */
+/** Standing SI — larger than orc 2.0 m. Measure skinned mesh after idle pose. */
 export const WORGE_BEAR_HEIGHT_M = 2.8;
 export const IGUANA_HEIGHT_M = 2.0;
 
@@ -91,22 +91,28 @@ export const FORMS = {
 
 const _meshBox = new THREE.Box3();
 
-/** Visible-mesh height, then feet on y=0. Do not use the whole GLB scene AABB. */
+function expandSkinned(root, box) {
+  box.makeEmpty();
+  root.traverse((o) => {
+    if (o.isSkinnedMesh && o.visible) box.expandByObject(o);
+  });
+  if (box.isEmpty()) {
+    root.traverse((o) => {
+      if (o.isMesh && o.visible) box.expandByObject(o);
+    });
+  }
+}
+
+/** Skinned-mesh height after idle, then feet on y=0. Never the whole GLB scene AABB. */
 export function fitFormToSi(root, heightM) {
   if (!root) return;
   root.updateMatrixWorld(true);
-  _meshBox.makeEmpty();
-  root.traverse((o) => {
-    if (o.isMesh && o.visible) _meshBox.expandByObject(o);
-  });
+  expandSkinned(root, _meshBox);
   if (_meshBox.isEmpty()) _meshBox.setFromObject(root);
   const h = Math.max(0.2, _meshBox.max.y - _meshBox.min.y);
   root.scale.multiplyScalar(heightM / h);
   root.updateMatrixWorld(true);
-  _meshBox.makeEmpty();
-  root.traverse((o) => {
-    if (o.isMesh && o.visible) _meshBox.expandByObject(o);
-  });
+  expandSkinned(root, _meshBox);
   if (!_meshBox.isEmpty()) root.position.y -= _meshBox.min.y;
 }
 
@@ -122,14 +128,20 @@ export function defaultFormFor(classId) {
   return null;
 }
 
+/** Casting worgeBearForms clip stems — lowercase keys (classifyFormClip lowercases). */
 export const WORGE_BEAR_CLIP_ROLES = {
   warbear_stand: 'idle',
-  warbear_move: 'walk',
+  warbear_move: 'run',
   warbear_attack00: 'attack',
-  warbear_attack01: 'attack',
+  warbear_attack01: 'attack2',
+  warbear_activeskill: 'skill',
+  warbear_activeskill_return: 'skillReturn',
   warbear_hit: 'hit',
   warbear_stun: 'stun',
   warbear_die: 'death',
+  warbear_lobbyintro: 'idle',
+  warbear_lobbystand00: 'idle',
+  warbear_lobbystand01: 'idle',
 };
 
 export function classifyFormClip(name) {

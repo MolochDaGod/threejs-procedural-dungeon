@@ -5,10 +5,20 @@
 import { SKILL_ICON_CDN } from './skillIconCdn.js';
 
 export const ICONS_CDN = 'https://assets.grudge-studio.com';
-export const CRAFTPIX_SLOT_BG =
-  `${ICONS_CDN}/ui/craftpix/Action%20Bar/Slots/AB_MainSlot_Background.png`;
-export const CRAFTPIX_SLOT_BORDER =
-  `${ICONS_CDN}/ui/craftpix/Action%20Bar/Slots/AB_MainSlot_Border.png`;
+const CPX = `${ICONS_CDN}/ui/craftpix`;
+export const CRAFTPIX_SLOT_BG = `${CPX}/Action%20Bar/Slots/AB_MainSlot_Background.png`;
+export const CRAFTPIX_SLOT_BORDER = `${CPX}/Action%20Bar/Slots/AB_MainSlot_Border.png`;
+export const CRAFTPIX_SLOT_CD = `${CPX}/Action%20Bar/Slots/AB_MainSlot_Cooldown.png`;
+export const CRAFTPIX_FILL_BG = `${CPX}/Fill%20Bars/AB_FillBar_Background.png`;
+export const CRAFTPIX_FILL = `${CPX}/Fill%20Bars/AB_FillBar_Fill.png`;
+export const CRAFTPIX_CAST_BG = `${CPX}/Cast%20Bar/Castbar_Background.png`;
+export const CRAFTPIX_CAST_FILL = `${CPX}/Cast%20Bar/Castbar_Fill.png`;
+export const CRAFTPIX_AVATAR_BG = `${CPX}/Action%20Bar/Avatar%20Frame/AB_AvatarFrame_Background.png`;
+export const CRAFTPIX_AVATAR_BORDER = `${CPX}/Action%20Bar/Avatar%20Frame/AB_AvatarFrame_Border.png`;
+export const CRAFTPIX_PB_BG = `${CPX}/Unit%20Frames/Bars/UnitFrame_PB_Background.png`;
+export const CRAFTPIX_PB_FILL = `${CPX}/Unit%20Frames/Bars/UnitFrame_PB_Fill.png`;
+export const CRAFTPIX_SB_BG = `${CPX}/Unit%20Frames/Bars/UnitFrame_SB_Background.png`;
+export const CRAFTPIX_SB_FILL = `${CPX}/Unit%20Frames/Bars/UnitFrame_SB_Fill.png`;
 const FALLBACK = `${ICONS_CDN}/game-assets/icons/abilities/ability_arcane_focus.png`;
 
 export function iconUrlFromPath(p) {

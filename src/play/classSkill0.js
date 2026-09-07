@@ -3,6 +3,7 @@
  * Tree ids where they exist (w_taunt, rd_overpower). Totems are class F
  * prefabs — ObjectStore trees have no totem node yet.
  */
+import { overlayForSkill } from './stylizedProjectiles.js';
 export const CLASS_SKILL_0 = {
   warrior: {
     id: 'w_taunt',
@@ -183,6 +184,12 @@ export const CLASS_SKILL_0 = {
     form: 'bear',
   },
 };
+
+for (const row of Object.values(CLASS_SKILL_0)) {
+  if (row.overlay) continue;
+  row.overlay = overlayForSkill(row.id, row.kind, row.element);
+  row.overlayRef = row.overlay?.overlayRef || row.overlay?.vfxRef || null;
+}
 
 export function classSkill0(classId) {
   return CLASS_SKILL_0[classId] || null;

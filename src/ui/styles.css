@@ -133,6 +133,9 @@
     cursor: crosshair;
   }
   body.playing-tps canvas{
+    cursor: crosshair;
+  }
+  body.playing-tps.tps-locked canvas{
     cursor: none;
   }
 
@@ -150,12 +153,15 @@
     box-shadow:inset 0 0 0 1px #1a160e, 0 8px 24px #000a, inset 0 1px 0 #6a5730;
   }
   .ph-portrait{
-    width:56px;height:56px;flex:none;border:1px solid #6a5730;background:#0a0c12;
-    box-shadow:inset 0 0 0 2px #1c160c;
+    width:56px;height:56px;flex:none;border:none;background:#0a0c12;
     display:flex;align-items:center;justify-content:center;
     position:relative;overflow:hidden;
-    background-image:url('https://assets.grudge-studio.com/ui/craftpix/Action%20Bar/Slots/AB_MainSlot_Background.png');
+    background-image:url('https://assets.grudge-studio.com/ui/craftpix/Action%20Bar/Avatar%20Frame/AB_AvatarFrame_Background.png');
     background-size:cover;
+  }
+  .ph-portrait::after{
+    content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+    background:url('https://assets.grudge-studio.com/ui/craftpix/Action%20Bar/Avatar%20Frame/AB_AvatarFrame_Border.png') center/100% 100% no-repeat;
   }
   .ph-portrait img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
   .ph-portrait b{font-family:var(--serif);font-size:26px;color:var(--gold);letter-spacing:.04em;position:relative;z-index:1}
@@ -207,20 +213,30 @@
   .ph-meter{display:grid;grid-template-columns:22px 1fr 64px;align-items:center;gap:6px;margin-bottom:4px}
   .ph-meter em{font-style:normal;font-size:8px;letter-spacing:.1em;color:#8a8170}
   .ph-meter .track{
-    height:9px;background:#0a0c12;border:1px solid #2c3042;
-    box-shadow:inset 0 0 0 1px #161410;overflow:hidden;
+    height:12px;border:none;overflow:hidden;
+    background:url('https://assets.grudge-studio.com/ui/craftpix/Fill%20Bars/AB_FillBar_Background.png') center/100% 100% no-repeat;
   }
-  .ph-meter i{display:block;height:100%;width:100%;transform-origin:left center}
-  .ph-meter.hp i{background:linear-gradient(90deg,#5a1412,#d8433a)}
-  .ph-meter.mp i{background:linear-gradient(90deg,#16305e,#5a8fe8)}
-  .ph-meter.st i{background:linear-gradient(90deg,#5a4814,#d9a441)}
+  .ph-meter.hp .track,.ph-meter.st .track{
+    background-image:url('https://assets.grudge-studio.com/ui/craftpix/Unit%20Frames/Bars/UnitFrame_PB_Background.png');
+  }
+  .ph-meter.mp .track{
+    background-image:url('https://assets.grudge-studio.com/ui/craftpix/Unit%20Frames/Bars/UnitFrame_SB_Background.png');
+  }
+  .ph-meter i{display:block;height:100%;width:100%;transform-origin:left center;
+    background-image:url('https://assets.grudge-studio.com/ui/craftpix/Fill%20Bars/AB_FillBar_Fill.png');
+    background-size:100% 100%;background-repeat:no-repeat;
+  }
+  .ph-meter.hp i{background-color:#d8433a;background-blend-mode:multiply;filter:hue-rotate(-8deg) saturate(1.35)}
+  .ph-meter.mp i{background-color:#5a8fe8;background-blend-mode:multiply;filter:hue-rotate(190deg) saturate(1.2)}
+  .ph-meter.st i{background-color:#d9a441;background-blend-mode:multiply;filter:hue-rotate(28deg) saturate(1.25)}
   .ph-meter b{font-size:9px;color:#eef0f6;text-align:right;font-variant-numeric:tabular-nums;width:64px}
   .ph-obj{color:var(--ember);letter-spacing:.08em;font-size:11px;text-align:right;max-width:42%}
   .ph-bar6,.ph-bar-class{
-    position:absolute;bottom:22px;left:50%;transform:translateX(-50%);
-    display:flex;gap:8px;pointer-events:auto;
+    position:absolute;left:50%;transform:translateX(-50%);
+    display:flex;gap:4px;pointer-events:auto;
   }
-  .ph-bar-class{bottom:96px}
+  .ph-bar6{bottom:18px}
+  .ph-bar-class{bottom:80px}
   .ph-hud-edit{
     position:absolute;bottom:18px;right:18px;pointer-events:auto;z-index:8;
     background:#0d0f16f2;border:1px solid #3a3220;color:var(--gold);
@@ -263,25 +279,34 @@
   .ph-crosshair.focus{opacity:1;border-color:#e8b86a}
   #play-hud.edit .ph-bar6,#play-hud.edit .ph-bar-class,#play-hud.edit .ph-frame,#play-hud.edit .ph-party,#play-hud.edit .ph-obj-wrap,#play-hud.edit .ph-target,#play-hud.edit .ph-defend,#play-hud.edit .ph-timer,#play-hud.edit .ph-cast{pointer-events:auto}
   .ph-slot{
-    width:72px;height:64px;background:#0d0f16f2;border:1px solid #2c3042;border-radius:8px;
+    width:58px;height:58px;background:#0d0f16f2;border:none;border-radius:0;
     color:var(--ink);cursor:pointer;position:relative;overflow:hidden;
     display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;
-    padding:6px 8px;font-family:var(--mono);
+    padding:6px 6px 4px;font-family:var(--mono);
     background-image:url('https://assets.grudge-studio.com/ui/craftpix/Action%20Bar/Slots/AB_MainSlot_Background.png');
     background-size:cover;background-position:center;
   }
-  .ph-slot.class{border-color:#5a8fe8}
-  .ph-slot .ico{position:absolute;inset:8px 8px 18px;width:auto;height:auto;object-fit:contain;opacity:.95;pointer-events:none;image-rendering:auto}
-  .ph-slot kbd{position:absolute;top:6px;left:8px;font-size:10px;color:var(--ember)}
-  .ph-slot span{font-size:9px;letter-spacing:.04em}
-  .ph-slot .ring{position:absolute;inset:0;pointer-events:none;border-radius:8px}
-  .ph-slot.on{border-color:var(--ember);box-shadow:0 0 0 1px color-mix(in srgb,var(--ember) 40%,transparent)}
-  .ph-slot.heal{border-color:#5a8a58}
+  .ph-slot.class{box-shadow:inset 0 0 0 1px #5a8fe888}
+  .ph-slot .ico{position:absolute;inset:8px 8px 16px;width:auto;height:auto;object-fit:contain;opacity:.95;pointer-events:none;image-rendering:auto;z-index:1}
+  .ph-slot .slot-border{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;z-index:2}
+  .ph-slot kbd{position:absolute;top:4px;left:6px;font-size:9px;color:var(--ember);z-index:3;text-shadow:0 1px 2px #000}
+  .ph-slot span{font-size:8px;letter-spacing:.04em;position:relative;z-index:3;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 2px #000}
+  .ph-slot .ring{position:absolute;inset:0;pointer-events:none;z-index:4}
+  .ph-slot.on{box-shadow:0 0 0 1px color-mix(in srgb,var(--ember) 55%,transparent),0 0 12px #e8973f44}
+  .ph-slot.heal{box-shadow:inset 0 0 0 1px #5a8a5888}
   .ph-slot.heal kbd{color:#8fd4a0}
   .ph-slot.cd{color:#6d7386}
-  .ph-cast{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);width:220px;height:10px;background:#12141f;border:1px solid #2c3042;border-radius:4px;overflow:hidden}
-  .ph-cast i{display:block;height:100%;background:var(--ember)}
-  .ph-cast.heal i{background:#6bc46a;background-image:none}
+  .ph-cast{
+    position:absolute;bottom:148px;left:50%;transform:translateX(-50%);
+    width:280px;height:16px;border:none;border-radius:0;overflow:hidden;
+    background:url('https://assets.grudge-studio.com/ui/craftpix/Cast%20Bar/Castbar_Background.png') center/100% 100% no-repeat;
+  }
+  .ph-cast i{
+    display:block;height:100%;
+    background:url('https://assets.grudge-studio.com/ui/craftpix/Cast%20Bar/Castbar_Fill.png') left/auto 100% no-repeat;
+    background-color:var(--ember);background-blend-mode:multiply;
+  }
+  .ph-cast.heal i{background-color:#6bc46a}
   .ph-cast b{position:absolute;left:0;right:0;top:-14px;text-align:center;font-size:10px;letter-spacing:.08em;color:#eef0f6;text-shadow:0 1px 6px #000}
   .ph-toast{
     position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);
@@ -362,8 +387,10 @@
     .ph-frame{min-width:0;max-width:100%}
     .ph-portrait{width:44px;height:44px}
     .ph-obj{display:none}
-    .ph-slot{width:48px;height:52px;padding:4px}
+    .ph-slot{width:48px;height:48px;padding:3px}
     .ph-slot span{display:none}
+    .ph-bar-class{bottom:70px}
+    .ph-cast{bottom:124px;width:220px}
   }
 
   .ally-sel{

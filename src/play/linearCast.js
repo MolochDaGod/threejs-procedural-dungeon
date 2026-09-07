@@ -10,6 +10,20 @@ import { attachStylizedOverlay, spawnStylizedHit } from './stylizedProjectiles.j
 
 const _n = new THREE.Vector3();
 const _side = new THREE.Vector3();
+const _fwd = new THREE.Vector3(0, 0, 1);
+
+function aimDir(dir, flatten = false) {
+  _n.copy(dir);
+  if (flatten) _n.setY(0);
+  if (_n.lengthSq() < 1e-6) _n.set(0, 0, 1);
+  else _n.normalize();
+  return _n;
+}
+
+function orientAlong(root, dir) {
+  _fwd.set(0, 0, 1);
+  root.quaternion.setFromUnitVectors(_fwd, dir);
+}
 
 function glow(color, opacity = 0.88) {
   return new THREE.MeshBasicMaterial({
@@ -93,14 +107,13 @@ export class LinearCastWorld {
 
   /** Line front that advances at constant m/s, optional lightning/fire forks. */
   line({ origin, dir, color, range = 12, speed = 22, width = 0.28, forks = false, onHit, height = 0.7, meshPath = null, shader = 'bolt', overlay = null }) {
-    _n.copy(dir).setY(0).normalize();
+    aimDir(dir, false);
     const root = new THREE.Group();
     const body = new THREE.Mesh(new THREE.BoxGeometry(width, height, 0.55), boltMat(color, shader));
-    body.position.y = height * 0.55;
+    body.position.y = 0;
     root.add(body);
     root.position.copy(origin);
-    root.position.y = 0.04;
-    root.rotation.y = Math.atan2(_n.x, _n.z);
+    orientAlong(root, _n);
     this.scene.add(root);
     if (meshPath) {
       loadGltf(meshPath).then((gltf) => {
@@ -111,7 +124,7 @@ export class LinearCastWorld {
         const longest = Math.max(size.x, size.y, size.z, 0.001);
         const si = /orb-/.test(meshPath) ? 0.45 : MAGIC_ROCK_DIAMETER_M;
         rock.scale.multiplyScalar(si / longest);
-        rock.position.y = si * 0.35;
+        rock.position.y = 0;
         rock.traverse((o) => {
           if (o.isMesh) {
             o.castShadow = true;
@@ -152,19 +165,17 @@ export class LinearCastWorld {
 
   /** Traveling slash residual (Getsuga) — band along aim, not a floor sprite. */
   wave({ origin, dir, color, range = 8, speed = 18, onHit, overlay = null }) {
-    _n.copy(dir).setY(0);
-    if (_n.lengthSq() < 1e-6) _n.set(0, 0, 1);
-    else _n.normalize();
+    aimDir(dir, false);
     const root = new THREE.Group();
     const band = new THREE.Mesh(
       new THREE.TorusGeometry(0.55, 0.07, 8, 18, Math.PI * 1.15),
       glow(color, 0.95),
     );
     band.rotation.y = Math.PI / 2;
-    band.position.y = 1.05;
+    band.position.y = 0;
     root.add(band);
     root.position.copy(origin);
-    root.rotation.y = Math.atan2(_n.x, _n.z);
+    orientAlong(root, _n);
     this.scene.add(root);
     const item = {
       type: 'line',

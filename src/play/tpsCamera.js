@@ -40,6 +40,19 @@ export class PlayTpsCamera {
     this._onDown = this._onDown.bind(this);
     this._onUp = this._onUp.bind(this);
     this._onWheel = this._onWheel.bind(this);
+    this._onLockChange = this._onLockChange.bind(this);
+  }
+
+  _tryLock() {
+    if (!this.enabled || this._locked()) return;
+    try {
+      const p = this.dom.requestPointerLock?.();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch { /* needs a later click */ }
+  }
+
+  _onLockChange() {
+    document.body.classList.toggle('tps-locked', this._locked());
   }
 
   enable() {
@@ -49,7 +62,9 @@ export class PlayTpsCamera {
     window.addEventListener('pointermove', this._onMove);
     window.addEventListener('pointerup', this._onUp);
     this.dom.addEventListener('wheel', this._onWheel, { passive: false });
+    document.addEventListener('pointerlockchange', this._onLockChange);
     document.body.classList.add('playing-tps');
+    this._tryLock();
   }
 
   disable() {
@@ -59,8 +74,9 @@ export class PlayTpsCamera {
     window.removeEventListener('pointermove', this._onMove);
     window.removeEventListener('pointerup', this._onUp);
     this.dom.removeEventListener('wheel', this._onWheel);
+    document.removeEventListener('pointerlockchange', this._onLockChange);
     if (document.pointerLockElement === this.dom) document.exitPointerLock?.();
-    document.body.classList.remove('playing-tps');
+    document.body.classList.remove('playing-tps', 'tps-locked');
   }
 
   setAnchor(x, y, z) {
@@ -131,12 +147,7 @@ export class PlayTpsCamera {
       this._lastX = e.clientX;
       this._lastY = e.clientY;
     }
-    if (e.button === 2 || e.button === 0) {
-      try {
-        const p = this.dom.requestPointerLock?.();
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      } catch { /* gesture */ }
-    }
+    if (e.button === 2 || e.button === 0) this._tryLock();
   }
 
   _onUp(e) {

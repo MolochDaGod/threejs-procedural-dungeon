@@ -4,6 +4,7 @@
  * Do not invent skill ids.
  */
 import { iconUrlFromPath, resolveSkillIcon } from './skillIcons.js';
+import { overlayForSkill } from './stylizedProjectiles.js';
 import { classSkill0 } from './classSkill0.js';
 
 export const CLASS_TREES_URL = 'https://info.grudge-studio.com/api/v1/master-skillTrees.json';
@@ -63,6 +64,7 @@ export function compileClassSkill(sk, index = 0) {
   const damage = raw > 4 ? raw : raw > 0 ? Math.round(raw * 42) : (/heal|buff/.test(kind) ? 0 : 28);
   const heal = g.healPercent ? Math.round((g.healPercent || 0) * 80) : 0;
   const id = g.id || sk.id;
+  const overlay = overlayForSkill(id, kind, element);
   return {
     id,
     catalogSkillId: id,
@@ -80,6 +82,8 @@ export function compileClassSkill(sk, index = 0) {
     speed: 18,
     telegraphSec: kind === 'slash' ? 0.14 : 0.28,
     taunt: /taunt/.test(`${sk.id} ${g.id} ${sk.name}`),
+    overlay,
+    overlayRef: overlay?.overlayRef || overlay?.vfxRef || null,
     iconUrl: resolveSkillIcon({
       id,
       iconUrl: iconUrlFromPath(g.iconUrl || sk.iconUrl || sk.icon) || undefined,
