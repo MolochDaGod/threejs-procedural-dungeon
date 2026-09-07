@@ -542,9 +542,13 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
     }
   };
   const tryJson = async (url, forceName) => {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`clip json ${r.status}`);
-    const json = await r.json();
+    let json = gatherClips._json.get(url);
+    if (!json) {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`clip json ${r.status}`);
+      json = await r.json();
+      gatherClips._json.set(url, json);
+    }
     const clip = THREE.AnimationClip.parse(json);
     if (!clip?.tracks?.length) return;
     take(clip, forceName);
@@ -567,6 +571,7 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
   for (const c of remapped) remember(c);
   return [...remapped, ...extra];
 }
+gatherClips._json = new Map();
 
 export async function spawnActor({
   raceId,

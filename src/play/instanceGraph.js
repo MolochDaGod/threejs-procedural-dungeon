@@ -29,9 +29,13 @@ export function layerOf(root, name) {
 
 const LOD_FAR = { Dress: 28, Cover: 24, Pinata: 18 };
 const _lodAt = new THREE.Vector3();
+let _lodAcc = 0;
 
 /** Distance hide on static layers. Skinned Actors stay on (one mixer each). */
-export function tickInstanceLod(layers, cam, origin) {
+export function tickInstanceLod(layers, cam, origin, dt = 0.16) {
+  _lodAcc += dt;
+  if (_lodAcc < 0.12) return;
+  _lodAcc = 0;
   if (!layers || !cam) return;
   const ox = origin?.x ?? cam.position.x;
   const oz = origin?.z ?? cam.position.z;

@@ -851,7 +851,11 @@ function tunePlayRender(on) {
     hemi.intensity = 0.22;
     dirL.intensity = 0.12;
     renderer.toneMappingExposure = 0.92;
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
     for (const L of lights) L.visible = false;
+    if (overlay) overlay.visible = false;
+    if (fx.parts) fx.parts.visible = false;
+    for (const m of fx.shafts || []) m.visible = false;
   } else {
     POST.enabled = !!el?.tPost?.checked;
     dirL.castShadow = true;
@@ -859,7 +863,10 @@ function tunePlayRender(on) {
     hemi.intensity = themeHemiI * LIGHT_K;
     dirL.intensity = themeDirI * LIGHT_K;
     renderer.toneMappingExposure = 1.08;
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     for (const L of lights) L.visible = true;
+    if (overlay) overlay.visible = true;
+    applyObjectVis();
   }
 }
 function tickPlayLights(origin) {
@@ -1148,12 +1155,12 @@ const TEX = { stone:makeStoneTex(), crack:makeCrackTex(), rune:makeRuneTex(), sw
 /* ================================================================
    MATERIAL KIT — named roles, shared across all instanced sets
    ================================================================ */
-const matStone = new THREE.MeshStandardMaterial({
+const matStone = new THREE.MeshPhongMaterial({
   map: TEX.stone,
   bumpMap: TEX.stone,
-  bumpScale: 0.14,
-  roughness: 0.88,
-  metalness: 0.04,
+  bumpScale: 0.12,
+  shininess: 7,
+  specular: 0x1c1c22,
 });
 const matTrim  = new THREE.MeshStandardMaterial({roughness:0.38, metalness:0.75});
 const matGlow  = new THREE.MeshBasicMaterial({color:0xffffff});
@@ -2547,6 +2554,7 @@ function forge(animate){
 
 /* -------- live per-frame animation: flames, crystals, liquids, particles -------- */
 function liveUpdate(time, tt){
+  if (playRender) return;
   for(const key of ['flame','flameCore']){
     const fm = meshes[key];
     if(!fm || !fm.userData.set.n) continue;
@@ -2605,10 +2613,14 @@ function tick(){
   }
   liveUpdate(elapsed, animating ? animT - 2.3 : Infinity);
   if (playRender) tickPlayLights(play.pos);
-  if (typeof fx.fire?.update === 'function') fx.fire.update(cam, elapsed);
+  if (typeof fx.fire?.update === 'function') fx.fire.update(play.playCamera?.() || cam, elapsed);
   dressing.update(elapsed, play.pos, playRender);
-  forgeGates.update(dt);
-  forgeCast.update(dt);
+  if (!playRender) {
+    forgeGates.update(dt);
+    forgeCast.update(dt);
+  } else {
+    forgeGates.update(dt);
+  }
   play.update(dt);
   renderer.info.reset();
   renderFrame();

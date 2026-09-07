@@ -2748,7 +2748,13 @@ export class PlaySession {
   }
 
   tickEnemies(dt) {
+    const _to = this._to || (this._to = new THREE.Vector3());
     for (const e of this.enemies) {
+      const d2 = e.pos.distanceToSquared(this.pos);
+      if (e.asleep && d2 > 28 * 28) {
+        e.actor.setGait(false, false);
+        continue;
+      }
       e.actor.update(dt);
       if (!e.alive) continue;
       if (!e.status) e.status = makeStatus();
@@ -2762,10 +2768,10 @@ export class PlaySession {
         e.actor.setGait(false, false);
         continue;
       }
-      const dist = e.pos.distanceTo(this.pos);
+      const dist = Math.sqrt(d2);
       const see = !this.classState?.hidden && losToPlayer(this, e);
       e.hitCd = Math.max(0, e.hitCd - dt);
-      const dir = this.pos.clone().sub(e.pos).setY(0);
+      const dir = _to.copy(this.pos).sub(e.pos).setY(0);
       if (dir.lengthSq() > 1e-6) dir.normalize();
 
       if (e.wind > 0) {
@@ -2864,14 +2870,15 @@ export class PlaySession {
     e.windMax = e.boss ? 0.85 : caster ? 0.7 : 0.42;
     e.wind = e.windMax;
     e.windKind = e.boss ? 'zone' : caster ? 'linear' : 'cone';
+    e.castDir = dir.clone();
     e.actor.requestOneShot(caster ? 'cast' : 'attack', e.windMax);
     const col = e.boss ? 0xd8433a : caster ? 0x9b6cf0 : 0xc9cedb;
     if (e.windKind === 'zone') {
       this.vfx.zone({ origin: this.pos.clone(), color: col, radius: 3.4, life: e.windMax, dps: 0 });
     } else if (e.windKind === 'linear') {
-      this.vfx.linear({ origin: e.pos, dir, color: col, range: 9, width: 0.95, life: e.windMax });
+      this.vfx.linear({ origin: e.pos, dir: e.castDir, color: col, range: 9, width: 0.95, life: e.windMax });
     } else {
-      this.vfx.cone({ origin: e.pos, dir, color: col, range: 3.2, half: 0.75, life: e.windMax });
+      this.vfx.cone({ origin: e.pos, dir: e.castDir, color: col, range: 3.2, half: 0.75, life: e.windMax });
     }
   }
 
@@ -3198,7 +3205,7 @@ export class PlaySession {
       void this.reportCompletion(false);
     }
 
-    tickInstanceLod(this.layers, this.playCamera() || this.ctx.cam, this.pos);
+    tickInstanceLod(this.layers, this.playCamera() || this.ctx.cam, this.pos, gdt);
     const awake = this.enemies.filter((e) => e.alive && !e.asleep);
     const lock = awake.sort((a, b) => a.pos.distanceTo(this.pos) - b.pos.distanceTo(this.pos))[0];
     renderHud(this._hudState(sheet, {
