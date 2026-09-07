@@ -1820,7 +1820,10 @@ export class PlaySession {
     } else if (spell.id === 'r_invis' || spell.id === 'r_shadow_strike') {
       this.fireRanger0(spell);
     } else if (spell.totem) {
-      this.deployTotem(spell.totem);
+      this.tele?.incoming({ origin: this.pos, range: 2.2, color: spell.color, life: 0.45 });
+      this.tele?.combat({ kind: 'warning', origin: this.pos, size: 2.8, ttl: 0.5 });
+      this.vfx.nova({ origin: this.pos.clone().setY(0.4), color: spell.color, range: 2.4 });
+      void this.deployTotem(spell.totem);
       toast(spell.name);
     } else {
       this.fireSpell(spell);
@@ -1954,17 +1957,19 @@ export class PlaySession {
     if ((this.classState.afterStrikeT || 0) > 0) this.classState.afterStrikeT -= dt;
   }
 
-  deployTotem(kind) {
+  async deployTotem(kind) {
     this.clearTotem();
     const hp = Math.max(12, Math.round((this.sheet?.hpMax || PLAY.hp) * 0.25));
-    const mesh = makeTotemMesh(kind, hp);
+    const mesh = await makeTotemMesh(kind, hp);
     const p = this.pos.clone();
     p.y = 0;
     mesh.position.copy(p);
+    groundRoot(mesh, this.sampler, p.x, p.z);
     (this.layers?.Actors || this.group).add(mesh);
     this.totem = { kind, mesh, hp, hpMax: hp, life: TOTEM_LIFE, pulse: TOTEM_PULSE };
     this.shieldHp = Math.min(TOTEM_SHIELD_MAX, (this.shieldHp || 0) + 8);
     for (const a of this.allies) a.shieldHp = Math.min(TOTEM_SHIELD_MAX, (a.shieldHp || 0) + 8);
+    this.vfx.mist({ origin: p.clone().setY(0.9), color: kind === 'blessed' ? 0xffe08a : 0xb070ff, radius: 1.6, life: 1.1 });
   }
 
   clearTotem() {
@@ -1993,7 +1998,9 @@ export class PlaySession {
       const pick = hurt[Math.floor(Math.random() * Math.max(1, hurt.length))];
       if (pick && pick !== this) pick.hp = Math.min(pick.hpMax, pick.hp + Math.max(1, Math.round(pick.hpMax * 0.01)));
       else if (pick === this) this.hp = Math.min(this.sheet?.hpMax || PLAY.hp, this.hp + Math.max(1, Math.round((this.sheet?.hpMax || PLAY.hp) * 0.01)));
+      this.vfx.mist({ origin: t.mesh.position.clone().setY(0.85), color: 0xffe08a, radius: 1.8, life: 0.7 });
     }
+    if (t.kind === 'spell') this.vfx.aura({ origin: t.mesh.position.clone(), color: 0xb070ff, life: 0.45 });
   }
 
   echoTotem(spell) {
@@ -2010,6 +2017,7 @@ export class PlaySession {
       const dir = foe.pos.clone().sub(origin).setY(0).normalize();
       if (spell.kind === 'projectile' || spell.kind === 'beam') {
         this.linear.line({ origin, dir, color: spell.color, range, speed: spell.speed || 16, onHit: (e) => this.hurt(e, dmg, spell), overlay: spell.overlay || null });
+        this.tele?.combat({ kind: 'arrow', origin, size: 3.2, yaw: Math.atan2(dir.x, dir.z), ttl: 0.35 });
       } else this.hitRadius(origin, Math.min(range, 4), dmg);
     }
     if (t.kind === 'blessed' && (spell.heal > 0 || spell.kind === 'nova' && spell.element === 'holy')) {
@@ -2323,12 +2331,19 @@ export class PlaySession {
     const tel = spell.telegraphSec || 0.15;
     this.casting = Math.max(0.16, tel);
     this.castMax = this.casting;
+    const yaw = Math.atan2(dir.x, dir.z);
     if (spell.kind === 'slash') {
       this.vfx.cone({ origin: this.pos, dir: flat, color: spell.color, range: spell.range, half: 0.85, life: tel });
-    } else if (spell.kind === 'nova' || spell.kind === 'zone') {
+      this.tele?.cone({ origin: this.pos, dir: flat, range: spell.range, half: 0.85, color: spell.color, life: tel });
+      this.tele?.combat({ kind: 'arrow', origin: this.pos, size: Math.min((spell.range || 3) * 1.1, 4.2), yaw, ttl: tel });
+    } else if (spell.kind === 'nova' || spell.kind === 'zone' || spell.heal) {
       this.linear.zone({ origin: this.pos, color: spell.color, radius: spell.range, life: tel });
+      this.tele?.aoe({ origin: this.pos, range: spell.range || 4, color: spell.color, life: tel, ring: !!spell.heal });
+      this.tele?.combat({ kind: 'warning', origin: this.pos, size: Math.min((spell.range || 4) * 1.5, 6.5), ttl: tel });
     } else {
       this.vfx.linear({ origin: this.pos, dir, color: spell.color, range: Math.min(spell.range, 10), width: 0.55, life: tel });
+      this.tele?.line({ origin: this.pos, dir, range: spell.range, width: 0.55, color: spell.color, life: tel });
+      this.tele?.combat({ kind: 'arrow', origin: this.pos, size: Math.min((spell.range || 8) * 0.42, 7), yaw, ttl: tel });
     }
 
     const foeSheet = { defense: 18, block: 0.04, blockEffect: 0.25 };
@@ -2583,6 +2598,8 @@ export class PlaySession {
     const mistAt = (origin || this.pos).clone();
     mistAt.y = 0.85;
     this.vfx.mist({ origin: mistAt, color: color || 0xc8f0a8, radius: Math.min(reach, 4.4), life: 2.2 });
+    this.tele?.aoe({ origin: origin || this.pos, range: Math.min(reach, 4.4), color: color || 0xc8f0a8, life: 0.55, ring: true });
+    this.tele?.combat({ kind: 'warning', origin: origin || this.pos, size: Math.min(reach * 1.3, 5.2), ttl: 0.5 });
     if (from) toast(`${from} · ${name}`);
   }
 

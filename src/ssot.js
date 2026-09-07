@@ -58,6 +58,7 @@ export const COMBAT_DEPLOY = {
   clipDonor: CLIP_DONOR,
   telegraphWarning: `${COMBAT}/models/telegraph_warning.glb`,
   telegraphArrow: `${COMBAT}/models/telegraph_arrow.glb`,
+  totemFire: `${CDN}/models/creatures/totem/fire_totem.glb`,
   /** Faction / Toon foes — race kit on CDN, clips from combat donor. */
   enemyFrom: 'toon-rts + combat clip donor',
   ban: 'FBX minions under combat /models/minions',

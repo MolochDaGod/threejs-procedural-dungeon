@@ -1,9 +1,11 @@
 /**
  * Ground telegraphs — combat.* / Flare design.
- * Shader-masked cone / line (arrow fill-sweep) / AoE disc or ring.
+ * Shader-masked cone / line / AoE plus combat.grudge-studio.com warning/arrow GLBs.
  * Hit tests stay CPU (pointIn*). Do not invent a second tell system.
  */
 import * as THREE from 'three';
+import { COMBAT_DEPLOY } from '../ssot.js';
+import { loadGltf } from './assets.js';
 
 const VERT = /* glsl */ `
 varying vec2 vUv;
@@ -86,7 +88,62 @@ export class TelegraphField {
   constructor(scene) {
     this.scene = scene;
     this.items = [];
+    this.combatItems = [];
+    this._combat = { warning: null, arrow: null };
     this.geo = new THREE.PlaneGeometry(1, 1);
+    void this._loadCombat();
+  }
+
+  async _loadCombat() {
+    const files = [
+      ['warning', COMBAT_DEPLOY.telegraphWarning],
+      ['arrow', COMBAT_DEPLOY.telegraphArrow],
+    ];
+    await Promise.all(files.map(async ([kind, url]) => {
+      try {
+        const gltf = await loadGltf(url);
+        const box = new THREE.Box3().setFromObject(gltf.scene);
+        const sz = box.getSize(new THREE.Vector3());
+        this._combat[kind] = {
+          scene: gltf.scene,
+          clip: gltf.animations?.[0] || null,
+          extent: Math.max(sz.x, sz.z, 0.001),
+        };
+      } catch (err) {
+        console.warn('[telegraph] combat mesh miss', kind, err?.message || err);
+      }
+    }));
+  }
+
+  /** Combat-lab warning/arrow GLB (Saber TelegraphSystem). Garnish — shader field stays SSOT. */
+  combat({ kind = 'warning', origin, size = 3.2, yaw = 0, ttl = 0.55 } = {}) {
+    const proto = this._combat[kind] || this._combat.warning;
+    if (!proto || this.combatItems.length >= 8 || !origin) return null;
+    const root = proto.scene.clone(true);
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      o.castShadow = false;
+      o.receiveShadow = false;
+      o.renderOrder = 5;
+      if (o.material) {
+        o.material = o.material.clone();
+        o.material.transparent = true;
+        o.material.depthWrite = false;
+      }
+    });
+    const s = size / proto.extent;
+    root.scale.setScalar(s);
+    root.position.set(origin.x, (origin.y || 0) + 0.06, origin.z);
+    root.rotation.y = yaw || 0;
+    this.scene.add(root);
+    let mixer = null;
+    if (proto.clip) {
+      mixer = new THREE.AnimationMixer(root);
+      mixer.clipAction(proto.clip).play();
+    }
+    const it = { root, mixer, life: ttl, max: ttl };
+    this.combatItems.push(it);
+    return it;
   }
 
   _spawn(shape, origin, dir, range, extra, color, life) {
@@ -164,6 +221,20 @@ export class TelegraphField {
         this.items.splice(i, 1);
       }
     }
+    for (let i = this.combatItems.length - 1; i >= 0; i--) {
+      const it = this.combatItems[i];
+      it.mixer?.update(dt);
+      it.life -= dt;
+      const fade = it.life < it.max * 0.2 ? Math.max(0, it.life / (it.max * 0.2)) : 1;
+      it.root.traverse((o) => {
+        if (o.isMesh && o.material?.opacity != null) o.material.opacity = 0.85 * fade;
+      });
+      if (it.life <= 0) {
+        this.scene.remove(it.root);
+        it.mixer?.stopAllAction();
+        this.combatItems.splice(i, 1);
+      }
+    }
     return done;
   }
 
@@ -173,6 +244,11 @@ export class TelegraphField {
       it.mat.dispose();
     }
     this.items.length = 0;
+    for (const it of this.combatItems) {
+      this.scene.remove(it.root);
+      it.mixer?.stopAllAction();
+    }
+    this.combatItems.length = 0;
   }
 }
 
