@@ -38,8 +38,9 @@ async function cloneProp(url, targetH) {
   return obj;
 }
 
-const TORCH_POOL = 8;
-const TORCH_SOFT = { intensity: 1.55, distance: 7.2, decay: 2 };
+const TORCH_POOL = 10;
+/** Physical PointLight (candela). Forge multiplies theme torch × 4π; play used 1.55 raw → black halls. */
+const TORCH_SOFT = { intensity: 2.05 * Math.PI * 1.35, distance: 12.5, decay: 2 };
 
 export class DungeonDressing {
   constructor() {
@@ -92,7 +93,7 @@ export class DungeonDressing {
       mesh.traverse((o) => {
         if (!o.isMesh || !o.material) return;
         o.material.emissive = new THREE.Color(flame);
-        o.material.emissiveIntensity = 0.62;
+        o.material.emissiveIntensity = 1.15;
         o.castShadow = false;
       });
       this.anchors.push({
@@ -130,7 +131,7 @@ export class DungeonDressing {
       const dz = a.z - origin.z;
       return { a, d: dx * dx + dz * dz };
     }).sort((p, q) => p.d - q.d);
-    const lim = 16 * 16;
+    const lim = 22 * 22;
     for (let i = 0; i < this.pool.length; i++) {
       const L = this.pool[i];
       const hit = ranked[i];
@@ -144,8 +145,11 @@ export class DungeonDressing {
       L.position.set(a.x, a.y, a.z);
       L.distance = TORCH_SOFT.distance;
       L.decay = TORCH_SOFT.decay;
-      const flick = 0.91 + 0.09 * Math.sin(time * 5.4 + a.ph) * Math.sin(time * 2.3 + a.ph * 1.3);
-      L.intensity = TORCH_SOFT.intensity * flick;
+      const flick = 0.76
+        + 0.14 * Math.sin(time * 6.8 + a.ph)
+        + 0.07 * Math.sin(time * 15.1 + a.ph * 1.8)
+        + 0.045 * Math.sin(time * 29.4 + a.ph * 0.37);
+      L.intensity = TORCH_SOFT.intensity * Math.max(0.58, flick);
     }
   }
 

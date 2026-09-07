@@ -212,12 +212,12 @@ export const PLAY = {
   slide: { key: 'ControlLeft', distance: 3.4, duration: 0.55, cd: 0.95, stam: 22, hitRadius: 1.15, damage: 16 },
   /** Indoor shoulder TPS — Casting contract, hall-scale boom (not map 20 / outdoor 8.4). */
   tps: {
-    fov: 62,
-    sprintFov: 68,
-    distance: 4.6,
-    sprintDistance: 5.2,
-    minDistance: 1.45,
-    maxDistance: 7.0,
+    fov: 74,
+    sprintFov: 80,
+    distance: 6.8,
+    sprintDistance: 7.6,
+    minDistance: 1.55,
+    maxDistance: 12.0,
     targetHeight: 1.42,
     shoulderOffset: 0.36,
     boomLift: 0.26,
@@ -259,9 +259,10 @@ export function spellById(id) {
 
 export { CREATURES, creatureOf, creaturesForBiome } from './content/creatures/index.js';
 export { PROP_KITS } from './content/props/kits.js';
-export { DUNGEON_KINDS, DUNGEON_KIND_IDS, enemyFactionRaces } from './content/kinds.js';
+export { DUNGEON_KINDS, DUNGEON_KIND_IDS, enemyFactionRaces, racesForFaction } from './content/kinds.js';
+export { PREFAB_DUNGEONS, PREFAB_IDS, prefabOf, PIRATE_LORDS } from './content/prefabs.js';
 export { HERO_24, PIRATE_FACES, portraitUrl, heroOf, portraitFallback } from './content/era/heroes24.js';
-export { CLASSES, CLASS_IDS, FAMILIES, FAMILY_OF, TEAM_COMPS, dungeonFill, familyOf } from './content/era/warlords.js';
+export { CLASSES, CLASS_IDS, FAMILIES, FAMILY_OF, TEAM_COMPS, dungeonFill, familyOf, normalizeRaceId, normalizeClassId } from './content/era/warlords.js';
 export { THEME_BIOME, POOL_RULES, biomeOf } from './content/biomes/index.js';
 export { ENEMY_ATTACKS, ROLE_ATTACKS } from './combat/attacks.js';
 

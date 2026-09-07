@@ -22,7 +22,7 @@ export class PlayTpsCamera {
   constructor(dom) {
     const s = spec();
     this.dom = dom;
-    this.camera = new THREE.PerspectiveCamera(s.fov, innerWidth / innerHeight, 0.12, 72);
+    this.camera = new THREE.PerspectiveCamera(s.fov, innerWidth / innerHeight, 0.12, 160);
     this.yaw = 0;
     this.pitch = s.defaultPitch;
     this.distance = s.distance;

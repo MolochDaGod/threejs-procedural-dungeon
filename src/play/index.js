@@ -3,11 +3,11 @@
  * Entrance → combat/elite rooms → boss. 6-slot pre-match loadout. Linear casts.
  */
 import * as THREE from 'three';
-import { AGGRO, CLASS_IDS, CLASSES, COMBAT_DEPLOY, PLAY, PLAY_DEFAULTS, RACES, loadoutFor, spellById, weaponsForClass, WEAPON_LABEL } from '../ssot.js';
+import { AGGRO, CLASS_IDS, CLASSES, COMBAT_DEPLOY, PLAY, PLAY_DEFAULTS, RACES, loadoutFor, spellById, weaponsForClass, WEAPON_LABEL, normalizeClassId, normalizeRaceId } from '../ssot.js';
 import { skillById } from './weaponSkills.js';
 import { incomingScale, outgoingScale, passiveFor } from './passives.js';
 import { coverSpotNear, lineOpen, firstObstruction, damageBarrier, CELL_FLAG, hasFlag } from '../grid/cells.js';
-import { allyRaces, makeAlly, otherClasses, tickAlly } from './party.js';
+import { allyRaces, makeAlly, resolveAllySlots, tickAlly } from './party.js';
 import { prefabFor, playerPrefab } from './prefabs.js';
 import { planEncounters } from './encounters.js';
 import { nerfSheet, tickFactionUnit } from './factionPacks.js';
@@ -118,6 +118,7 @@ export class PlaySession {
     this.lobby = null;
     this.weaponSet = 0;
     this.allyPick = [];
+    this.allySlots = [];
     this.script = null;
     this.characterId = null;
     this._lastPos = null;
@@ -340,7 +341,7 @@ export class PlaySession {
     return path.filter(Boolean);
   }
 
-  async enter({ dungeon, raceId = 'human', classId = 'worge', weaponId = '1h_tome', linear = true, allyClasses = null, characterId = null }) {
+  async enter({ dungeon, raceId = 'human', classId = 'worge', weaponId = '1h_tome', linear = true, allyClasses = null, allies = null, characterId = null, autoCrawl = false }) {
     if (!dungeon?.valid) {
       toast('Forge a connected dungeon first');
       return;
@@ -354,8 +355,10 @@ export class PlaySession {
     this.downed = false;
     this.timer0 = 0;
     this.d = dungeon;
-    this.raceId = RACES[raceId] ? raceId : 'human';
-    this.classId = CLASS_IDS.includes(classId) ? classId : 'worge';
+    const raceN = normalizeRaceId(raceId);
+    this.raceId = RACES[raceN] ? raceN : 'human';
+    const classN = normalizeClassId(classId) || classId;
+    this.classId = CLASS_IDS.includes(classN) ? classN : 'worge';
     this.classState = makeClassState(this.classId);
     this.bootVial();
     this.lockpick = null;
@@ -365,9 +368,11 @@ export class PlaySession {
     if (this.weaponSet < 0) this.weaponSet = 0;
     this.weaponId = sets[this.weaponSet] || sets[0];
     this.loadout = loadoutFor(this.classId, this.weaponId).map(stampSpell);
-    this.allyPick = (allyClasses && allyClasses.length === 3)
-      ? allyClasses.map((id) => (CLASS_IDS.includes(id) ? id : 'warrior'))
-      : otherClasses(this.classId);
+    const classSlots = (allyClasses && allyClasses.length === 3)
+      ? allyClasses.map((id) => ({ classId: id }))
+      : null;
+    this.allySlots = resolveAllySlots(allies || classSlots, this.classId, this.raceId);
+    this.allyPick = this.allySlots.map((s) => s.classId);
     this.refreshHudBars();
     this.linearCrawl = linear;
     this.characterId = playCharacterId(characterId)
@@ -472,14 +477,15 @@ export class PlaySession {
     (this.layers?.Actors || this.group).add(this.player.root);
     attachPlayHelpers(this.player.root, { height: PLAY.playerHeight });
 
-    const fill = this.allyPick.length ? this.allyPick : otherClasses(this.classId);
-    const races = allyRaces(this.raceId);
-    this.allies = await Promise.all(fill.map(async (cid, i) => {
-      const w0 = weaponsForClass(cid)[0];
-      const actor = await spawnActor({ prefab: playerPrefab(races[i % races.length], cid, w0), equipped: true });
+    const slots = this.allySlots.length ? this.allySlots : resolveAllySlots(null, this.classId, this.raceId);
+    this.allies = await Promise.all(slots.map(async (slot, i) => {
+      const cid = slot.classId;
+      const allowed = weaponsForClass(cid);
+      const w0 = (slot.weaponId && allowed.includes(slot.weaponId)) ? slot.weaponId : allowed[0];
+      const actor = await spawnActor({ prefab: playerPrefab(slot.raceId, cid, w0), equipped: true });
       const ang = (-0.7 + i * 0.7);
       const pos = this.pos.clone().add(new THREE.Vector3(Math.sin(ang) * 1.8, 0, Math.cos(ang) * 1.8));
-      const a = makeAlly(actor, { classId: cid, raceId: races[i % races.length], pos });
+      const a = makeAlly(actor, { classId: cid, raceId: slot.raceId, pos, characterId: slot.characterId });
       actor.bindTerrain(this.sampler);
       actor.root.position.copy(a.pos);
       groundRoot(actor.root, this.sampler, a.pos.x, a.pos.z);
@@ -497,8 +503,13 @@ export class PlaySession {
     this.ctx.cam.zoom = 1.15;
     this.ctx.cam.updateProjectionMatrix();
     this._aimLobbyCam(pose);
-    toast(`Lv ${this.sheet.level || PLAY.level} lobby · pick allies · E descend`);
     document.body.classList.add('lobbying');
+    if (autoCrawl) {
+      toast(`Lv ${this.sheet.level || PLAY.level} · descending`);
+      await this.beginCrawl();
+    } else {
+      toast(`Lv ${this.sheet.level || PLAY.level} lobby · pick allies · E descend`);
+    }
     } catch (err) {
       console.warn('[grudge-dungeon] enter failed', err);
       this.exit(true);
@@ -600,18 +611,31 @@ export class PlaySession {
 
   facing() {
     const yaw = this.tps?.enabled ? this.tps.yaw : this.ctx.yaw;
-    // Camera-relative forward
+    const locked = !!(this.focusEnabled || this.aiming?.target);
+    // Camera-relative WASD. right = up × forward = (cos yaw, 0, -sin yaw).
+    // A = −right, D = +right (was inverted).
     let fx = 0, fz = 0;
     if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) { fx += Math.sin(yaw); fz += Math.cos(yaw); }
     if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) { fx -= Math.sin(yaw); fz -= Math.cos(yaw); }
-    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) { fx -= Math.cos(yaw); fz += Math.sin(yaw); }
-    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) { fx += Math.cos(yaw); fz -= Math.sin(yaw); }
+    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) { fx += Math.cos(yaw); fz -= Math.sin(yaw); }
+    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) { fx -= Math.cos(yaw); fz += Math.sin(yaw); }
     const moving = fx * fx + fz * fz > 0.01;
     const looking = !!(this.focusEnabled || (this.tps?.enabled && (this.tps._rmb || this.tps._locked?.())));
     if (this.tps?.enabled && this.phase === 'crawl') {
-      this.tps.getLookDirection(this.aim);
-      this.aim.y = 0;
-      if (this.aim.lengthSq() > 1e-6) this.aim.normalize();
+      if (locked && this.aiming?.target?.pos) {
+        this.aim.copy(this.aiming.target.pos).sub(this.pos).setY(0);
+        if (this.aim.lengthSq() > 1e-6) this.aim.normalize();
+      } else if (locked) {
+        this.tps.getLookDirection(this.aim);
+        this.aim.y = 0;
+        if (this.aim.lengthSq() > 1e-6) this.aim.normalize();
+      } else if (moving) {
+        this.aim.set(fx, 0, fz).normalize();
+      } else {
+        this.tps.getLookDirection(this.aim);
+        this.aim.y = 0;
+        if (this.aim.lengthSq() > 1e-6) this.aim.normalize();
+      }
     } else if (this.aiming?.target) {
       this.aim.copy(this.aiming.dir);
     } else if (looking || this.casting > 0 || this.blocking) {
@@ -619,7 +643,7 @@ export class PlaySession {
     } else if (moving) {
       this.aim.set(fx, 0, fz).normalize();
     }
-    return { fx, fz, moving, looking };
+    return { fx, fz, moving, looking, locked };
   }
 
   tryMove(dt) {
@@ -1462,6 +1486,7 @@ export class PlaySession {
       kind: dungeon.params?.kind || 'biome',
       playerRace: this.raceId,
       level: this.sheet?.level || PLAY.level,
+      forceFaction: dungeon.params?.forceFaction || null,
     });
     const jobs = [];
     const byRoom = new Map();
@@ -1567,7 +1592,9 @@ export class PlaySession {
         windMax: 0,
         windKind: null,
         intent: null,
-        boss: r.type === 'boss' || p.brain === 'warlord' || p.scale >= 1.7,
+        boss: !!(j.j?.boss || p.boss || r.type === 'boss' || p.brain === 'warlord' || p.scale >= 1.7),
+        stationary: !!p.stationary,
+        objective: p.objective || null,
         kind: p.aiPlayer ? (p.packRole === 'cast' || p.packRole === 'heal' ? 'caster' : 'grunt') : (p.brain === 'mage' || p.role === 'mage' ? 'caster' : r.type === 'boss' ? 'boss' : 'grunt'),
         asleep: r.type !== 'entrance' && r.id !== dungeon.entrance,
         aiPlayer: !!p.aiPlayer,
@@ -1587,7 +1614,7 @@ export class PlaySession {
         packRole: e.packRole,
         telegraph: { variant: e.kind === 'caster' ? 'incoming' : 'cone' },
       };
-      attachYuka(e);
+      if (!e.stationary) attachYuka(e);
       actor.bindTerrain(this.sampler);
       actor.root.position.copy(e.pos);
       groundRoot(actor.root, this.sampler, e.pos.x, e.pos.z);
@@ -2344,10 +2371,20 @@ export class PlaySession {
     this.casting = Math.max(0.16, tel);
     this.castMax = this.casting;
     const yaw = Math.atan2(dir.x, dir.z);
+    const incoming = spell.travel === 'incoming';
+    const land = this.pos.clone();
+    if (incoming) {
+      land.addScaledVector(flat, Math.max(2.2, Math.min(spell.range || 4.2, 7.5)));
+      land.y = 0;
+    }
     if (spell.kind === 'slash') {
       this.vfx.cone({ origin: this.pos, dir: flat, color: spell.color, range: spell.range, half: 0.85, life: tel });
       this.tele?.cone({ origin: this.pos, dir: flat, range: spell.range, half: 0.85, color: spell.color, life: tel });
       this.tele?.combat({ kind: 'arrow', origin: this.pos, size: Math.min((spell.range || 3) * 1.1, 4.2), yaw, ttl: tel });
+    } else if (incoming) {
+      this.linear.zone({ origin: land, color: spell.color, radius: spell.range || 4.2, life: tel });
+      this.tele?.aoe({ origin: land, range: spell.range || 4, color: spell.color, life: tel });
+      this.tele?.combat({ kind: 'warning', origin: land, size: Math.min((spell.range || 4) * 1.5, 6.5), ttl: tel });
     } else if (spell.kind === 'nova' || spell.kind === 'zone' || spell.heal) {
       this.linear.zone({ origin: this.pos, color: spell.color, radius: spell.range, life: tel });
       this.tele?.aoe({ origin: this.pos, range: spell.range || 4, color: spell.color, life: tel, ring: !!spell.heal });
@@ -2457,19 +2494,66 @@ export class PlaySession {
       this.smashBarriersAlong(flat, spell.range);
       this.hitLine(flat, spell.range, 0.85, roll(spell.damage));
       this.punch(80, 0.45);
+    } else if (incoming) {
+      this.hitQ.push({
+        t: hitWindowSec(shotDur, 0.28),
+        fn: () => {
+          this.linear.incoming({
+            origin: land,
+            color: spell.color,
+            radius: spell.range || 4.2,
+            height: 8.5,
+            speed: spell.speed || 22,
+            overlay: spell.overlay || null,
+            meshPath: spell.meshPath || (spell.element === 'fire' ? COMBAT_DEPLOY.fireOrb : null),
+            onLand: (at) => {
+              const p = at.clone().setY(0.9);
+              this.vfx.explosion({ origin: p, color: spell.color, radius: spell.range || 4 });
+              if (spell.element === 'fire') {
+                this.vfx.tornado({ origin: at.clone().setY(0), color: spell.color, height: 2.8, ttl: 1.4 });
+              } else {
+                this.vfx.cloud({ origin: p, color: spell.color, radius: spell.range, life: 1.6 });
+              }
+              this.hitRadius(at, spell.range || 4.2, roll(spell.damage));
+              this.punch(90, 0.5);
+              this.applyLabEffects(spell, p, 'hit');
+            },
+          });
+        },
+      });
     } else if (spell.kind === 'nova' || spell.kind === 'zone') {
-      this.linear.zone({ origin: this.pos, color: spell.color, radius: spell.range, life: 0.7 });
+      const linger = Number(spell.linger) || 0;
       const cloudAt = this.pos.clone().setY(0.75);
-      if (spell.element === 'holy' || spell.element === 'nature') {
-        this.vfx.mist({ origin: cloudAt, color: spell.color, radius: spell.range, life: 2.2 });
-      } else if (spell.element === 'fire') {
-        this.vfx.tornado({ origin: this.pos.clone().setY(0), color: spell.color, height: 2.8, ttl: 1.6 });
-        this.vfx.cloud({ origin: cloudAt, color: spell.color, radius: spell.range, life: 2.2 });
+      if (linger > 0.8) {
+        const ticks = Math.max(3, Math.round(linger / 0.7));
+        const per = roll(spell.damage) / ticks;
+        this.linear.zone({
+          origin: this.pos,
+          color: spell.color,
+          radius: spell.range,
+          life: linger,
+          linger: true,
+          overlay: spell.overlay || null,
+          tickEvery: linger / ticks,
+          onTick: () => this.hitRadius(this.pos, spell.range, per),
+        });
+        this.vfx.mist({ origin: cloudAt, color: spell.color, radius: spell.range, life: linger });
+        this.vfx.cloud({ origin: cloudAt, color: spell.color, radius: spell.range, life: linger });
+        this.hitRadius(this.pos, spell.range, per);
+        this.punch(50, 0.3);
       } else {
-        this.vfx.cloud({ origin: cloudAt, color: spell.color, radius: spell.range, life: 2.8 });
+        this.linear.zone({ origin: this.pos, color: spell.color, radius: spell.range, life: 0.7 });
+        if (spell.element === 'holy' || spell.element === 'nature') {
+          this.vfx.mist({ origin: cloudAt, color: spell.color, radius: spell.range, life: 2.2 });
+        } else if (spell.element === 'fire') {
+          this.vfx.tornado({ origin: this.pos.clone().setY(0), color: spell.color, height: 2.8, ttl: 1.6 });
+          this.vfx.cloud({ origin: cloudAt, color: spell.color, radius: spell.range, life: 2.2 });
+        } else {
+          this.vfx.cloud({ origin: cloudAt, color: spell.color, radius: spell.range, life: 2.8 });
+        }
+        this.hitRadius(this.pos, spell.range, roll(spell.damage));
+        this.punch(80, 0.4);
       }
-      this.hitRadius(this.pos, spell.range, roll(spell.damage));
-      this.punch(80, 0.4);
     } else if (spell.kind === 'dash' || spell.kind === 'teleport') {
       const from = this.pos.clone().setY(0.95);
       this.dashAlong(flat, spell.range);
@@ -2836,6 +2920,10 @@ export class PlaySession {
       tickStatus(e.status, dt);
       paintStatus(e.actor, e.status);
       if (e.asleep) {
+        e.actor.setGait(false, false);
+        continue;
+      }
+      if (e.stationary) {
         e.actor.setGait(false, false);
         continue;
       }

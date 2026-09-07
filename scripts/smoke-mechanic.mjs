@@ -6,8 +6,9 @@ import { buildColliderAssets, greedyRects, hitsSolid, TILE } from '../src/physic
 import { compileMechanics, compileDungeonScript } from '../src/mechanic/compile.js';
 import { bindScript, tickScript } from '../src/play/scriptRuntime.js';
 import { existsSync, readFileSync } from 'node:fs';
-import { ANIM_URLS, CLASS_IDS, CLASS_WEAPON_SETS, COMBAT_DEPLOY, CRAFT_SUITE, DRESSING, DUNGEON_KINDS, DUNGEON_SI, ESTES_CAST_DONOR, HERO_24, KENPACHI_DONOR, MAIN_PANEL, PIRATE_FACES, PLAY, PLAY_DEFAULTS, PROP_KITS, creatureOf, creaturesForBiome, loadoutFor, skillById } from '../src/ssot.js';
-import { allyRaces } from '../src/play/party.js';
+import { ANIM_URLS, CLASS_IDS, CLASS_WEAPON_SETS, COMBAT_DEPLOY, CRAFT_SUITE, DRESSING, DUNGEON_KINDS, DUNGEON_SI, ESTES_CAST_DONOR, HERO_24, KENPACHI_DONOR, MAIN_PANEL, PIRATE_FACES, PLAY, PLAY_DEFAULTS, PREFAB_IDS, PIRATE_LORDS, PROP_KITS, creatureOf, creaturesForBiome, loadoutFor, racesForFaction, skillById } from '../src/ssot.js';
+import { planPirateEncounters } from '../src/play/encounters.js';
+import { allyRaces, resolveAllySlots } from '../src/play/party.js';
 import { flareBossForTheme, flareOf, FLARE_HOST } from '../src/content/flare.js';
 import { CELL_FLAG, damageBarrier, destroyCell, stampCover, firstObstruction, lineOpen } from '../src/grid/cells.js';
 import { createLosField, losOpen } from '../src/play/los.js';
@@ -32,7 +33,8 @@ import { HUD_BINDS_DEFAULT, optimalSlots } from '../src/play/hudLayout.js';
 import { GAP_CLOSE, MELEE_COMBO } from '../src/play/meleeCombo.js';
 import { CLIP_DONOR_NAMES, CLIP_SKIP, CLIP_FALLBACK, classifyClips, resolveClipName, animForSpell, hitWindowSec, stampAnimClip } from '../src/play/clipRoles.js';
 import { BIP001_PLAY, MIXAMO_PACKS, BIP001_DISK, CLIP_READERS, bip001ExtraForWeapon, BIP001_SPEAR } from '../src/play/clipLibrary.js';
-import { classifyId, craftSuiteUrl, mainPanelUrl, playCharacterId } from '../src/play/ids.js';
+import { classifyId, craftSuiteUrl, mainPanelUrl, parseAllySlots, playCharacterId } from '../src/play/ids.js';
+import { stampSpell, telegraphForSkill } from '../src/play/skillApi.js';
 import { COMBAT_ITEMS } from '../src/play/combatItems.js';
 import { canAct, inferCc, makeStatus } from '../src/play/status.js';
 import { playerPrefab } from '../src/play/prefabs.js';
@@ -184,9 +186,38 @@ report.radiantHeal = (skillById('staff_radiant_heal').heal || 0) >= 30;
 report.priestBarHeal = loadoutFor('priest').filter((s) => s.heal > 0).length >= 3;
 report.factionAllies = allyRaces('human').every((id) => id === 'human' || id === 'barbarian')
   && allyRaces('orc').every((id) => id === 'orc' || id === 'undead');
+report.prefabs6 = PREFAB_IDS.length === 6 && PREFAB_IDS.includes('pirate-freeport');
+report.pirateLords = PIRATE_LORDS.length === 3 && PIRATE_LORDS[0].id === 'scourge_faithbearer' && PIRATE_LORDS[2].weaponId === 'bow';
+report.crusadeRaces = JSON.stringify(racesForFaction('Crusade')) === JSON.stringify(['human', 'barbarian']);
+report.pirateKind = !!DUNGEON_KINDS.pirate;
+{
+  const rooms = [
+    { id: 0, type: 'entrance', cx: 0, cy: 0, depth: 0 },
+    { id: 1, type: 'combat', cx: 2, cy: 0, depth: 1 },
+    { id: 2, type: 'event', cx: 4, cy: 0, depth: 2 },
+    { id: 3, type: 'elite', cx: 6, cy: 0, depth: 3 },
+    { id: 4, type: 'combat', cx: 8, cy: 0, depth: 4 },
+    { id: 5, type: 'shrine', cx: 10, cy: 0, depth: 5 },
+    { id: 6, type: 'boss', cx: 12, cy: 0, depth: 6 },
+  ];
+  const edges = [0, 1, 2, 3, 4, 5].map((i) => ({ a: i, b: i + 1 }));
+  const { plan } = planPirateEncounters({ rooms, edges, entrance: 0, boss: 6, params: { kind: 'pirate', themeKey: 'grim' } }, { level: 20 });
+  const ids = plan.map((u) => u.id);
+  report.piratePlan = ids.includes('scourge_faithbearer') && ids.includes('john_wayne')
+    && ids.includes('john-wayne-airship') && ids.includes('racalvin');
+  report.airshipStationary = plan.some((u) => u.id === 'john-wayne-airship' && u.stationary && u.boss);
+}
 report.playDefaults = PLAY_DEFAULTS.rooms === 7 && PLAY_DEFAULTS.kind === 'biome' && PLAY_DEFAULTS.yuka === true;
 report.combatDonor = COMBAT_DEPLOY.clipDonor.includes('combat.grudge-studio.com') && COMBAT_DEPLOY.telegraphWarning.includes('telegraph_warning');
 report.uuidHero = playCharacterId('3f1c2a10-9b4e-4c11-8d22-0a1b2c3d4e5f') === '3f1c2a10-9b4e-4c11-8d22-0a1b2c3d4e5f';
+{
+  const q = new URLSearchParams('allyIds=3f1c2a10-9b4e-4c11-8d22-0a1b2c3d4e5f,,&allyRace=undead,orc,&allyClass=priest,ranger,');
+  const resolved = resolveAllySlots(parseAllySlots(q), 'warrior', 'human');
+  report.allyHandoff = resolved[0].characterId === '3f1c2a10-9b4e-4c11-8d22-0a1b2c3d4e5f'
+    && resolved[0].classId === 'priest'
+    && resolved[1].classId === 'ranger'
+    && resolved[2].classId === 'thief';
+}
 report.uuidRejectAccount = playCharacterId('GRUDGE_ABC') === null && classifyId('GRUDGE_ABC').kind === 'grudgeId';
 report.uuidRejectCode = playCharacterId('GRDG-12-AB') === null && classifyId('GRDG-12-AB').kind === 'grudgeCode';
 const cid = '3f1c2a10-9b4e-4c11-8d22-0a1b2c3d4e5f';
@@ -263,6 +294,24 @@ report.aiVector = readFileSync(new URL('../src/play/yukaSteer.js', import.meta.u
 report.animSlash = animForSpell(swordRoles, { kind: 'slash' }, { comboStage: 0 }) === 'attack';
 report.animCombo = animForSpell(swordRoles, { kind: 'slash' }, { comboStage: 2 }) === 'attack3';
 report.animDash = animForSpell(swordRoles, { kind: 'dash' }) === 'dashAtk';
+report.animBash = animForSpell(swordRoles, { kind: 'nova', anim: 'bash' }) === 'bash';
+report.tauntBash = CLASS_SKILL_0.warrior.anim === 'bash';
+const meteorSpell = stampSpell({ id: 'staff_meteor_strike', name: 'Meteor Strike', kind: 'nova', element: 'fire' });
+report.meteorIncoming = meteorSpell.travel === 'incoming' && telegraphForSkill(meteorSpell).variant === 'incoming';
+const blizzardSpell = stampSpell({ id: 'staff_blizzard', name: 'Blizzard', kind: 'zone', element: 'ice' });
+report.blizzardLinger = blizzardSpell.kind === 'zone' && blizzardSpell.linger >= 4;
+const meteorClass = compileClassSkill({
+  id: 'm_meteor',
+  name: 'Meteor Strike',
+  grantedAbility: { id: 'meteor_strike', name: 'Meteor Strike', type: 'magical', isAoE: true, damage: 3 },
+}, 2);
+report.meteorClass = meteorClass.travel === 'incoming' && meteorClass.kind === 'nova';
+const chainClass = compileClassSkill({
+  id: 'm_chain_lightning',
+  name: 'Chain Lightning',
+  grantedAbility: { id: 'chain_lightning', name: 'Chain Lightning', type: 'magical', isAoE: true, damage: 2.2 },
+}, 3);
+report.chainBeam = chainClass.kind === 'beam' && chainClass.forks === true;
 report.hitWindow = Math.abs(hitWindowSec(1, 0.32) - 0.32) < 1e-6;
 const playSrc = readFileSync(new URL('../src/play/index.js', import.meta.url), 'utf8');
 report.hitQTick = playSrc.includes('this.hitQ.filter') && playSrc.includes('h.fn()');
@@ -295,7 +344,7 @@ const foe = { alive: true, threatTable: new Map(), aggro: 0 };
 applyTaunt(foe, 'player', 0);
 report.tauntHolds = topThreatKey(foe, 0) === 'player' && THREAT.taunt >= 10000;
 report.playLevel = PLAY.level;
-report.tpsIndoor = PLAY.tps.distance >= 2.5 && PLAY.tps.distance <= 8 && PLAY.tps.minDistance < PLAY.tps.distance && PLAY.tps.followLambda >= 8;
+report.tpsIndoor = PLAY.tps.distance >= 2.5 && PLAY.tps.distance <= 14 && PLAY.tps.minDistance < PLAY.tps.distance && PLAY.tps.followLambda >= 8 && PLAY.tps.fov >= 70;
 report.fleetDodge = PLAY.dodge.iframeEnd === 0.34 && PLAY.dodge.doubleTapSec > 0 && PLAY.block.key === 'KeyE' && PLAY.parry.shiftRmb === true;
 report.hudBinds = HUD_BINDS_DEFAULT.w1 === 'Digit1' && HUD_BINDS_DEFAULT.i6 === 'Digit6' && HUD_BINDS_DEFAULT.m8 === 'Digit8' && HUD_BINDS_DEFAULT.c0 === 'KeyF' && HUD_BINDS_DEFAULT.c1 === 'Shift+Digit1' && HUD_BINDS_DEFAULT.c5 === 'Shift+Digit5';
 report.hudOptimal = optimalSlots([{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }, { id: 'ult' }], [{ id: 'c' }]).weapon.length === 5;
@@ -420,7 +469,7 @@ report.gateLocal = resolvePlayUrl('models/props/the-gate.glb') === '/models/prop
 const skillApiSrc = readFileSync(new URL('../src/play/skillApi.js', import.meta.url), 'utf8');
 report.skillApiHealth = skillApiSrc.includes('/api/health') && skillApiSrc.includes('master-weaponSkills.json');
 const linearSrc = readFileSync(new URL('../src/play/linearCast.js', import.meta.url), 'utf8');
-report.linearWave = linearSrc.includes('wave({') && linearSrc.includes('orb-');
+report.linearWave = linearSrc.includes('wave({') && linearSrc.includes('orb-') && linearSrc.includes("type: 'incoming'");
 report.rockCdn = resolvePlayUrl('models/vfx/rocks/magic-rock-1.glb').startsWith('https://assets.grudge-studio.com/models/');
 report.rock3Cdn = resolvePlayUrl('models/vfx/rocks/magic-rock-3.glb').includes('/models/vfx/rocks/magic-rock-3.glb');
 report.noDiskFs = resolvePlayUrl('/@fs/D:/Games/Models/x.glb') === '';
@@ -446,7 +495,7 @@ const stubTree = {
 const clsBar = classLoadoutFor('warrior', stubTree, 20);
 report.classBar = clsBar[0].id === 'w_taunt' && clsBar[0].cd === 15 && clsBar.some((s) => s.combatLab);
 report.labWarcry = clsBar.some((s) => s.id === 'warcry' && s.combatLab);
-report.labSunder = clsBar.some((s) => s.id === 'sunder');
+report.labSunder = clsBar.some((s) => s.id === 'sunder' && s.kind === 'dash' && s.anim === 'dashAtk');
 report.labEffects = (clsBar.find((s) => s.id === 'warcry')?.labEffects || []).length >= 3;
 report.classIconCdn = /^https:\/\/assets\.grudge-studio\.com\//.test(clsBar[1].iconUrl || '');
 report.classCompile = compileClassSkill(stubTree.skillTrees.warrior.tiers[0].skills[1], 1).catalogSkillId === 'life_drain_strike';
@@ -479,7 +528,7 @@ report.combatTel = telSrc.includes('telegraphWarning') && telSrc.includes('comba
 const totSrc = readFileSync(new URL('../src/play/totems.js', import.meta.url), 'utf8');
 report.combatTotem = totSrc.includes('totemFire') && totSrc.includes('makeTotemMesh');
 report.modelCacheHdr = readFileSync(new URL('../vercel.json', import.meta.url), 'utf8').includes('/models/(.*)');
-if (!mech.ok || !report.scriptOk || !report.floorWalkable || !report.voidBlocked || rects.length < 1 || floorY !== DUNGEON_SI.groundY || !report.troll || !report.smash || !report.barrierGone || report.heroes24 !== 24 || report.spiderSeeds < 2 || !report.modularWall || report.smelterVersions !== 5 || !report.carveLava || !report.carveVoid || !report.eventRoom || report.eventPlatforms < 4 || !report.eventSockets || report.platformCols < 2 || !report.puffHeal || !report.puffFire || report.puffKit.length < 6 || report.classSpecs !== 8 || !report.dualWeapons || report.playLevel !== 20 || !report.tpsIndoor || !report.fleetDodge || !report.hudBinds || !report.hudOptimal || !report.comboKnown || !report.gapKnown || !report.statusStun || !report.ccFreeze || !report.slideCtrl || !report.parryStun || !report.f0 || !report.warbear || !report.worgeNotBear || !report.formSi || !report.iguanaHeal || !report.iguanaFaction || !report.verdurorF || !report.thiefF || !report.classCrafts || !report.classItems4 || !report.skillNames || !report.lv20hp || report.dress < 1 || !report.playCarpets || !report.playWallArt || report.playFurniture < 2 || !report.t8Warrior || !report.t8Raider || !report.t8Mage || !report.t8Priest || !report.t8Worge || !report.t8Verduror || !report.t8Claws || !report.t8Bar6 || !report.t8SkillsKnown || !report.t0Wand || !report.t0Sapling || !report.warriorTank || !report.rangerLog || !report.mageWand || !report.worgeForms || !report.lockpickSweet || !report.lockpickOpen || !report.tauntHolds || !report.holyHeal || !report.radiantHeal || !report.priestBarHeal || !report.factionAllies || !report.playDefaults || !report.combatDonor || !report.uuidHero || !report.uuidRejectAccount || !report.uuidRejectCode || !report.uuidPrefab || !report.uuidSkill || !report.uuidIcon || !report.uuidVfx || !report.styFire || !report.styFrost || !report.styArrow || !report.styGun || !report.styLocal || !report.bagClothIcon || !report.itemIconsLabeled || !report.classF0All || !report.classF0Icons || !report.tauntNotArcane || !report.clipDonorCount || !report.clipSword || !report.clipJumpNotWall || !report.clipHitNoAttack || !report.clipParryChain || !report.clipGsLoco || !report.animSlash || !report.animCombo || !report.animDash || !report.hitWindow || !report.hitQTick || !report.parryClip || !report.noFlinchAttack || !report.dungeonKinds || !report.flareBoss || !report.flareIndoor || !report.pack2 || !report.pack3 || !report.pack5 || !report.pack6 || !report.factionBoss18 || report.factionAiPlayers < 8 || !report.canonWarrior || !report.canonMage || !report.canonAlias || !report.canonMesh || !report.orbFire || !report.orbIce || !report.skillApiHealth || !report.linearWave || !report.rockCdn || !report.rock3Cdn || !report.noDiskFs || !report.spiderLocal || !report.prefabT8 || !report.weaponIconCdn || !report.noCraftpixIcon || !report.classBar || !report.classIconCdn || !report.classCompile || !report.fireHasUpdate || !report.fireTickGuarded || !report.noClearOnLoad || !report.noClearOnLobby || !report.noClearEmptyBoss || !report.noClearLivingBoss || !report.endHiddenCss || !report.lobbyCss || !report.corpseTrash || !report.corpseElite || !report.corpseBoss || !report.deathNoCrawl || !report.deathFallback || !report.animDeathUrl || !report.lootE || !report.actorDie || !report.phLoot || !report.dressKaykit || !report.dressNoArchWall || !report.ruinPieces || !report.wallArchitecture || !report.kayRuinUrl || !report.coverPerimeter || !report.wallThick || !report.gateGlb || !report.gateUrl || !report.gateE || !report.phGate || !report.gateLocal || !report.mainPanelHost || !report.mainPanelUuid || !report.craftSuite || !report.meshopt || !report.playNoPost || !report.lodWorld || !report.weaponClips || !report.mixamoDeath || !report.ktx2Bind || !report.optLocal || !report.wallTorchPool || !report.playSkipForgeFx || !report.modelCacheHdr || !report.camWall || !report.smartLock || !report.combatTel || !report.combatTotem || !report.labWarcry || !report.labSunder || !report.labEffects || !report.newMobs || !report.newMobFiles || !report.foxSi || !report.detarSi || !report.alertMark || !report.estesDonor || !report.estesCastRole || !report.animUnique || !report.animLocoPref || !report.animCastPref || !report.bip001Pref || !report.bip001Lib || !report.mixamoCatalog || !report.bip001Disk || !report.rifleExtra || !report.deathJson || !report.staffMagic || !report.gaitMotion || !report.aiVector || !report.ikkakuSpear || !report.kenpachiDonor || !report.fightIdleSword || !report.weaponIk) {
+if (!mech.ok || !report.scriptOk || !report.floorWalkable || !report.voidBlocked || rects.length < 1 || floorY !== DUNGEON_SI.groundY || !report.troll || !report.smash || !report.barrierGone || report.heroes24 !== 24 || report.spiderSeeds < 2 || !report.modularWall || report.smelterVersions !== 5 || !report.carveLava || !report.carveVoid || !report.eventRoom || report.eventPlatforms < 4 || !report.eventSockets || report.platformCols < 2 || !report.puffHeal || !report.puffFire || report.puffKit.length < 6 || report.classSpecs !== 8 || !report.dualWeapons || report.playLevel !== 20 || !report.tpsIndoor || !report.fleetDodge || !report.hudBinds || !report.hudOptimal || !report.comboKnown || !report.gapKnown || !report.statusStun || !report.ccFreeze || !report.slideCtrl || !report.parryStun || !report.f0 || !report.warbear || !report.worgeNotBear || !report.formSi || !report.iguanaHeal || !report.iguanaFaction || !report.verdurorF || !report.thiefF || !report.classCrafts || !report.classItems4 || !report.skillNames || !report.lv20hp || report.dress < 1 || !report.playCarpets || !report.playWallArt || report.playFurniture < 2 || !report.t8Warrior || !report.t8Raider || !report.t8Mage || !report.t8Priest || !report.t8Worge || !report.t8Verduror || !report.t8Claws || !report.t8Bar6 || !report.t8SkillsKnown || !report.t0Wand || !report.t0Sapling || !report.warriorTank || !report.rangerLog || !report.mageWand || !report.worgeForms || !report.lockpickSweet || !report.lockpickOpen || !report.tauntHolds || !report.holyHeal || !report.radiantHeal || !report.priestBarHeal || !report.factionAllies || !report.playDefaults || !report.combatDonor || !report.uuidHero || !report.allyHandoff || !report.prefabs6 || !report.pirateLords || !report.crusadeRaces || !report.pirateKind || !report.piratePlan || !report.airshipStationary || !report.uuidRejectAccount || !report.uuidRejectCode || !report.uuidPrefab || !report.uuidSkill || !report.uuidIcon || !report.uuidVfx || !report.styFire || !report.styFrost || !report.styArrow || !report.styGun || !report.styLocal || !report.bagClothIcon || !report.itemIconsLabeled || !report.classF0All || !report.classF0Icons || !report.tauntNotArcane || !report.clipDonorCount || !report.clipSword || !report.clipJumpNotWall || !report.clipHitNoAttack || !report.clipParryChain || !report.clipGsLoco || !report.animSlash || !report.animCombo || !report.animDash || !report.hitWindow || !report.hitQTick || !report.parryClip || !report.noFlinchAttack || !report.dungeonKinds || !report.flareBoss || !report.flareIndoor || !report.pack2 || !report.pack3 || !report.pack5 || !report.pack6 || !report.factionBoss18 || report.factionAiPlayers < 8 || !report.canonWarrior || !report.canonMage || !report.canonAlias || !report.canonMesh || !report.orbFire || !report.orbIce || !report.skillApiHealth || !report.linearWave || !report.rockCdn || !report.rock3Cdn || !report.noDiskFs || !report.spiderLocal || !report.prefabT8 || !report.weaponIconCdn || !report.noCraftpixIcon || !report.classBar || !report.classIconCdn || !report.classCompile || !report.fireHasUpdate || !report.fireTickGuarded || !report.noClearOnLoad || !report.noClearOnLobby || !report.noClearEmptyBoss || !report.noClearLivingBoss || !report.endHiddenCss || !report.lobbyCss || !report.corpseTrash || !report.corpseElite || !report.corpseBoss || !report.deathNoCrawl || !report.deathFallback || !report.animDeathUrl || !report.lootE || !report.actorDie || !report.phLoot || !report.dressKaykit || !report.dressNoArchWall || !report.ruinPieces || !report.wallArchitecture || !report.kayRuinUrl || !report.coverPerimeter || !report.wallThick || !report.gateGlb || !report.gateUrl || !report.gateE || !report.phGate || !report.gateLocal || !report.mainPanelHost || !report.mainPanelUuid || !report.craftSuite || !report.meshopt || !report.playNoPost || !report.lodWorld || !report.weaponClips || !report.mixamoDeath || !report.ktx2Bind || !report.optLocal || !report.wallTorchPool || !report.playSkipForgeFx || !report.modelCacheHdr || !report.camWall || !report.smartLock || !report.combatTel || !report.combatTotem || !report.labWarcry || !report.labSunder || !report.labEffects || !report.newMobs || !report.newMobFiles || !report.foxSi || !report.detarSi || !report.alertMark || !report.estesDonor || !report.estesCastRole || !report.animUnique || !report.animLocoPref || !report.animCastPref || !report.bip001Pref || !report.bip001Lib || !report.mixamoCatalog || !report.bip001Disk || !report.rifleExtra || !report.deathJson || !report.staffMagic || !report.gaitMotion || !report.aiVector || !report.ikkakuSpear || !report.kenpachiDonor || !report.fightIdleSword || !report.weaponIk) {
   console.error('SMOKE FAIL', report);
   process.exit(1);
 }
