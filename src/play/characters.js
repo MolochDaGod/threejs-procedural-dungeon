@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { ANIM_URLS, CLIP_DONOR, ESTES_CAST_DONOR, PLAY, RACES, ROLE_KITS, WEAPON_KITS, WORGE_WEAPONS, raceCharacterUrl, weaponClipPack } from '../ssot.js';
+import { BIP001_PLAY } from './clipLibrary.js';
 import { loadGltf } from './assets.js';
 import { plantFeet } from '../terrain/footPlant.js';
 import {
@@ -536,7 +537,7 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
       take(c, { forceName, source });
     }
   };
-  const tryJson = async (url, forceName) => {
+  const tryJson = async (url, forceName, source = 'json') => {
     let json = gatherClips._json.get(url);
     if (!json) {
       const r = await fetch(url);
@@ -546,8 +547,11 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
     }
     const clip = THREE.AnimationClip.parse(json);
     if (!clip?.tracks?.length) return;
-    take(clip, { forceName, source: 'json' });
+    take(clip, { forceName, source });
   };
+  await Promise.all(BIP001_PLAY.map(async (row) => {
+    try { await tryJson(row.url, row.stem, 'bip001'); } catch { /* pack miss */ }
+  }));
   try {
     await tryUrl(CLIP_DONOR, null, 'donor');
   } catch {

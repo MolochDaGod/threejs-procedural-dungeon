@@ -46,6 +46,7 @@ export const SHOT_KEYS = [
   'dodge', 'evade', 'flip', 'slide', 'slideExit', 'jump',
   'block', 'parry', 'bash', 'uppercut',
   'hit', 'stun', 'death', 'interact', 'plant',
+  'climb', 'climb_down', 'climb_top', 'swim', 'treading', 'wall_run',
 ];
 
 /**
@@ -89,7 +90,7 @@ export const CLIP_FALLBACK = {
 export function clipStem(name) {
   const raw = String(name || '');
   const part = raw.split('|').pop().trim();
-  const stripped = part.replace(/^(donor|estes|native|json|death)__/i, '');
+  const stripped = part.replace(/^(donor|estes|native|json|death|bip001|mixamo)__/i, '');
   return stripped.replace(/^mixamorig:?/i, '').replace(/[\s-]+/g, '_');
 }
 
@@ -115,10 +116,10 @@ export function stampAnimClip(clip, source, rawName) {
   return clip;
 }
 
-const SRC_LOCO = ['native', 'donor', 'json', 'estes'];
-const SRC_CAST = ['estes', 'json', 'donor', 'native'];
-const SRC_MELEE = ['donor', 'native', 'estes', 'json'];
-const SRC_DEATH = ['native', 'estes', 'death', 'donor', 'json'];
+const SRC_LOCO = ['native', 'bip001', 'donor', 'mixamo', 'json', 'estes'];
+const SRC_CAST = ['bip001', 'estes', 'json', 'donor', 'mixamo', 'native'];
+const SRC_MELEE = ['donor', 'bip001', 'native', 'estes', 'json', 'mixamo'];
+const SRC_DEATH = ['native', 'bip001', 'estes', 'death', 'donor', 'json'];
 
 function namedGet(named, ...keys) {
   for (const k of keys) {
@@ -211,6 +212,8 @@ export function classifyClips(clips, weaponId = '') {
     || (mag ? (out.attack) : out.attack);
   out.stun = pick(['stun', 'verigo'], SRC_CAST);
   out.death = pick(['death', 'dead', 'die'], SRC_DEATH);
+  out.climb = pick(['climb', 'climbing', 'up'], SRC_LOCO);
+  out.swim = pick(['swim', 'swimming'], SRC_LOCO);
   out.shoot = exact('shoot', 'standing_draw_arrow', 'draw_arrow') || (bow ? (exact('attack') || out.attack) : out.cast);
   if (bow && !exact('cast')) out.cast = out.shoot;
 
