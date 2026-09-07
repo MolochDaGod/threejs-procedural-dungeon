@@ -49,9 +49,23 @@ export const BIP001_RIFLE = [
   { url: `${B}/rifle/death-from-front-headshot.json`, stem: 'death' },
 ];
 
+/** Extra magic casters (Estes already on every spawn). Staff / tome / wand. */
+export const BIP001_MAGIC_STAFF = [
+  { url: `${B}/magic/eudora_attack1.json`, stem: 'attack1' },
+  { url: `${B}/magic/eudora_attack2.json`, stem: 'attack2' },
+  { url: `${B}/magic/rafaela_skill1.json`, stem: 'skill1' },
+  { url: `${B}/magic/rafaela_skill2.json`, stem: 'skill2' },
+  { url: `${B}/magic/rafaela_skill3.json`, stem: 'skill3' },
+  { url: `${B}/magic/rafaela_attack1.json`, stem: 'attack1' },
+  { url: `${B}/magic/gojo_skill1.json`, stem: 'skill1' },
+  { url: `${B}/magic/gojo_skill2.json`, stem: 'skill2' },
+  { url: `${B}/magic/ace_attack.json`, stem: 'attack1' },
+];
+
 export function bip001ExtraForWeapon(weaponId) {
   const w = String(weaponId || '');
   if (/rifle|musket|carbine|shotgun/.test(w)) return BIP001_RIFLE;
+  if (/staff|wand|tome|magic/.test(w)) return BIP001_MAGIC_STAFF;
   return [];
 }
 
