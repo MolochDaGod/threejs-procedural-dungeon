@@ -249,6 +249,7 @@ export class PlaySession {
             raceId: this.raceId, classId: this.classId, weaponId: this.weaponId,
             level: this.sheet?.level, sheet: this.sheet, bag: this.bag,
             classState: this.classState, trees: this._trees, vial: this.vial,
+            characterId: this.characterId,
           });
           panel.hidden = !panel.hidden;
           panel.classList.toggle('open', !panel.hidden);

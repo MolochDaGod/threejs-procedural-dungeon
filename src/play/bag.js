@@ -1,7 +1,8 @@
 /**
  * Session dungeon bag. Production ownership is Railway account bag
- * (grudge-production-wiring). This is crawl yield only — not a second DB.
- * Unique gear is never minted here (no client grudge_uuid).
+ * (grudge-production-wiring) via grudgewarlords.com/craft/ — not this map.
+ * Character sheet: info.grudge-studio.com/main-panel.html
+ * This is crawl yield only — not a second DB. Unique gear is never minted here.
  */
 import { resolveSkillIcon, ICONS_CDN } from './skillIcons.js';
 

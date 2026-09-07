@@ -14,6 +14,10 @@ export const CDN = 'https://assets.grudge-studio.com';
 export const COMBAT = 'https://combat.grudge-studio.com';
 /** ObjectStore combat math + class/race SSOT. */
 export const INFO = 'https://info.grudge-studio.com';
+/** Canonical character info (ObjectStore 2D main panel). Do not fork a dungeon paperdoll. */
+export const MAIN_PANEL = `${INFO}/main-panel.html`;
+/** Canonical craft suite — Railway account bag + character XP. Pop-out only (no iframe). */
+export const CRAFT_SUITE = 'https://grudgewarlords.com/craft/';
 export const TOON_RTS = `${CDN}/asset-packs/toon-rts-characters`;
 /** Fleet catalog — same file DungeonInstanceSystem loads. */
 export const DUNGEON_KIT_URL = `${CDN}/models/dungeons/warlords-dungeon-kit.json`;

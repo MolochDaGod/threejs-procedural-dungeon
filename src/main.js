@@ -31,7 +31,7 @@ import { loadInteriorKits, plantCoverKits, plantRoomScenes, plantWallTorches, pl
 import { DungeonGates } from './props/gates.js';
 import { applyBiomeLook } from './props/saharaKit.js';
 import { InstancedFire, gridFireCells } from './vfx/instancedFire.js';
-import { playCharacterId } from './play/ids.js';
+import { craftSuiteUrl, mainPanelUrl, playCharacterId } from './play/ids.js';
 
 /* ================================================================
    DUNGEON FORGE — procedural dungeon generator core + showcase
@@ -2275,10 +2275,22 @@ document.getElementById('btnEquip')?.addEventListener('click', async () => {
     weaponId: weaponSel,
     level: PLAY.level,
     sheet: play.sheet,
+    bag: play.bag,
+    characterId: playHandoff.characterId,
   });
   panel.hidden = !panel.hidden;
   panel.classList.toggle('open', !panel.hidden);
 });
+function openFleetHandoff(kind) {
+  const here = location.href;
+  const cid = playHandoff.characterId;
+  const href = kind === 'craft'
+    ? craftSuiteUrl({ characterId: cid, from: 'dungeon', returnTo: here })
+    : mainPanelUrl({ characterId: cid, from: 'dungeon', returnTo: here });
+  window.open(href, '_blank', 'noopener');
+}
+document.getElementById('btnMainPanel')?.addEventListener('click', () => openFleetHandoff('panel'));
+document.getElementById('btnCraft')?.addEventListener('click', () => openFleetHandoff('craft'));
 (function mountPirates(){
   const row = document.getElementById('pirateFaces');
   if (!row) return;

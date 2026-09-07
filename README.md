@@ -46,7 +46,7 @@ Honest vs shipped. Green = live on `grudge-dungeons.vercel.app`. Yellow = wired 
 | Corpse loot | Green | stand on body · **E** loot popup → session bag (`BAG_DEFS` only) |
 | Interior dress | Green | KayKit barrel/crate/ruin on **room walls**; full wall meshes are architecture-only (not mid-hall cover) |
 | Warbear / iguana forms | Yellow | Casting warbear URL + local iguana albedos; not Railway `formSkin` |
-| Account bag / character UUID handoff | Red | crawl bag is session yield only |
+| Account bag / character UUID handoff | Green | CHARACTER → `info.grudge-studio.com/main-panel.html` · CRAFT → `grudgewarlords.com/craft/?era=warlords&from=&returnTo=` · crawl bag stays session yield |
 
 ---
 

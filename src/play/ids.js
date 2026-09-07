@@ -1,8 +1,21 @@
 /**
  * Fleet id law (grudge-production-wiring) — classify only, no second DB.
  * Account GRUDGE_… ≠ hero GRDG-… ≠ characters.id UUID ≠ catalog ITEM-… ≠ session ent_
+ * Character UI = info.grudge-studio.com/main-panel.html
+ * Craft UI = grudgewarlords.com/craft/  (era + from + returnTo + UUID)
  */
+import { CRAFT_SUITE, MAIN_PANEL, PLAY_DEFAULTS } from '../ssot.js';
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const TOKEN_KEYS = [
+  'grudge.open.token',
+  'grudge_auth_token',
+  'grudge_session_token',
+  'grudge.token',
+  'sso_token',
+  'grudge_token',
+];
 
 export function classifyId(raw) {
   const s = String(raw || '').trim();
@@ -28,4 +41,52 @@ export function playCharacterId(raw) {
 
 export function isCatalogPrefabId(raw) {
   return classifyId(raw).kind === 'catalogPrefab';
+}
+
+function readFleetToken() {
+  try {
+    for (const k of TOKEN_KEYS) {
+      const v = localStorage.getItem(k);
+      if (v) return v;
+    }
+  } catch { /* node / guest */ }
+  return '';
+}
+
+function withHandoff(base, {
+  era = PLAY_DEFAULTS.era,
+  from = 'dungeon',
+  characterId = '',
+  returnTo = '',
+  embed = false,
+  auth = false,
+} = {}) {
+  const u = new URL(base);
+  u.searchParams.set('era', era || 'warlords');
+  if (from) u.searchParams.set('from', from);
+  const cid = playCharacterId(characterId);
+  if (cid) u.searchParams.set('characterId', cid);
+  if (returnTo) u.searchParams.set('returnTo', returnTo);
+  if (embed) u.searchParams.set('embed', '1');
+  if (auth) {
+    const token = readFleetToken();
+    if (token) {
+      u.searchParams.set('sso_token', token);
+      u.searchParams.set('grudge_token', token);
+    }
+  }
+  return u.toString();
+}
+
+/** Canonical character info. Same host as ObjectStore main-panel.html. */
+export function mainPanelUrl(opts = {}) {
+  return withHandoff(MAIN_PANEL, { from: 'dungeon', ...opts, embed: false, auth: false });
+}
+
+/**
+ * Canonical craft suite. Query law matches info main-panel pop-out:
+ * era=warlords&from=&returnTo=&characterId=UUID
+ */
+export function craftSuiteUrl(opts = {}) {
+  return withHandoff(CRAFT_SUITE, { from: 'dungeon', auth: true, ...opts });
 }

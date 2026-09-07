@@ -1,5 +1,6 @@
 import { loadoutFor, weaponsForClass, WEAPON_LABEL } from './weaponSkills.js';
 import { CLASS_IDS, CLASSES, PLAY, ROLE_KITS, portraitFallback, portraitUrl } from '../ssot.js';
+import { craftSuiteUrl, mainPanelUrl, playCharacterId } from './ids.js';
 import { CRAFTPIX_SLOT_BG, CRAFTPIX_SLOT_BORDER, resolveSkillIcon } from './skillIcons.js';
 import { T8_CLASS_SETS, starterForClass } from './t0ClassSets.js';
 import { classItemFor, RANGER_LOG, THIEF_SATCHEL } from './classItems.js';
@@ -29,7 +30,7 @@ function treeHtml(classId, trees, classState, vial) {
     ? `<p class="eq-wep">Battle Forms · ${classState?.form || ''} · R cycles</p>`
     : relic?.twoHand ? `<p class="eq-wep">Two-Hand · block can auto-parry</p>` : '';
   const crafts = craftsForClass(classId).map((c) => c.name).join(' · ');
-  const craftLine = crafts ? `<p class="eq-wep">Unique craft · ${crafts} (hold R · offer in bag)</p>` : '';
+  const craftLine = crafts ? `<p class="eq-wep">Crawl tools · ${crafts} (hold R). Account recipes on CRAFT suite.</p>` : '';
   const vialLine = vial ? `<p class="eq-wep">Tonic vial · ${vial.id} · ${Math.round(vial.charge || 0)}/${vial.max || 100} (fills in combat)</p>` : '';
   const trinket = `<p class="eq-wep">Trinket (WoW relic slot) · ${classState?.trinketId || 'empty'}</p>`;
   return `<header class="eq-bag-h">CLASS ITEM · ${relic?.name || classId}${f0 ? ` · F ${f0.name}` : ''}</header>${forms}${wand}${log || ''}${satchel || ''}${craftLine}${vialLine}${trinket}${tiers || '<p class="eq-wep">Tree loads with crawl</p>'}`;
@@ -513,11 +514,15 @@ export function showEnd(win, text, opts = {}) {
   }
 }
 
-export function fillEquipPanel({ raceId = 'human', classId = 'worge', weaponId, level = PLAY.level, sheet, bag = {}, classState, trees, vial } = {}) {
+export function fillEquipPanel({ raceId = 'human', classId = 'worge', weaponId, level = PLAY.level, sheet, bag = {}, classState, trees, vial, characterId = null } = {}) {
   const body = document.getElementById('equip-body');
   if (!body) return;
   const kit = ROLE_KITS[classId] || ROLE_KITS.warrior;
   const sets = weaponsForClass(classId);
+  const here = typeof location !== 'undefined' ? location.href : 'https://grudge-dungeons.vercel.app/';
+  const cid = playCharacterId(characterId);
+  const panelHref = mainPanelUrl({ characterId: cid, from: 'dungeon', returnTo: here });
+  const craftHref = craftSuiteUrl({ characterId: cid, from: 'dungeon', returnTo: here });
   const rows = CLASS_IDS.map((id) => {
     const k = ROLE_KITS[id] || ROLE_KITS.warrior;
     const ws = (T8_CLASS_SETS[id] || []).map((s) => s.name || WEAPON_LABEL[s.id] || s.id).join(' · ');
@@ -526,9 +531,13 @@ export function fillEquipPanel({ raceId = 'human', classId = 'worge', weaponId, 
   }).join('');
   const slots = bagSlots(bag).map((s) => `
     <div class="eq-loot"><img src="${s.icon || '/ui/craftpix/icons/tome.png'}" alt="" width="28" height="28" /><b>${s.label}</b><span>×${s.n}</span></div>
-  `).join('') || '<p class="eq-wep">Bag empty · break tables, barrels, walls (F / skills)</p>';
+  `).join('') || '<p class="eq-wep">Crawl bag empty · break tables, barrels, walls (F / skills)</p>';
   body.innerHTML = `
-    <p class="eq-hero">${String(raceId).toUpperCase()} · ${(CLASSES[classId]?.label || classId).toUpperCase()} · Lv ${level}</p>
+    <nav class="eq-fleet">
+      <a href="${panelHref}" target="_blank" rel="noopener">CHARACTER · main panel</a>
+      <a href="${craftHref}" target="_blank" rel="noopener">CRAFT · account bag</a>
+    </nav>
+    <p class="eq-hero">${String(raceId).toUpperCase()} · ${(CLASSES[classId]?.label || classId).toUpperCase()} · Lv ${level}${cid ? ` · ${cid.slice(0, 8)}` : ''}</p>
     <p class="eq-stat">HP ${sheet?.hpMax ?? '—'} · MP ${sheet?.manaMax ?? '—'} · AR ${sheet?.armor ?? kit.body}</p>
     <p class="eq-slot">BODY ${kit.body} · ARMS ${kit.arms} · LEGS ${kit.legs} · HEAD ${kit.head} · SHOULDERS ${kit.shoulders}</p>
     <p class="eq-wep">T8 ${ (T8_CLASS_SETS[classId] || []).map((s) => s.name || s.id).join('  /  ')} · armed ${WEAPON_LABEL[weaponId] || weaponId || sets[0]} · Q swap</p>
@@ -536,7 +545,8 @@ export function fillEquipPanel({ raceId = 'human', classId = 'worge', weaponId, 
     <p class="eq-wep">F ${classSkill0(classId)?.name || '—'} · item ${classItemFor(classId)?.name || '—'} · R tap / hold R</p>
     <div class="eq-tree">${treeHtml(classId, trees, classState, vial)}</div>
     <div class="eq-all">${rows}</div>
-    <header class="eq-bag-h">BAG · session yield</header>
+    <header class="eq-bag-h">BAG · crawl yield</header>
+    <p class="eq-wep">Account bag + stations live on the craft suite. This list is crawl loot only.</p>
     <div class="eq-bag">${slots}</div>
   `;
 }

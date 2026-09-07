@@ -1,6 +1,7 @@
 /**
- * Unique class-made goods. Session bag until Railway account bag.
- * Maker can offer/trade; refill rules stay on warrior/raider.
+ * Unique class-made goods. Session bag until Railway account bag
+ * (grudgewarlords.com/craft/). Maker can offer/trade in-crawl; refill rules stay
+ * on warrior/raider. Do not invent a second recipe DB.
  */
 import { ICONS_CDN } from './skillIcons.js';
 
