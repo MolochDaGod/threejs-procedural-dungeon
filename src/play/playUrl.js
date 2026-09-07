@@ -1,7 +1,7 @@
 /** Binary URL SSOT — VFX/kit on CDN; SPA-shipped creatures/forms/props stay same-origin. */
 import { CDN } from '../ssot.js';
 
-const LOCAL_MODELS = /^models\/(creatures|forms|props|vfx\/stylized-projectiles|opt)\//;
+const LOCAL_MODELS = /^models\/(creatures|forms|props|vfx\/stylized-projectiles|opt|anims)\//;
 
 export function resolvePlayUrl(url) {
   if (!url) return url;

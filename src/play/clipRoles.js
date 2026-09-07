@@ -56,7 +56,7 @@ export const CLIP_FALLBACK = {
   attack: ['attack', 'attack2'],
   attack2: ['attack2', 'attack'],
   attack3: ['attack3', 'attack2', 'attack'],
-  cast: ['cast', 'attack'],
+  cast: ['cast', 'skill1', 'attack1', 'attack'],
   shoot: ['shoot', 'cast', 'attack'],
   dashAtk: ['dashAtk', 'jumpAtk', 'attack'],
   jumpAtk: ['jumpAtk', 'dashAtk', 'attack'],
@@ -67,11 +67,11 @@ export const CLIP_FALLBACK = {
   bash: ['bash', 'parry', 'attack'],
   block: ['block', 'parry'],
   hit: ['hit', 'stun'],
-  stun: ['stun', 'hit', 'crouch'],
+  stun: ['stun', 'verigo', 'hit', 'crouch'],
   jump: ['jump', 'flip'],
   slide: ['slide', 'dodge'],
   slideExit: ['slideExit'],
-  death: ['death'],
+  death: ['death', 'dead', 'die'],
   interact: ['interact', 'plant', 'cast'],
   plant: ['plant', 'interact'],
   uppercut: ['uppercut', 'attack'],
@@ -160,9 +160,11 @@ export function classifyClips(clips, weaponId = '') {
   out.attack = unarmed
     ? (exact('unarmed_uppercut') || exact('sword_attack_a', 'attack'))
     : exact('sword_attack_a', 'attack', 'attack01', 'attack_1', 'commonattack', 'strike_1');
-  out.attack2 = exact('sword_attack_c', 'attack_2', 'attack02', 'attack_3') || out.attack;
-  out.attack3 = exact('sword_combo_finisher', 'skill_1') || out.attack2;
-  out.cast = exact('cast', 'standing_1h_cast_spell_01', 'use_magic', 'use_skill', 'skill_ready', 'skill_1') || (mag ? (exact('attack') || out.attack) : out.attack);
+  out.attack2 = exact('sword_attack_c', 'attack_2', 'attack02', 'attack_3', 'skill2', 'attack2') || out.attack;
+  out.attack3 = exact('sword_combo_finisher', 'skill3', 'skill_1') || out.attack2;
+  out.cast = exact('cast', 'skill1', 'attack1', 'standing_1h_cast_spell_01', 'use_magic', 'use_skill', 'skill_ready', 'skill_1') || (mag ? (exact('attack') || out.attack) : out.attack);
+  out.stun = exact('stun', 'verigo');
+  out.death = exact('death', 'dead', 'die');
   out.shoot = exact('shoot', 'standing_draw_arrow', 'draw_arrow') || (bow ? (exact('attack') || out.attack) : out.cast);
   if (bow && !exact('cast')) out.cast = out.shoot;
 
@@ -195,6 +197,12 @@ export function resolveClipName(clips, name) {
 
 export function animForSpell(clips, spell, { comboStage = 0, sprint = false } = {}) {
   const kind = spell?.kind || '';
+  if (spell?.classSkill && spell.combatLab) {
+    const slot = Number(spell.slot) || 0;
+    if (slot >= 3 && clips?.attack3) return 'attack3';
+    if (slot >= 2 && clips?.attack2) return 'attack2';
+    return resolveClipName(clips, 'cast') || 'cast';
+  }
   const slashy = kind === 'slash' || kind === 'dash' || spell?.anim === 'attack';
   if (slashy) {
     if (sprint && clips?.jumpAtk && kind === 'slash') return resolveClipName(clips, 'jumpAtk') || 'attack';

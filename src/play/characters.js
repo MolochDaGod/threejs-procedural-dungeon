@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
-import { ANIM_URLS, CLIP_DONOR, PLAY, RACES, ROLE_KITS, WEAPON_KITS, WORGE_WEAPONS, raceCharacterUrl, weaponClipPack } from '../ssot.js';
+import { ANIM_URLS, CLIP_DONOR, ESTES_CAST_DONOR, PLAY, RACES, ROLE_KITS, WEAPON_KITS, WORGE_WEAPONS, raceCharacterUrl, weaponClipPack } from '../ssot.js';
 import { loadGltf } from './assets.js';
 import { plantFeet } from '../terrain/footPlant.js';
 import {
@@ -240,7 +240,8 @@ function findAnimRoot(root) {
 }
 
 function boneKey(name) {
-  return String(name || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const stem = String(name || '').replace(/_\d+$/, '');
+  return stem.replace(/[^a-z0-9]/gi, '').toLowerCase();
 }
 
 /** Mixamo clip stems → Bip001 (alphanumeric). anim_death.glb is Mixamo. */
@@ -558,6 +559,17 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
     await tryUrl(CLIP_DONOR);
   } catch {
     /* donor optional */
+  }
+  try {
+    const g = await loadGltf(ESTES_CAST_DONOR);
+    for (const c of g.animations || []) {
+      if (!c.tracks?.length) continue;
+      const stem = clipStem(c.name).toLowerCase();
+      if (stem === 'run' || stem === 'fight_idle') continue;
+      take(c);
+    }
+  } catch {
+    /* estes optional */
   }
   await Promise.all(Object.entries(ANIM_URLS).map(async ([key, url]) => {
     try { await tryUrl(url, key); } catch { /* optional death/idle fill */ }

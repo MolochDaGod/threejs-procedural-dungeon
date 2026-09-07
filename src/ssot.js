@@ -44,6 +44,8 @@ export function raceCharacterUrl(raceId) {
  * anim_*.glb translation tracks; those crush the race rest pose.
  */
 export const CLIP_DONOR = `${COMBAT}/models/toon-clips/wk-knight.glb`;
+/** Estes 2016 Bip001 cast/skill donor — rotation rematch only, not a play mesh. */
+export const ESTES_CAST_DONOR = '/models/anims/estes-cast.glb';
 
 /** Fallback single-clip GLBs if the combat donor is unreachable. */
 export const ANIM_URLS = {
