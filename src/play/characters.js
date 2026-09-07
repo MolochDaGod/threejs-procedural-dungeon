@@ -366,6 +366,8 @@ export class Actor {
     this.actions = {};
     this.loco = {};
     this.gait = 'idle';
+    this.skeletonId = 'Bip001';
+    this.clipLibrary = 'bip001';
     this.gaitW = Object.fromEntries(LOCO_KEYS.map((k) => [k, k === 'idle' ? 1 : 0]));
     this.busy = 0;
     this.moveLock = 0;
@@ -481,6 +483,40 @@ export class Actor {
     this.gait = next;
     for (const key of LOCO_KEYS) {
       if (this.clips[key]) this._locoAction(key);
+    }
+  }
+
+  /**
+   * Controller / AI vector → gait blend. One Bip001 mixer.
+   * vx/vz world m/s; lookYaw body facing (rad).
+   */
+  setMotion({
+    vx = 0,
+    vz = 0,
+    lookYaw = 0,
+    sprint = false,
+    sneak = false,
+    downed = false,
+    airborne = false,
+    walkSpeed = 3.4,
+  } = {}) {
+    if (!this.alive || this.dead) return;
+    const mag = Math.hypot(vx, vz);
+    const moving = mag > 0.12 && !airborne;
+    const fwdX = Math.sin(lookYaw);
+    const fwdZ = Math.cos(lookYaw);
+    const lat = vx * fwdZ + vz * (-fwdX);
+    const fwd = vx * fwdX + vz * fwdZ;
+    let strafe = null;
+    if (moving && !downed && Math.abs(lat) > 0.62 * mag && Math.abs(fwd) < 0.58 * mag) {
+      strafe = lat < 0 ? 'left' : 'right';
+    }
+    this.setGait(moving, !!(sprint && moving), { downed, sneak, strafe });
+    const act = this.loco[this.gait];
+    if (act) {
+      act.timeScale = moving && walkSpeed > 0.1
+        ? THREE.MathUtils.clamp(mag / walkSpeed, 0.7, 1.4)
+        : 1;
     }
   }
 

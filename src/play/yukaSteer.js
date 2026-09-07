@@ -77,6 +77,11 @@ export function steerEnemy(session, e, dt) {
   v.position.set(e.pos.x, 0, e.pos.z);
   if (see) {
     e.actor.root.rotation.y = Math.atan2(session.pos.x - e.pos.x, session.pos.z - e.pos.z);
+  } else {
+    const vel = v.velocity;
+    if (vel && (vel.x * vel.x + vel.z * vel.z) > 0.02) {
+      e.actor.root.rotation.y = Math.atan2(vel.x, vel.z);
+    }
   }
   return see;
 }

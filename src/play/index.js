@@ -3,17 +3,17 @@
  * Entrance → combat/elite rooms → boss. 6-slot pre-match loadout. Linear casts.
  */
 import * as THREE from 'three';
-import { AGGRO, CLASS_IDS, CLASSES, PLAY, PLAY_DEFAULTS, RACES, loadoutFor, spellById, weaponsForClass, WEAPON_LABEL } from '../ssot.js';
+import { AGGRO, CLASS_IDS, CLASSES, COMBAT_DEPLOY, PLAY, PLAY_DEFAULTS, RACES, loadoutFor, spellById, weaponsForClass, WEAPON_LABEL } from '../ssot.js';
 import { skillById } from './weaponSkills.js';
 import { incomingScale, outgoingScale, passiveFor } from './passives.js';
-import { coverSpotNear, lineOpen, firstObstruction, damageBarrier } from '../grid/cells.js';
+import { coverSpotNear, lineOpen, firstObstruction, damageBarrier, CELL_FLAG, hasFlag } from '../grid/cells.js';
 import { allyRaces, makeAlly, otherClasses, tickAlly } from './party.js';
 import { prefabFor, playerPrefab } from './prefabs.js';
 import { planEncounters } from './encounters.js';
 import { nerfSheet, tickFactionUnit } from './factionPacks.js';
 import { playSfx } from './audio.js';
 import { hydrateSkillApi, stampSpell, telegraphForSkill } from './skillApi.js';
-import { worldOf, cellOf, walkableWorld } from '../gen/cells.js';
+import { worldOf, cellOf, walkableWorld, CELL_M } from '../gen/cells.js';
 import {
   bindScript, tickScript, gateBlocks, livingInRoom, completionPayload, warlordsReturnUrl,
 } from './scriptRuntime.js';
@@ -737,18 +737,15 @@ export class PlaySession {
         this.player.root.rotation.y = cur + d * (1 - Math.exp(-14 * dt));
       }
       if (this.dodgeT <= 0) {
-        let strafe = null;
-        if (moving && !this.downed && this.aim.lengthSq() > 0) {
-          const rightX = this.aim.z;
-          const rightZ = -this.aim.x;
-          const lat = fx * rightX + fz * rightZ;
-          const fwd = fx * this.aim.x + fz * this.aim.z;
-          if (Math.abs(lat) > 0.65 && Math.abs(fwd) < 0.55) strafe = lat < 0 ? 'left' : 'right';
-        }
-        this.player.setGait(moving, this.downed ? false : sprint, {
-          downed: this.downed,
+        this.player.setMotion({
+          vx: this.vel.x,
+          vz: this.vel.z,
+          lookYaw: this.player.root.rotation.y,
+          sprint: this.downed ? false : sprint,
           sneak: !!(this.classId === 'thief' && this.classState?.hidden),
-          strafe,
+          downed: this.downed,
+          airborne: this._air,
+          walkSpeed: speed,
         });
         this._syncFormGait(moving, this.downed ? false : sprint);
       }
@@ -2382,11 +2379,11 @@ export class PlaySession {
       }
       const p = e.pos.clone().setY(1.1);
       if (spell.labEffects?.length) this.applyLabEffects(spell, p, 'hit');
-      else if (spell.element === 'fire') this.vfx.fire({ origin: p, color: spell.color, duration: 'small' });
+      else if (spell.element === 'fire') this.vfx.explosion({ origin: p, color: spell.color, radius: 1.5 });
       else if (spell.element === 'ice' || spell.element === 'frost') this.vfx.mist({ origin: p, color: spell.color, radius: 1.2, life: 1.0 });
       else if (spell.element === 'holy' || spell.element === 'nature') this.vfx.mist({ origin: p, color: spell.color, radius: 1.15, life: 0.9 });
       else this.vfx.smoke({ origin: p, color: spell.color, life: 0.65 });
-      if (!spell.labEffects?.length) this.vfx.impact({ origin: p, color: spell.color });
+      if (!spell.labEffects?.length && spell.element !== 'fire') this.vfx.impact({ origin: p, color: spell.color });
     };
 
     if (spell.kind === 'slash') {
@@ -2414,7 +2411,7 @@ export class PlaySession {
           const bolt = this.linear.line({
             origin, dir, color: spell.color, range: spell.range,
             speed: spell.speed || 20, forks: !!spell.forks, onHit,
-            meshPath: spell.meshPath || null,
+            meshPath: spell.meshPath || (spell.element === 'fire' ? COMBAT_DEPLOY.fireOrb : null),
             shader: elementShader(spell.element),
             overlay: spell.overlay || null,
           });
@@ -2432,7 +2429,7 @@ export class PlaySession {
       const bolt = this.linear.line({
         origin, dir, color: spell.color, range: spell.range,
         speed: 38, width: 0.22, forks: spell.forks || spell.linear === 'thunder', onHit,
-        meshPath: spell.meshPath || null,
+        meshPath: spell.meshPath || (spell.element === 'fire' ? COMBAT_DEPLOY.fireOrb : null),
         shader: elementShader(spell.element),
         overlay: spell.overlay || null,
       });
@@ -2456,6 +2453,9 @@ export class PlaySession {
       const cloudAt = this.pos.clone().setY(0.75);
       if (spell.element === 'holy' || spell.element === 'nature') {
         this.vfx.mist({ origin: cloudAt, color: spell.color, radius: spell.range, life: 2.2 });
+      } else if (spell.element === 'fire') {
+        this.vfx.tornado({ origin: this.pos.clone().setY(0), color: spell.color, height: 2.8, ttl: 1.6 });
+        this.vfx.cloud({ origin: cloudAt, color: spell.color, radius: spell.range, life: 2.2 });
       } else {
         this.vfx.cloud({ origin: cloudAt, color: spell.color, radius: spell.range, life: 2.8 });
       }
@@ -2586,6 +2586,7 @@ export class PlaySession {
   applyLabEffects(spell, origin, phase = 'cast') {
     const list = spell?.labEffects;
     if (!list?.length || !origin) return;
+    let tornadoed = false;
     for (const e of list) {
       const col = parseFxColor(e.color, spell.color);
       const life = e.duration || 0.5;
@@ -2593,11 +2594,26 @@ export class PlaySession {
       p.y = (origin.y || 0) + (e.attach === 'feet' ? 0.08 : 0.2);
       if (phase === 'cast') {
         if (e.kind === 'cast' || e.kind === 'aura') this.vfx.aura({ origin: p, color: col, life });
-        if (e.kind === 'flame' || e.kind === 'fire') this.vfx.fire({ origin: p, color: col, duration: 'small' });
+        if (e.kind === 'flame' || e.kind === 'fire') {
+          const spin = spell.kind === 'nova' || spell.kind === 'zone' || spell.labKind === 'dash' || spell.labKind === 'push';
+          if (spin && !tornadoed) {
+            tornadoed = true;
+            this.vfx.tornado({ origin: origin.clone().setY(0), color: col, height: spell.kind === 'nova' || spell.kind === 'zone' ? 2.8 : 2.2, ttl: Math.max(life, 1.25) });
+          } else this.vfx.fire({ origin: p, color: col, duration: spin ? 'long' : 'small' });
+        }
+        if (e.kind === 'trail' || e.kind === 'travel') {
+          this.vfx.speedTrail({
+            from: p.clone(),
+            to: p.clone().addScaledVector(this.aim || new THREE.Vector3(0, 0, 1), 1.4),
+            color: col,
+            life: Math.max(life, 0.35),
+            kind: spell.element === 'fire' ? 'fire' : 'smoke',
+          });
+        }
         if (e.kind === 'frost' || e.kind === 'heal') this.vfx.mist({ origin: p, color: col, radius: e.aoe || 1.2, life });
       }
       if (phase === 'hit') {
-        if (e.kind === 'impact') this.vfx.impact({ origin: p, color: col });
+        if (e.kind === 'impact') this.vfx.explosion({ origin: p, color: col, radius: e.aoe || 1.4 });
         if (e.kind === 'fire' || e.kind === 'flame') this.vfx.fire({ origin: p, color: col, duration: 'small' });
         if (e.kind === 'frost') this.vfx.mist({ origin: p, color: col, radius: e.aoe || 1.3, life });
         if (e.kind === 'smoke') this.vfx.smoke({ origin: p, color: col, life });
@@ -2859,7 +2875,21 @@ export class PlaySession {
       e.actor.root.position.copy(e.pos);
       groundRoot(e.actor.root, this.sampler, e.pos.x, e.pos.z);
       if (see) e.actor.root.rotation.y = Math.atan2(dir.x, dir.z);
-      e.actor.setGait(mode === 'chase' || mode === 'roam' || mode === 'leash', false);
+      {
+        const yv = e.yuka?.v?.velocity;
+        const evx = yv ? yv.x : 0;
+        const evz = yv ? yv.z : 0;
+        if (!see && (evx * evx + evz * evz) > 0.04) {
+          e.actor.root.rotation.y = Math.atan2(evx, evz);
+        }
+        e.actor.setMotion({
+          vx: evx,
+          vz: evz,
+          lookYaw: e.actor.root.rotation.y,
+          sprint: mode === 'chase',
+          walkSpeed: e.speed || 3.2,
+        });
+      }
 
       if ((e.aggro || 0) > 0) {
         e.aggro -= dt;
@@ -2922,9 +2952,11 @@ export class PlaySession {
     playSfx(spell.kind === 'slash' ? 'combat_hit' : 'combat_spell', { volume: 0.28 });
     playSfx('warning', { volume: 0.2 });
     const col = spell.color || 0xd8433a;
-    if (e.windKind === 'zone') this.vfx.zone({ origin: (e.mark || targetPos).clone(), color: col, radius: spell.range || 3.2, life: e.windMax, dps: 0 });
+    const mark = e.mark || targetPos;
+    if (e.windKind === 'zone') this.vfx.zone({ origin: mark.clone(), color: col, radius: spell.range || 3.2, life: e.windMax, dps: 0 });
     else if (e.windKind === 'linear') this.vfx.linear({ origin: e.pos, dir, color: col, range: spell.range || 9, width: 0.7, life: e.windMax });
     else this.vfx.cone({ origin: e.pos, dir, color: col, range: Math.min(spell.range || 3.2, 4), half: 0.75, life: e.windMax });
+    this.plantAvoidTell(e, mark, e.windKind, spell.range || 3.2, e.windMax);
   }
 
   beginEnemyCast(e, dir) {
@@ -2936,13 +2968,23 @@ export class PlaySession {
     e.castDir = dir.clone();
     e.actor.requestOneShot(caster ? 'cast' : 'attack', e.windMax);
     const col = e.boss ? 0xd8433a : caster ? 0x9b6cf0 : 0xc9cedb;
+    const mark = e.windKind === 'zone' || e.windKind === 'linear' ? this.pos.clone() : e.pos.clone();
     if (e.windKind === 'zone') {
-      this.vfx.zone({ origin: this.pos.clone(), color: col, radius: 3.4, life: e.windMax, dps: 0 });
+      this.vfx.zone({ origin: mark.clone(), color: col, radius: 3.4, life: e.windMax, dps: 0 });
     } else if (e.windKind === 'linear') {
       this.vfx.linear({ origin: e.pos, dir: e.castDir, color: col, range: 9, width: 0.95, life: e.windMax });
     } else {
       this.vfx.cone({ origin: e.pos, dir: e.castDir, color: col, range: 3.2, half: 0.75, life: e.windMax });
     }
+    playSfx('warning', { volume: e.boss ? 0.28 : 0.2 });
+    this.plantAvoidTell(e, mark, e.windKind, e.windKind === 'zone' ? 3.4 : e.windKind === 'linear' ? 1.5 : 1.8, e.windMax);
+  }
+
+  /** warning_03 on the danger disc — before the hit lands. Shader still draws cone/line. */
+  plantAvoidTell(e, mark, kind, radius, ttl) {
+    const origin = kind === 'cone' ? e.pos : mark;
+    const r = e.boss ? radius * 1.15 : radius;
+    this.tele?.avoid?.({ origin, radius: r, ttl });
   }
 
   resolveFactionCast(e) {
@@ -2964,6 +3006,10 @@ export class PlaySession {
     } else if (e.windKind === 'zone' || spell.kind === 'nova' || spell.kind === 'zone') {
       const mark = e.mark || this.pos.clone();
       this.vfx.nova({ origin: mark, color: spell.color, range: spell.range || 3.2 });
+      if (spell.element === 'fire' || e.boss) {
+        this.vfx.tornado({ origin: mark.clone().setY(0), color: spell.color, height: e.boss ? 3.1 : 2.4, ttl: 1.5 });
+        this.vfx.explosion({ origin: mark.clone().setY(0.9), color: spell.color, radius: 1.8 });
+      }
       this.splashParty(mark, spell.range || 3.2, dmg, e.sheet, 'aoe');
     } else {
       this.vfx.beam({ origin: e.pos.clone().setY(1.2), dir, color: spell.color, range: spell.range || 9 });
@@ -2971,6 +3017,7 @@ export class PlaySession {
     }
     if (e.boss && e.hp < e.hpMax * 0.5) {
       this.vfx.zone({ origin: this.pos.clone(), color: 0xd8433a, radius: 3.6, life: 0.9, dps: 0 });
+      this.vfx.tornado({ origin: this.pos.clone().setY(0), color: 0xd8433a, height: 3.2, ttl: 1.8 });
     }
   }
 
@@ -2979,6 +3026,8 @@ export class PlaySession {
     if (e.windKind === 'zone') {
       const mark = this.pos.clone();
       this.vfx.nova({ origin: mark, color: col, range: 3.4 });
+      this.vfx.tornado({ origin: mark.clone().setY(0), color: col, height: e.boss ? 3.2 : 2.4, ttl: e.boss ? 2.1 : 1.4 });
+      this.vfx.explosion({ origin: mark.clone().setY(0.9), color: col, radius: e.boss ? 2.2 : 1.6 });
       this.splashParty(mark, 3.4, e.boss ? 18 : 10, { damage: e.boss ? 40 : 16, crit: 0.06, critFactor: 1.5 }, 'aoe');
       this.vfx.gridFire({
         origin: mark,
@@ -2999,6 +3048,38 @@ export class PlaySession {
       this.splashParty(e.pos, 3.4, e.boss ? 16 : 8, { damage: e.boss ? 36 : 14, crit: 0.05, critFactor: 1.5 }, 'cone');
     }
     this.vfx.shake.add(e.boss ? 0.4 : 0.22);
+  }
+
+  /**
+   * Hidden floor traps (CELL_FLAG.HIDDEN) — warning_03 first, then snap.
+   * Player can step off during the arm window.
+   */
+  tickFloorTraps(dt) {
+    if (this.downed || this.phase !== 'crawl') {
+      this._trapArm = null;
+      return;
+    }
+    const { x, y } = cellOf(this.d, this.pos.x, this.pos.z);
+    if (!hasFlag(this.d, x, y, CELL_FLAG.HIDDEN)) {
+      this._trapArm = null;
+      return;
+    }
+    const key = `${x},${y}`;
+    if (!this._trapArm || this._trapArm.key !== key) {
+      const w = worldOf(this.d, x, y);
+      this._trapArm = { key, t: 0.7 };
+      this.tele?.avoid?.({
+        origin: { x: w.x, y: 0, z: w.z },
+        radius: Math.max(1.1, CELL_M * 0.52),
+        ttl: 0.7,
+      });
+      playSfx('warning', { volume: 0.24 });
+    }
+    this._trapArm.t -= dt;
+    if (this._trapArm.t > 0) return;
+    this.takeDamage(11, { damage: 14 }, 'aoe');
+    this.vfx.nova({ origin: this.pos.clone().setY(0.3), color: 0xd8433a, range: 1.3 });
+    this._trapArm = { key, t: 1.8 };
   }
 
   hitLineFrom(origin, dir, range, width, dmg) {
@@ -3209,6 +3290,7 @@ export class PlaySession {
       return;
     }
     this.tryMove(gdt);
+    this.tickFloorTraps(gdt);
     this.tickSummons(gdt);
     this.tickEnemies(gdt);
     tickWisps(this, gdt);
