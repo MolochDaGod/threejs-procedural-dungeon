@@ -23,21 +23,28 @@ async function loadProto() {
   return proto;
 }
 
-function roomsBeside(d, gx, gy) {
+function roomsBeside(d, arch) {
   const ids = [];
   const idx = (x, y) => y * d.W + x;
-  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-    const x = Math.round(gx) + dx;
-    const y = Math.round(gy) + dy;
-    if (x < 0 || y < 0 || x >= d.W || y >= d.H) continue;
-    const id = d.roomId[idx(x, y)];
-    if (id >= 0 && !ids.includes(id)) ids.push(id);
+  const px = arch.px || 0;
+  const py = arch.py || 0;
+  const half = Math.max(0, (arch.len || 1) / 2);
+  for (let k = -half; k <= half; k += 0.5) {
+    const gx = Math.round(arch.x + px * k);
+    const gy = Math.round(arch.y + py * k);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0, 0]]) {
+      const x = gx + dx;
+      const y = gy + dy;
+      if (x < 0 || y < 0 || x >= d.W || y >= d.H) continue;
+      const id = d.roomId[idx(x, y)];
+      if (id >= 0 && !ids.includes(id)) ids.push(id);
+    }
   }
   return ids;
 }
 
 function assignRooms(d, arch) {
-  const ids = roomsBeside(d, arch.x, arch.y);
+  const ids = roomsBeside(d, arch);
   const rooms = ids.map((id) => d.rooms[id]).filter(Boolean);
   rooms.sort((a, b) => (a.depth || 0) - (b.depth || 0) || a.id - b.id);
   const fromRoom = rooms[0]?.id ?? -1;
@@ -81,10 +88,6 @@ function paintTheme(root, themeKey) {
       m.needsUpdate = true;
     }
   });
-}
-
-export function livingInRoom(session, roomId) {
-  return (session.enemies || []).filter((e) => e.alive && e.room?.id === roomId);
 }
 
 export class DungeonGates {
@@ -145,6 +148,7 @@ export class DungeonGates {
         toRoom: rooms.toRoom,
         open: false,
         pos: new THREE.Vector3(world.x, 0, world.z),
+        halfW: Math.max(CELL_M * 0.55, (arch.len || 1) * CELL_M * 0.5),
         cellSpace,
       };
       wrap.userData.gate = item;
@@ -167,8 +171,18 @@ export class DungeonGates {
   }
 
   blocks(wx, wz) {
-    const g = this.near(wx, wz, 1.05);
-    return !!(g && !g.open);
+    for (const g of this.items) {
+      if (g.open) continue;
+      const alongX = g.arch?.px === 1;
+      const dx = Math.abs(wx - g.pos.x);
+      const dz = Math.abs(wz - g.pos.z);
+      const halfW = g.halfW || CELL_M * 0.7;
+      const halfD = (PLAY.gate?.thickM || 0.55) * 0.7 + 0.35;
+      if (alongX) {
+        if (dx <= halfW && dz <= halfD) return true;
+      } else if (dx <= halfD && dz <= halfW) return true;
+    }
+    return false;
   }
 
   playOpen(g) {
@@ -187,7 +201,7 @@ export class DungeonGates {
     let n = 0;
     for (const g of this.items) {
       if (g.open) continue;
-      if (g.fromRoom === roomId || g.toRoom === roomId) {
+      if (g.fromRoom === roomId) {
         this.playOpen(g);
         n++;
       }

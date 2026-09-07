@@ -227,7 +227,7 @@ export function compileDungeonScript(dungeon, opts = {}) {
   const events = (mechanics.stamps || []).map((s) => ({
     id: s.id,
     when: s.mechanic === 'awaken_on_enter' ? 'enter_room'
-      : s.mechanic === 'clear_gate' ? 'room_cleared'
+      : s.mechanic === 'clear_gate' ? 'room_cleared|KeyE'
       : s.mechanic === 'boss_phases' ? 'boss_hp'
       : s.mechanic === 'shrine_once' ? 'interact'
       : s.mechanic === 'pool_hazard' ? 'overlap_water'

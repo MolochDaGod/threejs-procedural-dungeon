@@ -76,7 +76,8 @@ export function clearRoom(session, roomId, { toastFn } = {}) {
   if (livingInRoom(session, roomId).length) return false;
   rt.cleared.add(roomId);
   rt.gatesOpen.add(roomId);
-  session.gates?.openForRoom?.(roomId);
+  const room = session.d?.rooms?.[roomId];
+  if (room && isGatedRoom(room)) session.gates?.openForRoom?.(roomId);
   toastFn?.('Path opens');
   return true;
 }

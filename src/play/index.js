@@ -15,7 +15,7 @@ import { playSfx } from './audio.js';
 import { hydrateSkillApi, stampSpell, telegraphForSkill } from './skillApi.js';
 import { worldOf, cellOf, walkableWorld } from '../gen/cells.js';
 import {
-  bindScript, tickScript, gateBlocks, completionPayload, warlordsReturnUrl,
+  bindScript, tickScript, gateBlocks, livingInRoom, completionPayload, warlordsReturnUrl,
 } from './scriptRuntime.js';
 import { buildNavMesh } from '../gen/navmesh.js';
 import { dungeonToInstance } from '../gen/instance.js';
@@ -34,7 +34,7 @@ import { VfxWorld } from './vfx.js';
 import { TelegraphField } from './telegraph.js';
 import { instanceCatalog, preloadDungeonAssets, loadGltf } from './assets.js';
 import { loadInteriorKits, plantDressPlan } from '../props/kitPlant.js';
-import { DungeonGates, GATE_FORCE_SEC, livingInRoom as livingAtGate } from '../props/gates.js';
+import { DungeonGates, GATE_FORCE_SEC } from '../props/gates.js';
 import { DungeonPinata, clearPinataCell } from './pinata.js';
 import { addLoot, BAG_DEFS, corpseYield, loadBag, spendLoot } from './bag.js';
 import { CLASS_CRAFTS, canRefillTonic, craftsForClass } from './classCrafts.js';
@@ -287,6 +287,7 @@ export class PlaySession {
   }
 
   walkable(d, wx, wz, radius = 0.32) {
+    if (this.gates?.blocks(wx, wz)) return false;
     return walkableWorld(d, wx, wz, radius);
   }
 
@@ -2645,14 +2646,12 @@ export class PlaySession {
     if (nearDown || this.nearCorpse()) return false;
     const g = this.gates?.near(this.pos.x, this.pos.z);
     if (!g) return false;
-    const living = livingAtGate(this, g.fromRoom);
+    const living = livingInRoom(this, g.fromRoom);
     if (!living.length) return this.finishOpenGate(g);
     if (fromKey) {
       this._gateE = true;
       if (!this.gateCast || this.gateCast.gate !== g) {
-        this.gateCast = { gate: g, t: 0, max: GATE_FORCE_SEC };
-        this.aggroRoom(g.fromRoom);
-        toast('Forcing the gate · hall aggro');
+        this.gateCast = { gate: g, t: 0, max: GATE_FORCE_SEC, aggroed: false };
       }
     }
     return true;
@@ -2662,10 +2661,18 @@ export class PlaySession {
     this.gates?.update(dt);
     const g = this.gates?.near(this.pos.x, this.pos.z);
     if (!g || this.downed) { this.gateCast = null; return; }
-    if (!livingAtGate(this, g.fromRoom).length) return;
+    if (!livingInRoom(this, g.fromRoom).length) {
+      if (this.gateCast?.gate === g) this.finishOpenGate(g);
+      return;
+    }
     const holding = this.keys.has('KeyE') || this._gateE;
     if (this.gateCast && this.gateCast.gate === g && holding) {
       this.gateCast.t += dt;
+      if (!this.gateCast.aggroed && this.gateCast.t >= 0.2) {
+        this.gateCast.aggroed = true;
+        this.aggroRoom(g.fromRoom);
+        toast('Forcing the gate · hall aggro');
+      }
       if (this.gateCast.t >= (this.gateCast.max || GATE_FORCE_SEC)) this.finishOpenGate(g);
     } else if (!holding) this.gateCast = null;
   }
@@ -2916,7 +2923,7 @@ export class PlaySession {
   _gateHud() {
     const g = this.gates?.near(this.pos.x, this.pos.z);
     if (!g || this.downed) return null;
-    const n = livingAtGate(this, g.fromRoom).length;
+    const n = livingInRoom(this, g.fromRoom).length;
     return {
       force: n > 0,
       n,
