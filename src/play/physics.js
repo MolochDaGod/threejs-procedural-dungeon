@@ -37,6 +37,7 @@ export async function createDungeonPhysics(dungeon) {
     if (!walk && !wallish && !n.sensor) continue;
     const [hx, hy, hz] = n.collider.params;
     const [x, y, z] = n.position;
+    if (![hx, hy, hz, x, y, z].every((v) => Number.isFinite(v))) continue;
     const desc = RAPIER.ColliderDesc.cuboid(hx, hy, hz)
       .setTranslation(x, y, z)
       .setFriction(n.bounce ? 0.2 : 0.9)
@@ -54,12 +55,15 @@ export async function createDungeonPhysics(dungeon) {
   controller.enableSnapToGround(0.5);
   controller.setApplyImpulsesToDynamicBodies(true);
 
-  const start = worldOf(dungeon, dungeon.rooms[dungeon.entrance].cx, dungeon.rooms[dungeon.entrance].cy);
+  const ent = dungeon.rooms?.[dungeon.entrance];
+  const start = worldOf(dungeon, ent?.cx ?? dungeon.W / 2, ent?.cy ?? dungeon.H / 2);
+  const sx = Number.isFinite(start.x) ? start.x : 0;
+  const sz = Number.isFinite(start.z) ? start.z : 0;
   const body = world.createRigidBody(
     RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
-      start.x,
+      sx,
       CCT_RADIUS + CCT_HALF,
-      start.z,
+      sz,
     ),
   );
   const capsule = world.createCollider(RAPIER.ColliderDesc.capsule(CCT_HALF, CCT_RADIUS), body);

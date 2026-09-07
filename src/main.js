@@ -15,8 +15,9 @@ import * as THREE from 'three';
 import { PlaySession } from './play/index.js';
 import {
   CLASS_IDS, CLASS_WEAPON_SETS, CLASSES, DUNGEON_KIND_IDS, DUNGEON_KINDS, DUNGEON_LAYOUT, DUNGEON_SI,
-  PIRATE_FACES, PLAY, PLAY_DEFAULTS, RACES,
-  dungeonFill, heroOf, portraitFallback, portraitUrl,
+  PIRATE_FACES, PLAY, PLAY_DEFAULTS, PREFAB_DUNGEONS, PREFAB_IDS, RACES,
+  dungeonFill, heroOf, portraitFallback, portraitUrl, prefabOf,
+  normalizeClassId, normalizeRaceId,
 } from './ssot.js';
 import { customGrudgeFromDungeon, downloadCustomGrudge } from './gen/customGrudge.js';
 import { attachDungeonTerrain } from './terrain/navmesh.js';
@@ -25,13 +26,13 @@ import { CELL_M } from './gen/cells.js';
 import { DungeonDressing } from './play/dressing.js';
 import { ForgeCast } from './play/previews.js';
 import { preloadDungeonAssets } from './play/assets.js';
-import { stampBossArena, stampCover } from './grid/cells.js';
+import { stampBossArena, stampCover, stampHiddenTraps } from './grid/cells.js';
 import { stampEventPlatformRoom } from './grid/eventPlatform.js';
 import { loadInteriorKits, plantCoverKits, plantRoomScenes, plantWallTorches, plantMagicRocks } from './props/kitPlant.js';
 import { DungeonGates } from './props/gates.js';
 import { applyBiomeLook } from './props/saharaKit.js';
 import { InstancedFire, gridFireCells } from './vfx/instancedFire.js';
-import { craftSuiteUrl, mainPanelUrl, playCharacterId } from './play/ids.js';
+import { craftSuiteUrl, mainPanelUrl, parseAllySlots, playCharacterId } from './play/ids.js';
 import { bindPlayKtx2 } from './loaders/gltfPlay.js';
 
 /* ================================================================
@@ -780,6 +781,7 @@ function tryGenerate(seed, params){
   const barrierStage = new Uint8Array(W*H);
   const coverRole = new Uint8Array(W*H);
   stampBossArena({ W, H, grid, roomId, doorway, rooms, boss, flags }, rng);
+  stampHiddenTraps({ W, H, grid, roomId, doorway, rooms, flags }, rng);
   stampCover({ W, H, grid, roomId, doorway, rooms, flags, barrierStage, coverRole }, rng);
   const dungeonDoc = {
     valid, params, seed, name:dungeonName(rng, TH),
@@ -813,6 +815,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 bindPlayKtx2(renderer);
 renderer.setSize(innerWidth, innerHeight);
 renderer.setClearColor(canvasBg);
+if (THREE.ColorManagement) THREE.ColorManagement.enabled = true;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.08;
@@ -848,9 +851,11 @@ function tunePlayRender(on) {
     POST.enabled = false;
     dirL.castShadow = false;
     renderer.shadowMap.enabled = false;
-    hemi.intensity = 0.22;
-    dirL.intensity = 0.12;
-    renderer.toneMappingExposure = 0.92;
+    /* Indoor crawl: keep PBR, restore readable fill. 0.22/0.12 was unreadable
+       (forge uses LIGHT_K ≈ 12.6). Torches still carry the mood. */
+    hemi.intensity = themeHemiI * LIGHT_K * PLAY_HEMI_K;
+    dirL.intensity = themeDirI * LIGHT_K * PLAY_DIR_K;
+    renderer.toneMappingExposure = 1.14;
     renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
     for (const L of lights) L.visible = false;
     if (overlay) overlay.visible = false;
@@ -887,8 +892,8 @@ function tickPlayLights(origin) {
   const idx = [];
   for (let i = 0; i < n; i++) idx.push(i);
   idx.sort((a, b) => _lightRank[a * 2 + 1] - _lightRank[b * 2 + 1]);
-  const keep = 8;
-  const lim = 16 * 16;
+  const keep = 10;
+  const lim = 22 * 22;
   for (const L of lights) L.visible = false;
   for (let k = 0; k < Math.min(keep, idx.length); k++) {
     const L = lights[idx[k]];
@@ -896,8 +901,8 @@ function tickPlayLights(origin) {
     L.visible = d2 < lim;
     if (L.visible) {
       const flicker = 0.91 + 0.09 * Math.sin(elapsed * 5.4 + (L.userData.ph || 0));
-      L.intensity = Math.min(1.7, L.userData.base || 1.55) * flicker;
-      L.distance = 7.2;
+      L.intensity = Math.min(28, (L.userData.base || 2.05) * LIGHT_K * PLAY_TORCH_K) * flicker;
+      L.distance = Math.max(11, L.userData.dist || 12.5);
       L.decay = 2;
     }
   }
@@ -924,6 +929,10 @@ window.__GRUDGE_PLAY__ = play;
    against. Measured against the r128 original: floors land at the same ~0.17
    linear instead of ~0.04. */
 const LIGHT_K = 4 * Math.PI;
+/** Indoor play vs forge overview — still physical candela, not the crushed 0.22 fill. */
+const PLAY_HEMI_K = 0.40;
+const PLAY_DIR_K = 0.24;
+const PLAY_TORCH_K = 0.34;
 
 /* painted-miniature light rig: warm key with soft shadows, cool ambient */
 const hemi = new THREE.HemisphereLight(0x2e3a52, 0x0a0b10, 0.55);
@@ -2044,12 +2053,12 @@ function buildScene(d){
   for(const k of keys){
     const L = new THREE.PointLight(k.col, k.i, k.dist, 2);
     L.position.set(wx(k.x), (k.ry||1.6) / CELL_M, wz(k.y));
-    L.userData={base:k.i, ph:li*2.1, ramp:1}; group.add(L); lights.push(L); li++;
+    L.userData={base:k.i, ph:li*2.1, ramp:1, dist:k.dist}; group.add(L); lights.push(L); li++;
   }
   for(const t of chosen){
     const L = new THREE.PointLight(TH.torchLight[0], TH.torchLight[1], TH.torchLight[2], 2);
     L.position.set(wx(t.x)+t.dx*0.62, 1.62, wz(t.y)+t.dy*0.62);
-    L.userData={base:TH.torchLight[1], ph:li*1.7, ramp:1}; group.add(L); lights.push(L); li++;
+    L.userData={base:TH.torchLight[1], ph:li*1.7, ramp:1, dist:TH.torchLight[2]}; group.add(L); lights.push(L); li++;
   }
 
   /* Volumetric instanced fire — torch points + molten/boss grid (THREE.Fire tex). */
@@ -2223,7 +2232,7 @@ let raceSel = PLAY_DEFAULTS.race;
 let classSel = PLAY_DEFAULTS.classId;
 let weaponSel = '1h_tome';
 let kindSel = PLAY_DEFAULTS.kind;
-const playHandoff = { characterId: '', era: PLAY_DEFAULTS.era, from: '', theme: '' };
+const playHandoff = { characterId: '', era: PLAY_DEFAULTS.era, from: '', theme: '', allies: null, play: false, prefab: '', forceFaction: '' };
 function setKindSel(id) {
   kindSel = DUNGEON_KIND_IDS.includes(id) ? id : PLAY_DEFAULTS.kind;
   document.querySelectorAll('#kindchips .chip').forEach((ch) => {
@@ -2235,9 +2244,11 @@ function applyPlayQuery() {
   playHandoff.characterId = playCharacterId(q.get('characterId')) || '';
   playHandoff.era = q.get('era') || PLAY_DEFAULTS.era;
   playHandoff.from = q.get('from') || '';
-  const race = q.get('race');
-  const cls = q.get('class');
-  if (race && RACES[race]) raceSel = race;
+  playHandoff.allies = parseAllySlots(q);
+  playHandoff.play = q.get('play') !== '0' && (q.get('play') === '1' || q.get('from') === 'home');
+  const race = normalizeRaceId(q.get('race'));
+  const cls = normalizeClassId(q.get('class')) || q.get('class');
+  if (race && RACES[race] && q.get('race')) raceSel = race;
   if (cls && CLASS_IDS.includes(cls)) classSel = cls;
   const wep = q.get('weapon');
   if (wep) weaponSel = wep;
@@ -2253,8 +2264,19 @@ function applyPlayQuery() {
   }
   if (q.get('kind')) setKindSel(q.get('kind'));
   playHandoff.theme = q.get('theme') || '';
+  const prefab = prefabOf(q.get('prefab'));
+  if (prefab) {
+    playHandoff.prefab = prefab.id;
+    playHandoff.forceFaction = prefab.forceFaction || '';
+    setKindSel(prefab.kind);
+    if (prefab.theme) playHandoff.theme = prefab.theme;
+    if (el.seed) el.seed.value = String(prefab.seed);
+    document.querySelectorAll('#prefabchips .chip').forEach((ch) => {
+      ch.classList.toggle('on', ch.dataset.p === prefab.id);
+    });
+  }
   const seed = q.get('seed');
-  if (seed && el.seed) el.seed.value = seed;
+  if (seed && el.seed && !prefab) el.seed.value = seed;
   const rooms = q.get('rooms');
   if (rooms && el.rooms) {
     el.rooms.value = rooms;
@@ -2344,6 +2366,14 @@ function fillAllySelects() {
 applyPlayQuery();
 setRaceSel(raceSel);
 setClassSel(classSel);
+if (playHandoff.allies) {
+  for (let i = 0; i < 3; i++) {
+    const sel = document.getElementById(`ally${i}`);
+    const raw = playHandoff.allies[i]?.classId;
+    const cls = normalizeClassId(raw) || raw;
+    if (sel && cls && CLASS_IDS.includes(cls)) sel.value = cls;
+  }
+}
 document.getElementById('btnEquip')?.addEventListener('click', async () => {
   const panel = document.getElementById('equip-panel');
   if (!panel) return;
@@ -2406,6 +2436,7 @@ async function enterDungeon(){
     forgeCast.setVisible(false);
     const allyClasses = [0, 1, 2].map((i) => document.getElementById(`ally${i}`)?.value).filter(Boolean);
     forgeGates.root.visible = false;
+    const handoffAllies = playHandoff.allies?.some(Boolean) ? playHandoff.allies : null;
     await play.enter({
       dungeon: D,
       raceId: raceSel,
@@ -2413,7 +2444,9 @@ async function enterDungeon(){
       weaponId: weaponSel,
       linear,
       allyClasses,
+      allies: handoffAllies,
       characterId: playHandoff.characterId,
+      autoCrawl: !!playHandoff.play,
     });
     if(el.enter) el.enter.textContent = 'LEAVE DUNGEON';
   } finally {
@@ -2510,6 +2543,8 @@ function forge(animate){
     decorDensity:+el.decor.value/100,
     themeKey,
     kind: kindSel,
+    prefab: playHandoff.prefab || '',
+    forceFaction: playHandoff.forceFaction || '',
   };
   const d = generateDungeon(params);
   attachDungeonTerrain(d);
@@ -2596,15 +2631,17 @@ function liveUpdate(time, tt){
 }
 
 /* -------- main loop -------- */
-const clock = new THREE.Clock();
 let elapsed = 0;
 let fpsFrames = 0, fpsTime = 0;
+let lastTick = performance.now();
 function tick(){
   /* RAF pauses entirely in occluded windows; keep a slow heartbeat so the
      build reveal and stats stay live when the tab is hidden */
   if(document.hidden) setTimeout(tick, 100);
   else requestAnimationFrame(tick);
-  const dt = Math.min(clock.getDelta(), PLAY.maxDt || 0.05);
+  const now = performance.now();
+  const dt = Math.min((now - lastTick) / 1000, PLAY.maxDt || 0.05);
+  lastTick = now;
   elapsed += dt;
   if(animating){
     animT += dt;
@@ -2708,6 +2745,32 @@ document.querySelectorAll('#chips .chip').forEach(ch=>{
 document.querySelectorAll('#kindchips .chip').forEach((ch) => {
   ch.addEventListener('click', () => {
     setKindSel(ch.dataset.k);
+    if (ch.dataset.k === 'pirate') {
+      const p = prefabOf('pirate-freeport');
+      playHandoff.prefab = p.id;
+      playHandoff.forceFaction = p.forceFaction || 'Pirate';
+      if (el.seed) el.seed.value = String(p.seed);
+      document.querySelectorAll('#prefabchips .chip').forEach((x) => {
+        x.classList.toggle('on', x.dataset.p === p.id);
+      });
+    } else if (!playHandoff.prefab) {
+      playHandoff.forceFaction = '';
+    }
+    forge(true);
+  });
+});
+document.querySelectorAll('#prefabchips .chip').forEach((ch) => {
+  ch.addEventListener('click', () => {
+    const p = prefabOf(ch.dataset.p);
+    if (!p) return;
+    playHandoff.prefab = p.id;
+    playHandoff.forceFaction = p.forceFaction || '';
+    setKindSel(p.kind);
+    if (p.theme) setThemeSel(p.theme);
+    if (el.seed) el.seed.value = String(p.seed);
+    document.querySelectorAll('#prefabchips .chip').forEach((x) => {
+      x.classList.toggle('on', x.dataset.p === p.id);
+    });
     forge(true);
   });
 });
@@ -2766,5 +2829,13 @@ addEventListener('resize', ()=>{
 
 /* -------- go -------- */
 preloadDungeonAssets();
-loadInteriorKits().catch((err) => console.warn('[grudge-dungeon] interior kits miss', err)).then(() => forge(true));
+loadInteriorKits().catch((err) => console.warn('[grudge-dungeon] interior kits miss', err)).then(() => {
+  forge(!playHandoff.play);
+  if (playHandoff.play) {
+    document.getElementById('panel')?.classList.add('min');
+    const col = document.getElementById('collapse');
+    if (col) col.textContent = '+';
+    enterDungeon();
+  }
+});
 tick();

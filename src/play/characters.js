@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { ANIM_URLS, CLIP_DONOR, ESTES_CAST_DONOR, KENPACHI_DONOR, PLAY, RACES, ROLE_KITS, WEAPON_KITS, WORGE_WEAPONS, raceCharacterUrl, weaponClipPack } from '../ssot.js';
-import { BIP001_PLAY, bip001ExtraForWeapon } from './clipLibrary.js';
+import { BIP001_PLAY, BLOCK_CLIPS, EPICFIGHT_CLIPS, bip001ExtraForWeapon } from './clipLibrary.js';
 import { loadGltf } from './assets.js';
 import { plantFeet } from '../terrain/footPlant.js';
 import {
@@ -319,11 +319,11 @@ function remapClipTracks(clip, boneMap) {
 /** If a clip has Spine but no Spine1/Spine2/Head, copy parent quats (Toon 22-core). */
 function fillMissingBip001Core(tracks, boneMap) {
   const have = new Set(tracks.map((t) => t.name));
-  const nameOf = (want) => boneMap.get(boneKey(want)) || want;
+  const nameOf = (want) => boneMap.get(boneKey(want)) || null;
   const cloneQuat = (fromWant, toWant) => {
     const from = nameOf(fromWant);
     const to = nameOf(toWant);
-    if (!to) return;
+    if (!from || !to) return;
     const dest = `${to}.quaternion`;
     if (have.has(dest)) return;
     const src = tracks.find((t) => t.name === `${from}.quaternion`);
@@ -464,6 +464,7 @@ export class Actor {
   setHold(name, on) {
     if (!this.alive) return;
     if (on) {
+      if (this.busy > 0) return;
       const resolved = resolveClipName(this.clips, name);
       if (!resolved) return;
       if (this._hold !== resolved) {
@@ -633,6 +634,18 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
     if (!copy.tracks.length) return;
     stampAnimClip(copy, source, forceName || c.name);
     extra.push(copy);
+    if (source === 'epicfight' && forceName === 'combo1' && copy.duration > 2.2) {
+      const fps = 30;
+      const names = ['attack', 'attack2', 'attack3'];
+      for (let i = 0; i < 3; i++) {
+        const a = Math.floor((copy.duration * i / 3) * fps);
+        const b = Math.max(a + 1, Math.floor((copy.duration * (i + 1) / 3) * fps));
+        const part = THREE.AnimationUtils.subclip(copy, names[i], a, b, fps);
+        if (!part?.tracks?.length) continue;
+        stampAnimClip(part, 'epicfight', names[i]);
+        extra.push(part);
+      }
+    }
   };
   const tryUrl = async (url, forceName = null, source = 'donor') => {
     const g = await loadGltf(url);
@@ -657,6 +670,14 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
   await Promise.all(bipRows.map(async (row) => {
     try { await tryJson(row.url, row.stem, 'bip001'); } catch { /* pack miss */ }
   }));
+  await Promise.all(BLOCK_CLIPS.map(async (row) => {
+    try { await tryUrl(row.url, row.stem, 'epicfight'); } catch { /* pack miss */ }
+  }));
+  if (/sword_shield|mace_sword|^sword$|two_hand|greataxe|spear/.test(String(weaponId || ''))) {
+    await Promise.all(EPICFIGHT_CLIPS.map(async (row) => {
+      try { await tryUrl(row.url, row.stem, 'epicfight'); } catch { /* pack miss */ }
+    }));
+  }
   try {
     await tryUrl(CLIP_DONOR, null, 'donor');
   } catch {

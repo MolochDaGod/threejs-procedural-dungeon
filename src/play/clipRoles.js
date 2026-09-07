@@ -44,7 +44,7 @@ export const LOCO_KEYS = ['idle', 'fight_idle', 'walk', 'run', 'sprint', 'crawl'
 export const SHOT_KEYS = [
   'attack', 'attack2', 'attack3', 'cast', 'shoot', 'dashAtk', 'jumpAtk',
   'dodge', 'evade', 'flip', 'slide', 'slideExit', 'jump',
-  'block', 'parry', 'bash', 'uppercut',
+  'block', 'blockHit', 'parry', 'bash', 'warcry', 'uppercut', 'kick',
   'hit', 'stun', 'death', 'interact', 'plant',
   'climb', 'climb_down', 'climb_top', 'swim', 'treading', 'wall_run',
 ];
@@ -66,7 +66,9 @@ export const CLIP_FALLBACK = {
   flip: ['flip', 'dodge'],
   parry: ['parry', 'bash', 'block'],
   bash: ['bash', 'parry', 'attack'],
-  block: ['block', 'parry'],
+  warcry: ['warcry', 'bash', 'cast'],
+  block: ['block', 'blockHit', 'parry'],
+  blockHit: ['blockHit', 'block', 'parry'],
   hit: ['hit', 'stun'],
   stun: ['stun', 'verigo', 'hit', 'crouch'],
   jump: ['jump', 'flip'],
@@ -76,6 +78,7 @@ export const CLIP_FALLBACK = {
   interact: ['interact', 'plant', 'cast'],
   plant: ['plant', 'interact'],
   uppercut: ['uppercut', 'attack'],
+  kick: ['kick', 'dashAtk', 'attack'],
   crawl: ['crawl', 'crouch', 'walk'],
   sneak: ['sneak', 'crouch', 'walk'],
   crouch: ['crouch', 'idle'],
@@ -118,10 +121,11 @@ export function stampAnimClip(clip, source, rawName) {
 
 const SRC_LOCO = ['native', 'bip001', 'donor', 'mixamo', 'json', 'estes'];
 const SRC_CAST = ['bip001', 'estes', 'json', 'donor', 'mixamo', 'native'];
-const SRC_MELEE = ['donor', 'bip001', 'native', 'estes', 'json', 'mixamo'];
+const SRC_MELEE = ['epicfight', 'donor', 'bip001', 'native', 'estes', 'json', 'mixamo'];
 const SRC_2H = ['kenpachi', 'bip001', 'donor', 'native', 'json'];
 const SRC_SPEAR = ['bip001', 'kenpachi', 'donor', 'native', 'json'];
 const SRC_DEATH = ['native', 'bip001', 'kenpachi', 'estes', 'death', 'donor', 'json'];
+const SRC_BLOCK = ['epicfight', 'donor', 'bip001', 'native', 'json'];
 
 function namedGet(named, ...keys) {
   for (const k of keys) {
@@ -200,17 +204,20 @@ export function classifyClips(clips, weaponId = '') {
   out.crouch = exact('crouch_idle');
   out.strafeL = exact('strafe_left', 'strafe_left_walk');
   out.strafeR = exact('strafe_right', 'strafe_right_walk');
-  out.block = exact('sword_block');
-  out.parry = exact('shield_bash', 'sword_block');
+  out.block = pick(['block', 'great_sword_blocking', 'sword_block'], SRC_BLOCK);
+  out.blockHit = pick(['blockHit', 'block_hit', 'block'], SRC_BLOCK) || out.block;
+  out.parry = exact('shield_bash', 'sword_block') || out.block;
   out.bash = exact('shield_bash');
+  out.warcry = exact('warcry', 'taunt_battlecry', 'taunt') || out.bash;
   out.uppercut = exact('unarmed_uppercut');
   out.dashAtk = exact('sword_dash_attack');
-  out.jumpAtk = exact('run_jump_attack');
+  out.kick = exact('kick', 'counterkick');
+  out.jumpAtk = exact('jumpAtk', 'fromairlmb', 'air_lmb', 'run_jump_attack');
   out.interact = exact('harvest');
   out.plant = exact('plant_seed');
   out.attack = unarmed
     ? (pick(['unarmed_uppercut', 'sword_attack_a', 'attack'], SRC_MELEE))
-    : pick(['sword_attack_a', 'attack', 'attack01', 'attack_1', 'commonattack', 'strike_1'], meleeSrc);
+    : pick(['sword_attack_a', 'attack', 'combo1', 'attack01', 'attack_1', 'commonattack', 'strike_1'], meleeSrc);
   out.attack2 = pick(['sword_attack_c', 'attack_2', 'attack02', 'attack_3', 'skill2', 'attack2'], mag ? SRC_CAST : meleeSrc) || out.attack;
   out.attack3 = pick(['sword_combo_finisher', 'skill3', 'skill_1', 'skill_1_1'], mag ? SRC_CAST : meleeSrc) || out.attack2;
   out.cast = pick(['cast', 'skill1', 'attack1', 'skill_1_1', 'skill_1_2', 'standing_1h_cast_spell_01', 'use_magic', 'use_skill', 'skill_ready', 'skill_1'], mag || twoH || spear ? (twoH || spear ? meleeSrc : SRC_CAST) : SRC_CAST)
@@ -250,17 +257,21 @@ export function resolveClipName(clips, name) {
   return null;
 }
 
-export function animForSpell(clips, spell, { comboStage = 0, sprint = false } = {}) {
+export function animForSpell(clips, spell, { comboStage = 0, sprint = false, airborne = false } = {}) {
   const kind = spell?.kind || '';
+  const asked = spell?.anim;
+  if (asked && asked !== 'attack' && CLIP_FALLBACK[asked]) {
+    return resolveClipName(clips, asked) || asked;
+  }
   if (spell?.classSkill && spell.combatLab) {
     const slot = Number(spell.slot) || 0;
     if (slot >= 3 && clips?.attack3) return 'attack3';
     if (slot >= 2 && clips?.attack2) return 'attack2';
     return resolveClipName(clips, 'cast') || 'cast';
   }
-  const slashy = kind === 'slash' || kind === 'dash' || spell?.anim === 'attack';
+  const slashy = kind === 'slash' || kind === 'dash' || asked === 'attack';
   if (slashy) {
-    if (sprint && clips?.jumpAtk && kind === 'slash') return resolveClipName(clips, 'jumpAtk') || 'attack';
+    if ((airborne || sprint) && clips?.jumpAtk && kind === 'slash') return resolveClipName(clips, 'jumpAtk') || 'attack';
     if (kind === 'dash') return resolveClipName(clips, 'dashAtk') || 'attack';
     if (comboStage >= 2 && clips?.attack3) return 'attack3';
     if (comboStage >= 1 && clips?.attack2) return 'attack2';

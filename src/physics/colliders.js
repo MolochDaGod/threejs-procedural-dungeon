@@ -84,6 +84,8 @@ function maskEq(grid, W, H, pred) {
 }
 
 function node(id, kind, physicsLayer, world, extra = {}) {
+  const loc = extra.location || { tags: ['dungeon', kind] };
+  if (!loc.uuid) loc.uuid = `grudge.loc.${id}`;
   return {
     id,
     meshKey: `dungeon/${kind}`,
@@ -91,7 +93,7 @@ function node(id, kind, physicsLayer, world, extra = {}) {
     position: world.position,
     physicsLayer,
     collider: world.collider,
-    location: extra.location || { tags: ['dungeon', kind] },
+    location: loc,
     solid: extra.solid !== false,
     sensor: !!extra.sensor,
     ...extra,

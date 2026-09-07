@@ -3,7 +3,6 @@
  * Same pattern as saharaKit — never fuse the pack.
  */
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { PROP_KITS } from '../content/props/kits.js';
 import { MAGIC_ROCKS, MAGIC_ROCK_DIAMETER_M } from '../content/props/magicRocks.js';
 import { CELL_FLAG } from '../grid/cells.js';
@@ -11,7 +10,6 @@ import { DUNGEON_SI } from '../ssot.js';
 import { plantObjectOnTerrain } from '../terrain/footPlant.js';
 import { loadGltf } from '../play/assets.js';
 
-const loader = new GLTFLoader();
 const packs = {};
 let ready = false;
 
@@ -63,7 +61,7 @@ function fitProp(root, targetH, maxFoot = Infinity) {
 
 async function loadOne(id, kit) {
   if (packs[id]) return packs[id];
-  const gltf = await new Promise((res, rej) => loader.load(kit.glb, res, undefined, rej));
+  const gltf = await loadGltf(kit.glb);
   gltf.scene.traverse((o) => {
     if (o.isMesh) {
       o.castShadow = true;

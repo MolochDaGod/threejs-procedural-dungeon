@@ -3,14 +3,13 @@
  * Extends clear_gate: E opens. Instant if the hall is clear; 5s cast + room aggro if not.
  */
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRESSING, DUNGEON_SI, PLAY } from '../ssot.js';
+import { loadGltf } from '../play/assets.js';
 import { CELL_M, worldOf } from '../gen/cells.js';
 import { isGatedRoom } from '../ruleset.js';
 import { lookOf } from '../content/looks/matlib.js';
 import { applyBiomeLook } from './saharaKit.js';
 
-const loader = new GLTFLoader();
 let proto = null;
 
 export const GATE_URL = DRESSING.gate;
@@ -18,7 +17,7 @@ export const GATE_FORCE_SEC = PLAY.gate?.forceSec || 5;
 
 async function loadProto() {
   if (proto) return proto;
-  const gltf = await new Promise((res, rej) => loader.load(GATE_URL, res, undefined, rej));
+  const gltf = await loadGltf(GATE_URL);
   proto = gltf;
   return proto;
 }

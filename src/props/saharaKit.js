@@ -2,12 +2,11 @@
  * Load Sahara cartoon pack once, isolate mesh by name, plant SI-sized props.
  */
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadGltf } from '../play/assets.js';
 import { SAHARA_CM_TO_M, SAHARA_CATALOG, SAHARA_GLB, saharaByBiome } from '../content/props/sahara.js';
 import { lookOf } from '../content/looks/matlib.js';
 import { DUNGEON_SI } from '../ssot.js';
 
-const loader = new GLTFLoader();
 let pack = null;
 let catalog = null;
 let byBiome = null;
@@ -16,7 +15,7 @@ const texLoader = new THREE.TextureLoader();
 export async function loadSaharaKit() {
   if (byBiome) return { pack, catalog, byBiome };
   const [gltf, cat] = await Promise.all([
-    new Promise((res, rej) => loader.load(SAHARA_GLB, res, undefined, rej)),
+    loadGltf(SAHARA_GLB),
     fetch(SAHARA_CATALOG).then((r) => r.json()).catch(() => ({ sahara: { items: [] } })),
   ]);
   pack = gltf;

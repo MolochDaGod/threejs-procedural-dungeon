@@ -51,7 +51,7 @@ import { makeTotemMesh, TOTEM_LIFE, TOTEM_PULSE, TOTEM_RANGE_BONUS, TOTEM_SHIELD
 import { COMBAT_ITEMS, DEFAULT_ITEM_SLOTS, starterItemCounts } from './combatItems.js';
 import { MOUNTS, mountById } from './mounts.js';
 import { applyHitReact, canAct, canMove, inferCc, makeStatus, paintStatus, tickStatus } from './status.js';
-import { gapCloseSkill, isMeleeKit, nextComboSkill } from './meleeCombo.js';
+import { epicHitWindow, gapCloseSkill, isMeleeKit, nextComboSkill } from './meleeCombo.js';
 import { loadHudLayout, resolveBarSlots } from './hudLayout.js';
 import { classLoadoutFor, loadClassTrees } from './classSkills.js';
 import { PlayTpsCamera } from './tpsCamera.js';
@@ -130,9 +130,12 @@ export class PlaySession {
     this.tps = new PlayTpsCamera(ctx.renderer?.domElement || document.body);
     this.tps.onParry = () => this.tryParry();
     this.tps.onFocusToggle = () => this.toggleFocus();
+    this.tps.onKick = () => this.tryWarriorKick();
     this.status = makeStatus();
     this.comboStage = 0;
     this.comboT = 0;
+    this._comboPlayStage = 0;
+    this.kickCd = 0;
     this.slideCd = 0;
     this.radial = false;
     this._eHold = 0;
@@ -978,6 +981,7 @@ export class PlaySession {
         this.stamina = Math.max(0, this.stamina - stam);
         incoming *= (1 - factor);
         addGrudgeStack(this.classState);
+        this.player?.requestOneShot?.('blockHit', 0.53);
         toast('Block');
       } else this.blocking = false;
     }
@@ -2341,6 +2345,11 @@ export class PlaySession {
     if (!spell.overlay) spell.overlay = overlayForSkill(spell.id, spell.kind, spell.element);
     const origin = this.pos.clone();
     origin.y = 1.15;
+    const hand = this.player?._findWeaponHand?.() || this.player?._rHand;
+    if (hand) {
+      hand.updateWorldMatrix(true, false);
+      hand.getWorldPosition(origin);
+    }
     const dir = new THREE.Vector3();
     if (this.tps?.enabled) this.tps.getLookDirection(dir);
     else dir.copy(this.aim).setY(0);

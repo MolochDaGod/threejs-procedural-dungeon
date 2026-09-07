@@ -3,25 +3,10 @@
  * Stamps warlordsPlayContract. Extra clips from combat.grudge-studio.com donor.
  */
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { ANIM_URLS, COMBAT_CLIP_URLS, PLAY, raceCharacterUrl } from '../ssot.js';
 import { plantFeet } from '../terrain/footPlant.js';
-
-const loader = new GLTFLoader();
-const cache = new Map();
-
-function loadGltf(url) {
-  if (cache.has(url)) return cache.get(url);
-  const p = new Promise((resolve, reject) => {
-    loader.load(url, resolve, undefined, (err) => {
-      cache.delete(url);
-      reject(err);
-    });
-  });
-  cache.set(url, p);
-  return p;
-}
+import { loadGltf } from '../play/assets.js';
 
 function findAnimRoot(root) {
   let skinned = null;

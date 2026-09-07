@@ -54,6 +54,53 @@ function walkSkills(node, fn) {
   }
 }
 
+/**
+ * Travel + clip stamps on existing skill ids.
+ * Patterns cover meteor / blizzard / chain for every class.
+ * SKILL_FX is the one-class-at-a-time pass (warrior first).
+ */
+const SKILL_FX = {
+  w_taunt: { anim: 'warcry', travel: 'zone' },
+  warcry: { anim: 'warcry', travel: 'zone' },
+  sunder: { kind: 'dash', anim: 'dashAtk', travel: 'dash', range: 8 },
+  life_drain_strike: { kind: 'slash', anim: 'attack', travel: 'wave' },
+  concussive_blow: { kind: 'slash', anim: 'attack', travel: 'wave' },
+  sunder_armor: { kind: 'slash', anim: 'attack', travel: 'wave' },
+  execute: { kind: 'slash', anim: 'attack3', travel: 'wave' },
+  guardian_aura: { anim: 'cast', travel: 'zone' },
+  demoralizing_shout: { anim: 'warcry', travel: 'zone' },
+  avatar_form: { anim: 'cast', travel: 'zone' },
+};
+
+export function bindSkillTravel(spell) {
+  if (!spell?.id) return spell;
+  const blob = `${spell.id} ${spell.name || ''}`.toLowerCase();
+  if (/meteor/.test(blob)) {
+    spell.travel = spell.travel || 'incoming';
+    if (spell.kind === 'projectile' || spell.kind === 'slash') spell.kind = 'nova';
+    if (!spell.anim || spell.anim === 'attack') spell.anim = 'cast';
+  } else if (/blizzard/.test(blob)) {
+    spell.travel = spell.travel || 'zone';
+    spell.kind = 'zone';
+    spell.linger = spell.linger || 4.2;
+    spell.anim = spell.anim || 'cast';
+  } else if (/chain.?lightning|thundergod/.test(blob)) {
+    spell.kind = 'beam';
+    spell.forks = true;
+    spell.linear = spell.linear || 'thunder';
+    spell.anim = spell.anim || 'cast';
+  }
+  const row = SKILL_FX[spell.id];
+  if (row) {
+    if (row.kind) spell.kind = row.kind;
+    if (row.anim) spell.anim = row.anim;
+    if (row.travel) spell.travel = row.travel;
+    if (row.range != null) spell.range = row.range;
+    if (row.linger != null) spell.linger = row.linger;
+  }
+  return spell;
+}
+
 export function stampSpell(spell) {
   if (!spell?.id) return spell;
   const live = catalogList().find((s) => s.id === spell.id);
@@ -67,7 +114,10 @@ export function stampSpell(spell) {
     if (live.t8) spell.t8 = live.t8;
     if (live.weaponName) spell.weaponName = live.weaponName;
   }
+  bindSkillTravel(spell);
   spell.iconUrl = resolveSkillIcon(spell);
+  if (!spell.uuid) spell.uuid = live?.uuid || `grudge.skill.${spell.id}`;
+  if (!spell.labId) spell.labId = live?.labId || spell.id;
   return spell;
 }
 
@@ -114,6 +164,7 @@ export async function hydrateSkillApi() {
 
 export function telegraphForSkill(spell) {
   if (!spell) return { variant: 'cone', sec: 0.42 };
+  if (spell.travel === 'incoming') return { variant: 'incoming', sec: spell.telegraphSec || 0.85 };
   if (spell.kind === 'nova' || spell.kind === 'zone') return { variant: 'aoe', sec: spell.telegraphSec || 1.1 };
   if (spell.kind === 'projectile' || spell.kind === 'beam' || spell.kind === 'fissure') {
     return { variant: 'incoming', sec: spell.telegraphSec || 0.7 };
