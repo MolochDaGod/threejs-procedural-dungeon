@@ -21,3 +21,8 @@ pnpm-debug.log*
 
 # unused fused showcase (atlases live in public/textures/matlib)
 public/models/props/matlib-showcase.glb
+
+# convert scratch
+tmp/
+public/models/**/.tmp-*
+public/models/**/*.manifest.json

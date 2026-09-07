@@ -25,7 +25,8 @@
     "verify:cdn": "node scripts/verify-cdn.mjs",
     "upload:kit": "node scripts/upload-kit.mjs",
     "deploy": "node scripts/deploy.mjs",
-    "smoke:mechanic": "node scripts/smoke-mechanic.mjs"
+    "smoke:mechanic": "node scripts/smoke-mechanic.mjs",
+    "bake:kits": "node scripts/bake-play-kits.mjs"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.19.3",

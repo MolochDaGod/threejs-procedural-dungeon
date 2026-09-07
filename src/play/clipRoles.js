@@ -126,7 +126,7 @@ export function classifyClips(clips, weaponId = '') {
     c.userData = c.userData || {};
     c.userData.stem = s;
     const key = s.toLowerCase();
-    if (!named.has(key)) named.set(key, c);
+    named.set(key, c);
   }
   const exact = (...keys) => namedGet(named, ...keys);
   const hit = (re) => firstHit(clips || [], re, skip);
@@ -162,16 +162,9 @@ export function classifyClips(clips, weaponId = '') {
     : exact('sword_attack_a', 'attack');
   out.attack2 = exact('sword_attack_c') || out.attack;
   out.attack3 = exact('sword_combo_finisher') || out.attack2;
-  if (bow) {
-    out.shoot = exact('attack') || out.attack;
-    out.cast = out.shoot;
-  } else if (mag) {
-    out.cast = exact('attack') || out.attack;
-    out.shoot = out.cast;
-  } else {
-    out.cast = out.attack;
-    out.shoot = out.attack;
-  }
+  out.cast = exact('cast', 'standing_1h_cast_spell_01') || (mag ? (exact('attack') || out.attack) : out.attack);
+  out.shoot = exact('shoot', 'standing_draw_arrow', 'draw_arrow') || (bow ? (exact('attack') || out.attack) : out.cast);
+  if (bow && !exact('cast')) out.cast = out.shoot;
 
   if (!out.idle) out.idle = hit(/^idle(_\d+)?$/i) || hit(/gs_idle|stand(?!2)|breath/i);
   if (!out.walk) out.walk = hit(/^walk(_\d+)?$/i) || hit(/gs_walk|^walk$/i);

@@ -32,6 +32,7 @@ import { DungeonGates } from './props/gates.js';
 import { applyBiomeLook } from './props/saharaKit.js';
 import { InstancedFire, gridFireCells } from './vfx/instancedFire.js';
 import { craftSuiteUrl, mainPanelUrl, playCharacterId } from './play/ids.js';
+import { bindPlayKtx2 } from './loaders/gltfPlay.js';
 
 /* ================================================================
    DUNGEON FORGE — procedural dungeon generator core + showcase
@@ -809,6 +810,7 @@ const renderer = new THREE.WebGLRenderer({
   preserveDrawingBuffer: false,
 });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+bindPlayKtx2(renderer);
 renderer.setSize(innerWidth, innerHeight);
 renderer.setClearColor(canvasBg);
 renderer.outputColorSpace = THREE.SRGBColorSpace;

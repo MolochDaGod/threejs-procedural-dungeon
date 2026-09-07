@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
-import { ANIM_URLS, CLIP_DONOR, PLAY, RACES, ROLE_KITS, WEAPON_KITS, WORGE_WEAPONS, raceCharacterUrl } from '../ssot.js';
+import { ANIM_URLS, CLIP_DONOR, PLAY, RACES, ROLE_KITS, WEAPON_KITS, WORGE_WEAPONS, raceCharacterUrl, weaponClipPack } from '../ssot.js';
 import { loadGltf } from './assets.js';
 import { plantFeet } from '../terrain/footPlant.js';
 import {
@@ -242,6 +242,32 @@ function boneKey(name) {
   return String(name || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
 }
 
+/** Mixamo clip stems → Bip001 (alphanumeric). anim_death.glb is Mixamo. */
+const MIXAMO_BIP = {
+  mixamorighips: 'bip001pelvis',
+  mixamorigspine: 'bip001spine',
+  mixamorigspine1: 'bip001spine1',
+  mixamorigspine2: 'bip001spine2',
+  mixamorigneck: 'bip001neck',
+  mixamorighead: 'bip001head',
+  mixamorigleftshoulder: 'bip001lclavicle',
+  mixamorigleftarm: 'bip001lupperarm',
+  mixamorigleftforearm: 'bip001lforearm',
+  mixamoriglefthand: 'bip001lhand',
+  mixamorigrightshoulder: 'bip001rclavicle',
+  mixamorigrightarm: 'bip001rupperarm',
+  mixamorigrightforearm: 'bip001rforearm',
+  mixamorigrighthand: 'bip001rhand',
+  mixamorigleftupleg: 'bip001lthigh',
+  mixamorigleftleg: 'bip001lcalf',
+  mixamorigleftfoot: 'bip001lfoot',
+  mixamoriglefttoebase: 'bip001ltoe0',
+  mixamorigrightupleg: 'bip001rthigh',
+  mixamorigrightleg: 'bip001rcalf',
+  mixamorigrightfoot: 'bip001rfoot',
+  mixamorigrighttoebase: 'bip001rtoe0',
+};
+
 function collectBoneMap(root) {
   const map = new Map();
   root.traverse((o) => {
@@ -268,7 +294,8 @@ function remapClipTracks(clip, boneMap) {
     const node = track.name.slice(0, dot);
     const path = track.name.slice(dot + 1);
     if (/position|scale/i.test(path)) continue;
-    const dest = boneMap.get(boneKey(node));
+    const key = boneKey(node);
+    const dest = boneMap.get(key) || boneMap.get(MIXAMO_BIP[key]);
     if (!dest) continue;
     track.name = `${dest}.${path}`;
     keep.push(track);
@@ -490,7 +517,7 @@ export class Actor {
   }
 }
 
-async function gatherClips(gltf, boneMap) {
+async function gatherClips(gltf, boneMap, weaponId = '') {
   const native = (gltf.animations || []).filter((c) => c.tracks?.length);
   const extra = [];
   const have = new Set();
@@ -498,18 +525,29 @@ async function gatherClips(gltf, boneMap) {
     const s = clipStem(c.name).toLowerCase();
     if (s) have.add(s);
   };
+  const take = (c, forceName = null) => {
+    const copy = remapClipTracks(c, boneMap);
+    if (!copy.tracks.length) return;
+    if (forceName) copy.name = forceName;
+    const stem = clipStem(copy.name).toLowerCase();
+    if (!forceName && have.has(stem)) return;
+    extra.push(copy);
+    remember(copy);
+  };
   const tryUrl = async (url, forceName = null) => {
     const g = await loadGltf(url);
     for (const c of g.animations || []) {
       if (!c.tracks?.length) continue;
-      const copy = remapClipTracks(c, boneMap);
-      if (!copy.tracks.length) continue;
-      if (forceName) copy.name = forceName;
-      const stem = clipStem(copy.name).toLowerCase();
-      if (have.has(stem)) continue;
-      extra.push(copy);
-      remember(copy);
+      take(c, forceName);
     }
+  };
+  const tryJson = async (url, forceName) => {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`clip json ${r.status}`);
+    const json = await r.json();
+    const clip = THREE.AnimationClip.parse(json);
+    if (!clip?.tracks?.length) return;
+    take(clip, forceName);
   };
   try {
     await tryUrl(CLIP_DONOR);
@@ -517,9 +555,14 @@ async function gatherClips(gltf, boneMap) {
     /* donor optional */
   }
   await Promise.all(Object.entries(ANIM_URLS).map(async ([key, url]) => {
-    if (have.has(key)) return;
     try { await tryUrl(url, key); } catch { /* optional death/idle fill */ }
   }));
+  const pack = weaponClipPack(weaponId);
+  if (pack) {
+    await Promise.all(Object.entries(pack).map(async ([role, url]) => {
+      try { await tryJson(url, role); } catch { /* catalog miss */ }
+    }));
+  }
   const remapped = native.map((c) => remapClipTracks(c, boneMap)).filter((c) => c.tracks.length);
   for (const c of remapped) remember(c);
   return [...remapped, ...extra];
@@ -566,7 +609,7 @@ export async function spawnActor({
   actor.mixer = new THREE.AnimationMixer(animRoot);
   const clips = nativeMesh
     ? (gltf.animations || []).map((c) => stripPositionTracks(c.clone()))
-    : await gatherClips(gltf, collectBoneMap(visual));
+    : await gatherClips(gltf, collectBoneMap(visual), wid);
   actor.clipBank = clips;
   actor.clips = classifyClips(clips, wid);
   if (!actor.clips.idle) {

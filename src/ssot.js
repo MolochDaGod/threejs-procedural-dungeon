@@ -129,18 +129,41 @@ export const DUNGEON_SI = {
   capsuleHalfH: 0.55,
 };
 
-/** Kit meshes used by forge dressing (KayKit on CDN). */
+/** Kit meshes used by forge dressing (KayKit). Opt copies = Meshopt + KTX2/WebP. */
 export const DRESSING = {
-  torch: `${CDN}/game-assets/glb/kaykit/gltf/torch.glb`,
-  chest: `${CDN}/game-assets/glb/kaykit/gltf/chest_rare.glb`,
-  banner: `${CDN}/game-assets/glb/kaykit/gltf/banner.glb`,
-  carpet: `${CDN}/game-assets/glb/kaykit/gltf/floorDecoration_wood.glb`,
-  crate: `${CDN}/game-assets/glb/kaykit/gltf/crate.glb`,
-  barrel: `${CDN}/game-assets/glb/kaykit/gltf/barrel.glb`,
-  pillar: `${CDN}/game-assets/glb/kaykit/gltf/pillar.glb`,
-  ruin: `${CDN}/game-assets/glb/kaykit/gltf/pillar_broken.glb`,
+  torch: '/models/opt/kaykit/torch.glb',
+  chest: '/models/opt/kaykit/chest_rare.glb',
+  banner: '/models/opt/kaykit/banner.glb',
+  carpet: '/models/opt/kaykit/floorDecoration_wood.glb',
+  crate: '/models/opt/kaykit/crate.glb',
+  barrel: '/models/opt/kaykit/barrel.glb',
+  pillar: '/models/opt/kaykit/pillar.glb',
+  ruin: '/models/opt/kaykit/pillar_broken.glb',
   gate: '/models/props/the-gate.glb',
 };
+
+/** Catalog weapon overlay clips — Bip001 JSON on assets CDN (Casting prod/anims). */
+export const WEAPON_CLIP_URLS = {
+  magic: {
+    cast: `${CDN}/prod/anims/magic/standing-1h-cast-spell-01.json`,
+  },
+  longbow: {
+    shoot: `${CDN}/prod/anims/longbow/standing-draw-arrow.json`,
+    attack2: `${CDN}/prod/anims/longbow/standing-aim-recoil.json`,
+  },
+  sword_shield: {
+    attack: `${CDN}/prod/anims/sword_shield/sword-and-shield-slash.json`,
+    attack2: `${CDN}/prod/anims/sword_shield/sword-and-shield-attack.json`,
+  },
+};
+
+export function weaponClipPack(weaponId) {
+  const w = String(weaponId || '');
+  if (/bow|longbow|xbow/.test(w)) return WEAPON_CLIP_URLS.longbow;
+  if (/staff|wand|tome|magic/.test(w)) return WEAPON_CLIP_URLS.magic;
+  if (/unarmed|claw/.test(w)) return null;
+  return WEAPON_CLIP_URLS.sword_shield;
+}
 
 export const PLAY = {
   level: 20,

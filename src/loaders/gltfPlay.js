@@ -6,8 +6,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 
 const DRACO_PATH = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/';
+const KTX2_PATH = 'https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/libs/basis/';
 
 let playLoader = null;
 
@@ -24,6 +26,16 @@ export function getPlayGltfLoader() {
     if (dec) loader.setMeshoptDecoder(dec);
   }).catch(() => { /* Draco-only kits still load */ });
   return loader;
+}
+
+/** Bind Basis/KTX2 after the WebGLRenderer exists. Same pin as Casting gltfPipeline. */
+export function bindPlayKtx2(renderer) {
+  if (!renderer || typeof document === 'undefined') return;
+  const loader = getPlayGltfLoader();
+  const ktx2 = new KTX2Loader();
+  ktx2.setTranscoderPath(KTX2_PATH);
+  ktx2.detectSupport(renderer);
+  loader.setKTX2Loader(ktx2);
 }
 
 /** Albedo SRGB, data maps linear, skins not frustum-culled. No unit squash. */
