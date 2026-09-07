@@ -170,6 +170,41 @@ export const CREATURES = {
     biomes: ['grim', 'verdant', 'molten'],
     attacks: ['slash', 'earth_spike', 'column'], telegraph: 'cone',
   },
+  fox_monster: {
+    id: 'fox_monster', label: 'Cave Fox', mesh: 'models/creatures/fox_monster.glb',
+    clips: 'native', hide: /icosphere/i, height: 1.15, radius: 0.38, speed: 3.6, hp: 42,
+    kind: 'grunt', role: 'warrior', brain: 'pursue', biome: 'verdant',
+    biomes: ['verdant', 'ancient'],
+    attacks: ['slash', 'swipe'], telegraph: 'cone',
+  },
+  ulquiorra: {
+    id: 'ulquiorra', label: 'Hollow Blade', mesh: 'models/creatures/ulquiorra.glb',
+    clips: 'native', hide: /icosphere/i, height: 1.85, radius: 0.42, speed: 3.2, hp: 130,
+    kind: 'elite', role: 'warrior', brain: 'pursue', biome: 'grim',
+    biomes: ['grim', 'ancient'],
+    attacks: ['slash', 'linear', 'circle'], telegraph: 'cone',
+  },
+  detale: {
+    id: 'detale', label: 'Detale', mesh: 'models/creatures/detale.glb',
+    clips: 'native', hide: /icosphere/i, height: 2.05, radius: 0.7, speed: 2.7, hp: 150,
+    kind: 'elite', role: 'mage', brain: 'pursue', biome: 'frost',
+    biomes: ['frost', 'verdant'],
+    attacks: ['slash', 'linear', 'circle'], telegraph: 'incoming',
+  },
+  devil_dragon: {
+    id: 'devil_dragon', label: 'Devil Drake', mesh: 'models/creatures/devil_dragon.glb',
+    clips: 'native', hide: /icosphere/i, height: 2.75, radius: 0.9, speed: 2.4, hp: 240,
+    kind: 'miniboss', role: 'mage', brain: 'pursue', biome: 'molten',
+    biomes: ['molten', 'grim'],
+    attacks: ['fire_fan', 'slash', 'circle'], telegraph: 'aoe',
+  },
+  detardeurus: {
+    id: 'detardeurus', label: 'Detardeurus', mesh: 'models/creatures/detardeurus.glb',
+    clips: 'native', hide: /icosphere/i, height: 3.15, radius: 1.05, speed: 2.0, hp: 320,
+    kind: 'miniboss', role: 'mage', brain: 'pursue', biome: 'ancient',
+    biomes: ['ancient', 'molten'],
+    attacks: ['fire_fan', 'column', 'circle', 'linear'], telegraph: 'aoe',
+  },
 };
 
 export function creatureOf(id) {

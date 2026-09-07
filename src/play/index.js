@@ -26,6 +26,7 @@ import { createDungeonPhysics, stepDungeonPhysics, setPhysicsFeet, disposeDungeo
 import { createLosField } from './los.js';
 import { warmYuka, attachYuka, steerEnemy } from './yukaSteer.js';
 import { pull, hearBreak, tickMobMotion, losToPlayer, applyTaunt, addThreat, THREAT } from './aggro.js';
+import { updateAlertMark } from './alertMark.js';
 import { makeClassState, WARRIOR_TANK, WORGE_GRIMOIRE, RAIDER_TWO_HAND, MAGE_WAND, PRIEST_WAND, classItemFor, addGrudgeStack, grudgeDefenseMul, craftWorgeForm } from './classItems.js';
 import { createLockpickSession, tickLockpickHold, attemptLockpickTumble, setLockpickPinAngle, cancelLockpick, pinInSweetZone } from './lockpick.js';
 import { animForSpell, hitWindowSec, reequipActor, spawnActor } from './characters.js';
@@ -2801,6 +2802,7 @@ export class PlaySession {
       const d2 = e.pos.distanceToSquared(this.pos);
       if (e.asleep && d2 > 28 * 28) {
         e.actor.setGait(false, false);
+        updateAlertMark(e);
         continue;
       }
       e.actor.update(dt);
@@ -2841,6 +2843,19 @@ export class PlaySession {
       } else {
         mode = tickMobMotion(this, e, dt);
       }
+      if (e.alert && !e._alertTold) {
+        e._alertTold = true;
+        this.tele?.combat({ kind: 'warning', origin: e.pos, size: 1.7, ttl: 0.7 });
+      }
+      if ((e.aggro || 0) > 0 && !e._aggroTold) {
+        e._aggroTold = true;
+        this.tele?.combat({ kind: 'warning', origin: e.pos, size: 2.3, ttl: 0.45 });
+      }
+      if (!e.alert && !(e.aggro > 0)) {
+        e._alertTold = false;
+        e._aggroTold = false;
+      }
+      updateAlertMark(e);
       e.actor.root.position.copy(e.pos);
       groundRoot(e.actor.root, this.sampler, e.pos.x, e.pos.z);
       if (see) e.actor.root.rotation.y = Math.atan2(dir.x, dir.z);

@@ -134,8 +134,8 @@ export function classifyClips(clips, weaponId = '') {
   const out = {};
   for (const k of [...LOCO_KEYS, ...SHOT_KEYS]) out[k] = null;
 
-  out.idle = twoH ? (exact('gs_idle') || exact('idle')) : exact('idle');
-  out.walk = twoH ? (exact('gs_walk') || exact('walk')) : exact('walk');
+  out.idle = twoH ? (exact('gs_idle') || exact('idle')) : exact('idle', 'stand', 'wait', 'stay_show', 'show', 'wait_inhand');
+  out.walk = twoH ? (exact('gs_walk') || exact('walk')) : exact('walk', 'walk_inhand');
   out.run = twoH ? (exact('gs_run') || exact('run')) : exact('run');
   out.sprint = exact('sprint', 'sprint_start') || out.run;
   out.jump = exact('jump');
@@ -159,18 +159,20 @@ export function classifyClips(clips, weaponId = '') {
   out.plant = exact('plant_seed');
   out.attack = unarmed
     ? (exact('unarmed_uppercut') || exact('sword_attack_a', 'attack'))
-    : exact('sword_attack_a', 'attack');
-  out.attack2 = exact('sword_attack_c') || out.attack;
-  out.attack3 = exact('sword_combo_finisher') || out.attack2;
-  out.cast = exact('cast', 'standing_1h_cast_spell_01') || (mag ? (exact('attack') || out.attack) : out.attack);
+    : exact('sword_attack_a', 'attack', 'attack01', 'attack_1', 'commonattack', 'strike_1');
+  out.attack2 = exact('sword_attack_c', 'attack_2', 'attack02', 'attack_3') || out.attack;
+  out.attack3 = exact('sword_combo_finisher', 'skill_1') || out.attack2;
+  out.cast = exact('cast', 'standing_1h_cast_spell_01', 'use_magic', 'use_skill', 'skill_ready', 'skill_1') || (mag ? (exact('attack') || out.attack) : out.attack);
   out.shoot = exact('shoot', 'standing_draw_arrow', 'draw_arrow') || (bow ? (exact('attack') || out.attack) : out.cast);
   if (bow && !exact('cast')) out.cast = out.shoot;
 
-  if (!out.idle) out.idle = hit(/^idle(_\d+)?$/i) || hit(/gs_idle|stand(?!2)|breath/i);
-  if (!out.walk) out.walk = hit(/^walk(_\d+)?$/i) || hit(/gs_walk|^walk$/i);
+  if (!out.idle) out.idle = hit(/^idle(_\d+)?$/i) || hit(/gs_idle|stand(?!2)|breath|^wait$|^show$/i);
+  if (!out.walk) out.walk = hit(/^walk(_\d+)?$/i) || hit(/gs_walk|^walk/i);
   if (!out.run) out.run = hit(/^run(_\d+)?$/i) || hit(/gs_run|^run$|sprint/i);
+  if (!out.attack) out.attack = hit(/^attack|commonattack|strike_1|attack01/i);
+  if (!out.cast) out.cast = hit(/use_magic|use_skill|skill_ready|skill_1|skill$/i);
   if (!out.death) out.death = hit(/death|die|dead/i);
-  if (!out.hit) out.hit = hit(/^hit$|^hurt$|flinch|react_hit/i);
+  if (!out.hit) out.hit = hit(/^hit$|^hurt$|flinch|react_hit|gethit/i);
   if (!out.stun) out.stun = hit(/^stun$|stagger/i) || out.hit;
 
   if (!out.idle && clips?.[0]) out.idle = clips[0];

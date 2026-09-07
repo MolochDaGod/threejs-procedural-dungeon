@@ -16,6 +16,7 @@ import {
   hitWindowSec,
   resolveClipName,
 } from './clipRoles.js';
+import { attachAlertMark } from './alertMark.js';
 
 export { animForSpell, classifyClips, clipStem, hitWindowSec, resolveClipName };
 
@@ -625,6 +626,7 @@ export async function spawnActor({
   }
   fitHeight(visual, h);
   if (prefab?.yaw) visual.rotation.y = prefab.yaw;
+  attachAlertMark(actor, h);
   actor.ready = true;
   const stamp = {
     v: 1,

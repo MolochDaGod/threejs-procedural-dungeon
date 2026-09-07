@@ -142,6 +142,7 @@ export function tickMobMotion(session, e, dt) {
   const see = dist <= AGGRO.detection && losToPlayer(session, e);
   if (see && dist <= AGGRO.aggro) pull(session, e, 8);
   else if (see) e.alert = true;
+  else e.alert = false;
 
   const fromSpawn = e.spawn ? e.pos.distanceTo(e.spawn) : 0;
   if ((e.aggro || 0) > 0 && fromSpawn > AGGRO.leash) {
