@@ -20,6 +20,13 @@ import {
 } from './clipRoles.js';
 import { attachAlertMark } from './alertMark.js';
 
+const _aimWp = new THREE.Vector3();
+const _aimDir = new THREE.Vector3();
+const _aimInv = new THREE.Matrix4();
+const _aimLook = new THREE.Quaternion();
+const _aimWant = new THREE.Quaternion();
+const _aimUp = new THREE.Vector3(0, 1, 0);
+
 export { animForSpell, classifyClips, clipStem, hitWindowSec, resolveClipName };
 
 const RACE_PREFIXES = ['WK_', 'BRB_', 'ELF_', 'DWF_', 'ORC_', 'UD_'];
@@ -501,7 +508,7 @@ export class Actor {
     else if (opts.sneak) next = moving ? (this.clips.sneak ? 'sneak' : 'walk') : (this.clips.crouch ? 'crouch' : 'idle');
     else if (opts.strafe === 'left' && moving && this.clips.strafeL) next = 'strafeL';
     else if (opts.strafe === 'right' && moving && this.clips.strafeR) next = 'strafeR';
-    else if (!moving) next = 'idle';
+    else if (!moving) next = (opts.combat && this.clips.fight_idle) ? 'fight_idle' : 'idle';
     else if (sprint) next = this.clips.sprint ? 'sprint' : 'run';
     else next = 'walk';
     this.gait = next;
@@ -523,6 +530,7 @@ export class Actor {
     downed = false,
     airborne = false,
     walkSpeed = 3.4,
+    combat = false,
   } = {}) {
     if (!this.alive || this.dead) return;
     const mag = Math.hypot(vx, vz);
@@ -535,7 +543,7 @@ export class Actor {
     if (moving && !downed && Math.abs(lat) > 0.62 * mag && Math.abs(fwd) < 0.58 * mag) {
       strafe = lat < 0 ? 'left' : 'right';
     }
-    this.setGait(moving, !!(sprint && moving), { downed, sneak, strafe });
+    this.setGait(moving, !!(sprint && moving), { downed, sneak, strafe, combat });
     const act = this.loco[this.gait];
     if (act) {
       act.timeScale = moving && walkSpeed > 0.1
@@ -567,6 +575,42 @@ export class Actor {
     }
     this.mixer?.update(dt);
     if (this.groundSampler && !this.airborne) plantFeet(this.root, this.groundSampler);
+    this._aimWeaponToward(dt);
+  }
+
+  _findWeaponHand() {
+    if (this._rHand) return this._rHand;
+    const r = this.visual || this.root;
+    this._rHand = r.getObjectByName('R_hand_container')
+      || r.getObjectByName('Bip001 R Hand')
+      || r.getObjectByName('Bip001_R_Hand');
+    return this._rHand;
+  }
+
+  /** Late-bind: after mixer, aim held weapon at lock (limited). */
+  _aimWeaponToward(dt) {
+    const hand = this._findWeaponHand();
+    const target = this.aimPoint;
+    if (!hand) return;
+    if (!this._handRestQ) this._handRestQ = hand.quaternion.clone();
+    if (!target) {
+      hand.quaternion.slerp(this._handRestQ, Math.min(1, 8 * dt));
+      return;
+    }
+    hand.getWorldPosition(_aimWp);
+    _aimDir.subVectors(target, _aimWp);
+    if (_aimDir.lengthSq() < 0.25) return;
+    _aimDir.normalize();
+    const parent = hand.parent;
+    if (!parent) return;
+    parent.updateWorldMatrix(true, false);
+    _aimInv.copy(parent.matrixWorld).invert();
+    _aimDir.transformDirection(_aimInv);
+    _aimLook.setFromUnitVectors(_aimUp, _aimDir);
+    _aimWant.copy(this._handRestQ).multiply(_aimLook);
+    const ang = hand.quaternion.angleTo(_aimWant);
+    if (ang > 0.7) _aimWant.slerp(this._handRestQ, 1 - 0.7 / ang);
+    hand.quaternion.slerp(_aimWant, Math.min(1, 10 * dt));
   }
 
   dispose() {
@@ -635,7 +679,11 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
       for (const c of g.animations || []) {
         if (!c.tracks?.length) continue;
         const stem = clipStem(c.name).toLowerCase();
-        if (stem === 'run' || stem === 'idle' || stem === 'stay_show' || stem === 'back') continue;
+        if (stem === 'run' || stem === 'stay_show' || stem === 'back') continue;
+        if (stem === 'idle') {
+          take(c, { forceName: 'fight_idle', source: 'kenpachi' });
+          continue;
+        }
         take(c, { source: 'kenpachi' });
       }
     } catch {

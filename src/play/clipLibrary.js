@@ -49,7 +49,7 @@ export const BIP001_RIFLE = [
   { url: `${B}/rifle/walking.json`, stem: 'walk' },
   { url: `${B}/rifle/run-forward.json`, stem: 'run' },
   { url: `${B}/rifle/firing-rifle.json`, stem: 'shoot' },
-  { url: `${B}/rifle/rifle-aiming-idle.json`, stem: 'aim' },
+  { url: `${B}/rifle/rifle-aiming-idle.json`, stem: 'fight_idle' },
   { url: `${B}/rifle/reloading.json`, stem: 'reload' },
   { url: `${B}/rifle/hit-reaction.json`, stem: 'hit' },
   { url: `${B}/rifle/death-from-front-headshot.json`, stem: 'death' },
@@ -66,6 +66,7 @@ export const BIP001_MAGIC_STAFF = [
   { url: `${B}/magic/gojo_skill1.json`, stem: 'skill1' },
   { url: `${B}/magic/gojo_skill2.json`, stem: 'skill2' },
   { url: `${B}/magic/ace_attack.json`, stem: 'attack1' },
+  { url: `${B}/magic/estes_fight_idle.json`, stem: 'fight_idle' },
 ];
 
 /** Ikkaku Bip001 JSON — spear attacks (attack1–5, skill1–8 + ult). */
@@ -86,6 +87,16 @@ export const BIP001_SPEAR = [
   { url: `${B}/spear/ikkaku_skill_ult.json`, stem: 'attack3' },
   { url: `${B}/spear/ikkaku_hit.json`, stem: 'hit' },
   { url: `${B}/spear/ikkaku_dead.json`, stem: 'death' },
+  { url: `${B}/spear/ikkaku_fight_idle.json`, stem: 'fight_idle' },
+];
+
+/** Bleach 1H — fight idle + attacks for sword+shield. */
+export const BIP001_SWORD = [
+  { url: `${B}/sword/bleach_fight_idle.json`, stem: 'fight_idle' },
+  { url: `${B}/sword/bleach_attack.json`, stem: 'attack' },
+  { url: `${B}/sword/bleach_attack2.json`, stem: 'attack2' },
+  { url: `${B}/sword/bleach_attack3.json`, stem: 'attack3' },
+  { url: `${B}/sword/bleach_skill1.json`, stem: 'skill1' },
 ];
 
 export function bip001ExtraForWeapon(weaponId) {
@@ -93,6 +104,7 @@ export function bip001ExtraForWeapon(weaponId) {
   if (/rifle|musket|carbine|shotgun/.test(w)) return BIP001_RIFLE;
   if (/staff|wand|tome|magic/.test(w)) return BIP001_MAGIC_STAFF;
   if (/spear|pike|glaive|halberd/.test(w)) return BIP001_SPEAR;
+  if (/sword_shield|1h_tome|mace_sword/.test(w) || (w === 'sword')) return BIP001_SWORD;
   return [];
 }
 

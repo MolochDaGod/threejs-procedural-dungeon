@@ -737,6 +737,7 @@ export class PlaySession {
         this.player.root.rotation.y = cur + d * (1 - Math.exp(-14 * dt));
       }
       if (this.dodgeT <= 0) {
+        const inFight = !!(this.aiming?.target) || this.enemies.some((en) => en.alive && (en.aggro || 0) > 0);
         this.player.setMotion({
           vx: this.vel.x,
           vz: this.vel.z,
@@ -746,7 +747,15 @@ export class PlaySession {
           downed: this.downed,
           airborne: this._air,
           walkSpeed: speed,
+          combat: inFight,
         });
+        if (this.aiming?.target?.pos) {
+          if (!this.player.aimPoint) this.player.aimPoint = new THREE.Vector3();
+          this.player.aimPoint.copy(this.aiming.target.pos);
+          this.player.aimPoint.y += 1.15;
+        } else {
+          this.player.aimPoint = null;
+        }
         this._syncFormGait(moving, this.downed ? false : sprint);
       }
       if (this._air && !this._wasAir) this.player.requestOneShot?.('jump');
@@ -2888,7 +2897,13 @@ export class PlaySession {
           lookYaw: e.actor.root.rotation.y,
           sprint: mode === 'chase',
           walkSpeed: e.speed || 3.2,
+          combat: (e.aggro || 0) > 0 || mode === 'chase',
         });
+        if ((e.aggro || 0) > 0) {
+          if (!e.actor.aimPoint) e.actor.aimPoint = new THREE.Vector3();
+          e.actor.aimPoint.copy(this.pos);
+          e.actor.aimPoint.y += 1.15;
+        } else e.actor.aimPoint = null;
       }
 
       if ((e.aggro || 0) > 0) {

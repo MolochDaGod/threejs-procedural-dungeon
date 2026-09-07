@@ -38,7 +38,7 @@ export const CLIP_SKIP = [
   'turn_left', 'turn_right',
 ];
 
-export const LOCO_KEYS = ['idle', 'walk', 'run', 'sprint', 'crawl', 'sneak', 'crouch', 'strafeL', 'strafeR'];
+export const LOCO_KEYS = ['idle', 'fight_idle', 'walk', 'run', 'sprint', 'crawl', 'sneak', 'crouch', 'strafeL', 'strafeR'];
 
 /** Overlay / one-shot roles the Actor may play. */
 export const SHOT_KEYS = [
@@ -185,6 +185,7 @@ export function classifyClips(clips, weaponId = '') {
   for (const k of [...LOCO_KEYS, ...SHOT_KEYS]) out[k] = null;
 
   out.idle = pick(twoH ? ['gs_idle', 'idle'] : ['idle', 'stand', 'wait', 'stay_show', 'show', 'wait_inhand'], SRC_LOCO);
+  out.fight_idle = pick(['fight_idle', 'fightidle', 'aim'], spear ? SRC_SPEAR : twoH ? SRC_2H : mag ? SRC_CAST : SRC_MELEE);
   out.walk = pick(twoH ? ['gs_walk', 'walk'] : ['walk', 'walk_inhand'], SRC_LOCO);
   out.run = pick(twoH ? ['gs_run', 'run'] : ['run'], SRC_LOCO);
   out.sprint = exact('sprint', 'sprint_start') || out.run;
