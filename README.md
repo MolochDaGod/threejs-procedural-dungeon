@@ -30,7 +30,7 @@ Honest vs shipped. Green = live on `grudge-dungeons.vercel.app`. Yellow = wired 
 | Area | Status | Fact |
 | --- | --- | --- |
 | One `generateDungeon` | Green | No second dungeon host / Vercel project |
-| Toon play mesh + `loadRaceKit` wardrobe | Green | `SkeletonUtils.clone` + mesh_ids kit |
+| Toon play mesh + contract stamp | Yellow | Clone + `warlordsPlayContract` stamp — **not** ObjectStore `loadRaceKit` |
 | Rapier CCT + indoor TPS | Green | `src/play/physics.js` + `tpsCamera.js` |
 | T8 weapon catalog (not Cleave/Fireball) | Green | `weaponSkills.js` + aliases (`fireball` → `staff_fire_bolt`) |
 | Combat bar 1–5 / 6–7 items / 8 mounts | Green | ElvUI layout in `hudLayout.js` |
