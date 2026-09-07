@@ -89,8 +89,36 @@ export const CLIP_FALLBACK = {
 export function clipStem(name) {
   const raw = String(name || '');
   const part = raw.split('|').pop().trim();
-  return part.replace(/^mixamorig:?/i, '').replace(/[\s-]+/g, '_');
+  const stripped = part.replace(/^(donor|estes|native|json|death)__/i, '');
+  return stripped.replace(/^mixamorig:?/i, '').replace(/[\s-]+/g, '_');
 }
+
+export function clipStemOf(clip) {
+  return clip?.userData?.stem || clipStem(clip?.name);
+}
+
+/**
+ * Definition id for a clip — not account GRUDGE_… and not item grudge_uuid.
+ * Unique across donors so classifyClips never last-write-wins.
+ */
+export function stampAnimClip(clip, source, rawName) {
+  if (!clip) return clip;
+  const stem = clipStem(rawName || clip.name);
+  const src = String(source || 'pack').toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'pack';
+  const slug = stem.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'clip';
+  clip.userData = Object.assign(clip.userData || {}, {
+    stem,
+    source: src,
+    animId: `grudge.anim.${src}.${slug}`,
+  });
+  clip.name = `${src}__${slug}`;
+  return clip;
+}
+
+const SRC_LOCO = ['native', 'donor', 'json', 'estes'];
+const SRC_CAST = ['estes', 'json', 'donor', 'native'];
+const SRC_MELEE = ['donor', 'native', 'estes', 'json'];
+const SRC_DEATH = ['native', 'estes', 'death', 'donor', 'json'];
 
 function namedGet(named, ...keys) {
   for (const k of keys) {
@@ -102,7 +130,7 @@ function namedGet(named, ...keys) {
 
 function firstHit(clips, re, skip) {
   for (const c of clips) {
-    const s = clipStem(c.name);
+    const s = clipStemOf(c);
     if (skip.has(s.toLowerCase())) continue;
     if (re.test(s) || re.test(c.name)) return c;
   }
@@ -120,23 +148,40 @@ export function classifyClips(clips, weaponId = '') {
   const twoH = /two_hand|greataxe|greatsword|gs_|hammer_holy|mace_sword/.test(wep);
   const unarmed = /unarmed|claw/.test(wep);
   const skip = new Set(CLIP_SKIP.map((n) => n.toLowerCase()));
-  const named = new Map();
+  const byStem = new Map();
   for (const c of clips || []) {
-    const s = clipStem(c.name);
-    c.userData = c.userData || {};
-    c.userData.stem = s;
-    const key = s.toLowerCase();
-    named.set(key, c);
+    if (!c.userData?.animId) stampAnimClip(c, c.userData?.source || 'pack', c.name);
+    const s = clipStemOf(c).toLowerCase();
+    if (!byStem.has(s)) byStem.set(s, []);
+    byStem.get(s).push(c);
+    byStem.set(String(c.name).toLowerCase(), [c]);
   }
-  const exact = (...keys) => namedGet(named, ...keys);
+  const pick = (keys, prefer) => {
+    let best = null;
+    let bestR = 99;
+    for (const k of keys) {
+      const arr = byStem.get(String(k).toLowerCase()) || [];
+      for (const c of arr) {
+        const src = c.userData?.source || 'pack';
+        const r = prefer.indexOf(src);
+        const rank = r < 0 ? 80 : r;
+        if (rank < bestR) {
+          best = c;
+          bestR = rank;
+        }
+      }
+    }
+    return best;
+  };
+  const exact = (...keys) => pick(keys, mag ? SRC_CAST : SRC_MELEE);
   const hit = (re) => firstHit(clips || [], re, skip);
 
   const out = {};
   for (const k of [...LOCO_KEYS, ...SHOT_KEYS]) out[k] = null;
 
-  out.idle = twoH ? (exact('gs_idle') || exact('idle')) : exact('idle', 'stand', 'wait', 'stay_show', 'show', 'wait_inhand');
-  out.walk = twoH ? (exact('gs_walk') || exact('walk')) : exact('walk', 'walk_inhand');
-  out.run = twoH ? (exact('gs_run') || exact('run')) : exact('run');
+  out.idle = pick(twoH ? ['gs_idle', 'idle'] : ['idle', 'stand', 'wait', 'stay_show', 'show', 'wait_inhand'], SRC_LOCO);
+  out.walk = pick(twoH ? ['gs_walk', 'walk'] : ['walk', 'walk_inhand'], SRC_LOCO);
+  out.run = pick(twoH ? ['gs_run', 'run'] : ['run'], SRC_LOCO);
   out.sprint = exact('sprint', 'sprint_start') || out.run;
   out.jump = exact('jump');
   out.flip = exact('front_flip');
@@ -158,13 +203,14 @@ export function classifyClips(clips, weaponId = '') {
   out.interact = exact('harvest');
   out.plant = exact('plant_seed');
   out.attack = unarmed
-    ? (exact('unarmed_uppercut') || exact('sword_attack_a', 'attack'))
-    : exact('sword_attack_a', 'attack', 'attack01', 'attack_1', 'commonattack', 'strike_1');
-  out.attack2 = exact('sword_attack_c', 'attack_2', 'attack02', 'attack_3', 'skill2', 'attack2') || out.attack;
-  out.attack3 = exact('sword_combo_finisher', 'skill3', 'skill_1') || out.attack2;
-  out.cast = exact('cast', 'skill1', 'attack1', 'standing_1h_cast_spell_01', 'use_magic', 'use_skill', 'skill_ready', 'skill_1') || (mag ? (exact('attack') || out.attack) : out.attack);
-  out.stun = exact('stun', 'verigo');
-  out.death = exact('death', 'dead', 'die');
+    ? (pick(['unarmed_uppercut', 'sword_attack_a', 'attack'], SRC_MELEE))
+    : pick(['sword_attack_a', 'attack', 'attack01', 'attack_1', 'commonattack', 'strike_1'], SRC_MELEE);
+  out.attack2 = pick(['sword_attack_c', 'attack_2', 'attack02', 'attack_3', 'skill2', 'attack2'], mag ? SRC_CAST : SRC_MELEE) || out.attack;
+  out.attack3 = pick(['sword_combo_finisher', 'skill3', 'skill_1'], mag ? SRC_CAST : SRC_MELEE) || out.attack2;
+  out.cast = pick(['cast', 'skill1', 'attack1', 'standing_1h_cast_spell_01', 'use_magic', 'use_skill', 'skill_ready', 'skill_1'], SRC_CAST)
+    || (mag ? (out.attack) : out.attack);
+  out.stun = pick(['stun', 'verigo'], SRC_CAST);
+  out.death = pick(['death', 'dead', 'die'], SRC_DEATH);
   out.shoot = exact('shoot', 'standing_draw_arrow', 'draw_arrow') || (bow ? (exact('attack') || out.attack) : out.cast);
   if (bow && !exact('cast')) out.cast = out.shoot;
 

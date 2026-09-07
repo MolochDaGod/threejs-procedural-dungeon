@@ -15,6 +15,7 @@ import {
   clipStem,
   hitWindowSec,
   resolveClipName,
+  stampAnimClip,
 } from './clipRoles.js';
 import { attachAlertMark } from './alertMark.js';
 
@@ -522,25 +523,17 @@ export class Actor {
 async function gatherClips(gltf, boneMap, weaponId = '') {
   const native = (gltf.animations || []).filter((c) => c.tracks?.length);
   const extra = [];
-  const have = new Set();
-  const remember = (c) => {
-    const s = clipStem(c.name).toLowerCase();
-    if (s) have.add(s);
-  };
-  const take = (c, forceName = null) => {
+  const take = (c, { forceName = null, source = 'donor' } = {}) => {
     const copy = remapClipTracks(c, boneMap);
     if (!copy.tracks.length) return;
-    if (forceName) copy.name = forceName;
-    const stem = clipStem(copy.name).toLowerCase();
-    if (!forceName && have.has(stem)) return;
+    stampAnimClip(copy, source, forceName || c.name);
     extra.push(copy);
-    remember(copy);
   };
-  const tryUrl = async (url, forceName = null) => {
+  const tryUrl = async (url, forceName = null, source = 'donor') => {
     const g = await loadGltf(url);
     for (const c of g.animations || []) {
       if (!c.tracks?.length) continue;
-      take(c, forceName);
+      take(c, { forceName, source });
     }
   };
   const tryJson = async (url, forceName) => {
@@ -553,10 +546,10 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
     }
     const clip = THREE.AnimationClip.parse(json);
     if (!clip?.tracks?.length) return;
-    take(clip, forceName);
+    take(clip, { forceName, source: 'json' });
   };
   try {
-    await tryUrl(CLIP_DONOR);
+    await tryUrl(CLIP_DONOR, null, 'donor');
   } catch {
     /* donor optional */
   }
@@ -566,13 +559,13 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
       if (!c.tracks?.length) continue;
       const stem = clipStem(c.name).toLowerCase();
       if (stem === 'run' || stem === 'fight_idle') continue;
-      take(c);
+      take(c, { source: 'estes' });
     }
   } catch {
     /* estes optional */
   }
   await Promise.all(Object.entries(ANIM_URLS).map(async ([key, url]) => {
-    try { await tryUrl(url, key); } catch { /* optional death/idle fill */ }
+    try { await tryUrl(url, key, key === 'death' ? 'death' : 'donor'); } catch { /* optional */ }
   }));
   const pack = weaponClipPack(weaponId);
   if (pack) {
@@ -580,8 +573,12 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
       try { await tryJson(url, role); } catch { /* catalog miss */ }
     }));
   }
-  const remapped = native.map((c) => remapClipTracks(c, boneMap)).filter((c) => c.tracks.length);
-  for (const c of remapped) remember(c);
+  const remapped = native.map((c) => {
+    const copy = remapClipTracks(c, boneMap);
+    if (!copy.tracks.length) return null;
+    stampAnimClip(copy, 'native', c.name);
+    return copy;
+  }).filter(Boolean);
   return [...remapped, ...extra];
 }
 gatherClips._json = new Map();
@@ -626,7 +623,7 @@ export async function spawnActor({
   const animRoot = findAnimRoot(visual);
   actor.mixer = new THREE.AnimationMixer(animRoot);
   const clips = nativeMesh
-    ? (gltf.animations || []).map((c) => stripPositionTracks(c.clone()))
+    ? (gltf.animations || []).map((c) => stampAnimClip(stripPositionTracks(c.clone()), 'native', c.name))
     : await gatherClips(gltf, collectBoneMap(visual), wid);
   actor.clipBank = clips;
   actor.clips = classifyClips(clips, wid);
