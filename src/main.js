@@ -848,19 +848,27 @@ function tunePlayRender(on) {
     POST.enabled = false;
     dirL.castShadow = false;
     renderer.shadowMap.enabled = false;
-    hemi.intensity = themeHemiI * 1.35;
-    dirL.intensity = themeDirI * 1.1;
+    hemi.intensity = 0.22;
+    dirL.intensity = 0.12;
+    renderer.toneMappingExposure = 0.92;
+    for (const L of lights) L.visible = false;
   } else {
     POST.enabled = !!el?.tPost?.checked;
     dirL.castShadow = true;
     renderer.shadowMap.enabled = true;
     hemi.intensity = themeHemiI * LIGHT_K;
     dirL.intensity = themeDirI * LIGHT_K;
+    renderer.toneMappingExposure = 1.08;
     for (const L of lights) L.visible = true;
   }
 }
 function tickPlayLights(origin) {
-  if (!playRender || !origin || !lights.length) return;
+  if (!playRender) return;
+  if (dressing?.anchors?.length) {
+    for (const L of lights) L.visible = false;
+    return;
+  }
+  if (!origin || !lights.length) return;
   const ox = origin.x, oz = origin.z;
   _lightRank.length = 0;
   for (let i = 0; i < lights.length; i++) {
@@ -872,16 +880,18 @@ function tickPlayLights(origin) {
   const idx = [];
   for (let i = 0; i < n; i++) idx.push(i);
   idx.sort((a, b) => _lightRank[a * 2 + 1] - _lightRank[b * 2 + 1]);
-  const keep = 4;
-  const lim = 22 * 22;
+  const keep = 8;
+  const lim = 16 * 16;
   for (const L of lights) L.visible = false;
   for (let k = 0; k < Math.min(keep, idx.length); k++) {
     const L = lights[idx[k]];
     const d2 = _lightRank[idx[k] * 2 + 1];
     L.visible = d2 < lim;
     if (L.visible) {
-      const flicker = 0.88 + 0.16 * Math.sin(elapsed * 9 + (L.userData.ph || 0)) * Math.sin(elapsed * 4.7 + (L.userData.ph || 0) * 1.7);
-      L.intensity = (L.userData.base || 1.6) * flicker;
+      const flicker = 0.91 + 0.09 * Math.sin(elapsed * 5.4 + (L.userData.ph || 0));
+      L.intensity = Math.min(1.7, L.userData.base || 1.55) * flicker;
+      L.distance = 7.2;
+      L.decay = 2;
     }
   }
 }
@@ -1818,7 +1828,7 @@ function buildScene(d){
   for(const t of d.torches){
     const ry = Math.atan2(t.dx, t.dy);
     const X = wx(t.x)+t.dx*0.5, Z = wz(t.y)+t.dy*0.5, dl = nearFloorBfs(t.x,t.y)*dStep + 0.66;
-    S.torchArm.add(X, 1.02 / CELL_M, Z, 1 / CELL_M, 1 / CELL_M, 1 / CELL_M, ry, 0x4a4038, dl);
+    S.torchArm.add(X, 1.18, Z, 1 / CELL_M, 1 / CELL_M, 1 / CELL_M, ry, 0x4a4038, dl);
   }
 
   /* spawn markers: three authored tiers */
@@ -2031,7 +2041,7 @@ function buildScene(d){
   }
   for(const t of chosen){
     const L = new THREE.PointLight(TH.torchLight[0], TH.torchLight[1], TH.torchLight[2], 2);
-    L.position.set(wx(t.x)+t.dx*0.28, 1.7 / CELL_M, wz(t.y)+t.dy*0.28);
+    L.position.set(wx(t.x)+t.dx*0.62, 1.62, wz(t.y)+t.dy*0.62);
     L.userData={base:TH.torchLight[1], ph:li*1.7, ramp:1}; group.add(L); lights.push(L); li++;
   }
 
@@ -2041,9 +2051,9 @@ function buildScene(d){
     const torchS = 0.55 / CELL_M;
     for (const t of d.torches) {
       fires.push({
-        x: wx(t.x) + t.dx * 0.18,
-        y: 1.55 / CELL_M,
-        z: wz(t.y) + t.dy * 0.18,
+        x: wx(t.x) + t.dx * 0.42,
+        y: 1.58,
+        z: wz(t.y) + t.dy * 0.42,
         scale: torchS * (0.9 + cellRng.f(0, 0.25)),
         seed: cellRng.raw(),
       });
@@ -2596,7 +2606,7 @@ function tick(){
   liveUpdate(elapsed, animating ? animT - 2.3 : Infinity);
   if (playRender) tickPlayLights(play.pos);
   if (typeof fx.fire?.update === 'function') fx.fire.update(cam, elapsed);
-  dressing.update(elapsed);
+  dressing.update(elapsed, play.pos, playRender);
   forgeGates.update(dt);
   forgeCast.update(dt);
   play.update(dt);

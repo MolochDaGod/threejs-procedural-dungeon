@@ -12,6 +12,16 @@ const DRACO_PATH = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/';
 const KTX2_PATH = 'https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/libs/basis/';
 
 let playLoader = null;
+let meshoptReady = null;
+
+function ensureMeshopt(loader) {
+  if (!meshoptReady) {
+    meshoptReady = import('three/addons/libs/meshopt_decoder.module.js')
+      .then((m) => { if (m.MeshoptDecoder) loader.setMeshoptDecoder(m.MeshoptDecoder); })
+      .catch(() => {});
+  }
+  return meshoptReady;
+}
 
 export function getPlayGltfLoader() {
   if (playLoader) return playLoader;
@@ -21,10 +31,7 @@ export function getPlayGltfLoader() {
   const loader = new GLTFLoader();
   loader.setDRACOLoader(draco);
   playLoader = loader;
-  import('three/addons/libs/meshopt_decoder.module.js').then((m) => {
-    const dec = m.MeshoptDecoder;
-    if (dec) loader.setMeshoptDecoder(dec);
-  }).catch(() => { /* Draco-only kits still load */ });
+  ensureMeshopt(loader);
   return loader;
 }
 
@@ -68,7 +75,7 @@ export function loadPlayGltf(url, cache) {
   const store = cache || loadPlayGltf._cache || (loadPlayGltf._cache = new Map());
   if (store.has(url)) return store.get(url);
   const loader = getPlayGltfLoader();
-  const p = new Promise((resolve, reject) => {
+  const p = ensureMeshopt(loader).then(() => new Promise((resolve, reject) => {
     loader.load(
       url,
       (gltf) => {
@@ -81,7 +88,7 @@ export function loadPlayGltf(url, cache) {
         reject(err);
       },
     );
-  });
+  }));
   store.set(url, p);
   return p;
 }
