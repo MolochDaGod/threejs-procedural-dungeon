@@ -158,7 +158,8 @@ export function setHudClassSkills(hud, skills) {
   if (!bar) return;
   bar.innerHTML = '';
   for (const s of skills) {
-    bar.appendChild(paintSlot(s, keyLabel(binds[`c${s.slot}`] || (s.slot === 0 ? 'F' : ''))));
+    const ck = binds[`c${s.slot}`] || (s.slot === 0 ? 'KeyF' : `Shift+Digit${s.slot}`);
+    bar.appendChild(paintSlot(s, keyLabel(ck)));
   }
 }
 

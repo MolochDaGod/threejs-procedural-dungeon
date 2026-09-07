@@ -15,9 +15,11 @@ export const HUD_BINDS_DEFAULT = {
   i7: 'Digit7',
   m8: 'Digit8',
   c0: 'KeyF',
-  c1: '',
-  c2: '',
-  c3: '',
+  c1: 'Shift+Digit1',
+  c2: 'Shift+Digit2',
+  c3: 'Shift+Digit3',
+  c4: 'Shift+Digit4',
+  c5: 'Shift+Digit5',
   dodge: 'KeyX',
   parry: 'KeyC',
   block: 'KeyE',
@@ -35,8 +37,12 @@ export function loadHudLayout() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return blank();
     const d = JSON.parse(raw);
+    const binds = { ...HUD_BINDS_DEFAULT, ...(d.binds || {}) };
+    for (const k of Object.keys(HUD_BINDS_DEFAULT)) {
+      if (!binds[k]) binds[k] = HUD_BINDS_DEFAULT[k];
+    }
     return {
-      binds: { ...HUD_BINDS_DEFAULT, ...(d.binds || {}) },
+      binds,
       slots: d.slots && typeof d.slots === 'object' ? d.slots : null,
       pos: d.pos && typeof d.pos === 'object' ? d.pos : {},
       barOn: { weapon: true, class: true, ...(d.barOn || {}) },
@@ -60,6 +66,7 @@ export function resetHudLayout() {
 
 export function keyLabel(code) {
   if (!code) return '·';
+  if (code.startsWith('Shift+Digit')) return `⇧${code.slice(-1)}`;
   if (code.startsWith('Digit')) return code.slice(5);
   if (code.startsWith('Key')) return code.slice(3);
   return code.replace('Shift', '⇧').replace('Control', 'Ctrl');

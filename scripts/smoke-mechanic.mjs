@@ -258,7 +258,7 @@ report.tauntHolds = topThreatKey(foe, 0) === 'player' && THREAT.taunt >= 10000;
 report.playLevel = PLAY.level;
 report.tpsIndoor = PLAY.tps.distance >= 2.5 && PLAY.tps.distance <= 8 && PLAY.tps.minDistance < PLAY.tps.distance && PLAY.tps.followLambda >= 8;
 report.fleetDodge = PLAY.dodge.iframeEnd === 0.34 && PLAY.dodge.doubleTapSec > 0 && PLAY.block.key === 'KeyE' && PLAY.parry.shiftRmb === true;
-report.hudBinds = HUD_BINDS_DEFAULT.w1 === 'Digit1' && HUD_BINDS_DEFAULT.i6 === 'Digit6' && HUD_BINDS_DEFAULT.m8 === 'Digit8' && HUD_BINDS_DEFAULT.c0 === 'KeyF';
+report.hudBinds = HUD_BINDS_DEFAULT.w1 === 'Digit1' && HUD_BINDS_DEFAULT.i6 === 'Digit6' && HUD_BINDS_DEFAULT.m8 === 'Digit8' && HUD_BINDS_DEFAULT.c0 === 'KeyF' && HUD_BINDS_DEFAULT.c1 === 'Shift+Digit1' && HUD_BINDS_DEFAULT.c5 === 'Shift+Digit5';
 report.hudOptimal = optimalSlots([{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }, { id: 'ult' }], [{ id: 'c' }]).weapon.length === 5;
 const comboIds = Object.values(MELEE_COMBO).flat();
 report.comboKnown = comboIds.every((id) => CATALOG_SKILL_PLAY[id]);

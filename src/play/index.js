@@ -180,15 +180,6 @@ export class PlaySession {
         if (e.code === 'Space') { this.lockpick = attemptLockpickTumble(this.lockpick); e.preventDefault(); return; }
         if (e.code === 'Escape') { this.lockpick = cancelLockpick(this.lockpick); toast('Lockpick cancelled'); e.preventDefault(); return; }
       }
-      if (e.shiftKey && this.classId === 'worge') {
-        const form = Object.entries(WORGE_GRIMOIRE.shiftKeys).find(([, code]) => code === e.code)?.[0];
-        if (form) {
-          e.preventDefault();
-          craftWorgeForm(this.classState, form);
-          toast(`Grimoire · ${form}`);
-          return;
-        }
-      }
       const binds = loadHudLayout().binds;
       if (e.shiftKey && e.code.startsWith('Digit')) {
         const n = Number(e.code.slice(5));
@@ -196,6 +187,15 @@ export class PlaySession {
           e.preventDefault();
           this.castClassSlot(n);
           this.closeRadial();
+          return;
+        }
+      }
+      if (e.shiftKey && this.classId === 'worge' && !e.code.startsWith('Digit')) {
+        const form = Object.entries(WORGE_GRIMOIRE.shiftKeys).find(([, code]) => code === e.code)?.[0];
+        if (form) {
+          e.preventDefault();
+          craftWorgeForm(this.classState, form);
+          toast(`Grimoire · ${form}`);
           return;
         }
       }
@@ -221,8 +221,11 @@ export class PlaySession {
       if (binds.i6 && e.code === binds.i6) { e.preventDefault(); this.useCombatItem(0); }
       if (binds.i7 && e.code === binds.i7) { e.preventDefault(); this.useCombatItem(1); }
       if (binds.m8 && e.code === binds.m8) { e.preventDefault(); this.toggleMountMenu(); }
-      for (let i = 0; i < 4; i++) {
-        if (binds[`c${i}`] && e.code === binds[`c${i}`]) {
+      for (let i = 0; i <= 5; i++) {
+        const chord = binds[`c${i}`];
+        if (!chord) continue;
+        if (chord.startsWith('Shift+')) continue;
+        if (e.code === chord) {
           e.preventDefault();
           if (i === 0 && this.pinata?.nearest?.(this.pos, 2.8)) this.smashNearestProp();
           else this.castMapped('class', i);
