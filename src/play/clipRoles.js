@@ -90,7 +90,7 @@ export const CLIP_FALLBACK = {
 export function clipStem(name) {
   const raw = String(name || '');
   const part = raw.split('|').pop().trim();
-  const stripped = part.replace(/^(donor|estes|native|json|death|bip001|mixamo)__/i, '');
+  const stripped = part.replace(/^(donor|estes|native|json|death|bip001|mixamo|kenpachi)__/i, '');
   return stripped.replace(/^mixamorig:?/i, '').replace(/[\s-]+/g, '_');
 }
 
@@ -119,7 +119,9 @@ export function stampAnimClip(clip, source, rawName) {
 const SRC_LOCO = ['native', 'bip001', 'donor', 'mixamo', 'json', 'estes'];
 const SRC_CAST = ['bip001', 'estes', 'json', 'donor', 'mixamo', 'native'];
 const SRC_MELEE = ['donor', 'bip001', 'native', 'estes', 'json', 'mixamo'];
-const SRC_DEATH = ['native', 'bip001', 'estes', 'death', 'donor', 'json'];
+const SRC_2H = ['kenpachi', 'bip001', 'donor', 'native', 'json'];
+const SRC_SPEAR = ['bip001', 'kenpachi', 'donor', 'native', 'json'];
+const SRC_DEATH = ['native', 'bip001', 'kenpachi', 'estes', 'death', 'donor', 'json'];
 
 function namedGet(named, ...keys) {
   for (const k of keys) {
@@ -146,8 +148,10 @@ export function classifyClips(clips, weaponId = '') {
   const wep = String(weaponId || '');
   const bow = /bow|longbow|xbow|crossbow/.test(wep);
   const mag = /staff|wand|tome|magic/.test(wep);
-  const twoH = /two_hand|greataxe|greatsword|gs_|hammer_holy|mace_sword/.test(wep);
+  const twoH = /two_hand|greataxe|greatsword|gs_|hammer_holy/.test(wep);
+  const spear = /spear|pike|glaive|halberd/.test(wep);
   const unarmed = /unarmed|claw/.test(wep);
+  const meleeSrc = spear ? SRC_SPEAR : twoH ? SRC_2H : SRC_MELEE;
   const skip = new Set(CLIP_SKIP.map((n) => n.toLowerCase()));
   const byStem = new Map();
   for (const c of clips || []) {
@@ -174,7 +178,7 @@ export function classifyClips(clips, weaponId = '') {
     }
     return best;
   };
-  const exact = (...keys) => pick(keys, mag ? SRC_CAST : SRC_MELEE);
+  const exact = (...keys) => pick(keys, mag ? SRC_CAST : meleeSrc);
   const hit = (re) => firstHit(clips || [], re, skip);
 
   const out = {};
@@ -205,12 +209,13 @@ export function classifyClips(clips, weaponId = '') {
   out.plant = exact('plant_seed');
   out.attack = unarmed
     ? (pick(['unarmed_uppercut', 'sword_attack_a', 'attack'], SRC_MELEE))
-    : pick(['sword_attack_a', 'attack', 'attack01', 'attack_1', 'commonattack', 'strike_1'], SRC_MELEE);
-  out.attack2 = pick(['sword_attack_c', 'attack_2', 'attack02', 'attack_3', 'skill2', 'attack2'], mag ? SRC_CAST : SRC_MELEE) || out.attack;
-  out.attack3 = pick(['sword_combo_finisher', 'skill3', 'skill_1'], mag ? SRC_CAST : SRC_MELEE) || out.attack2;
-  out.cast = pick(['cast', 'skill1', 'attack1', 'standing_1h_cast_spell_01', 'use_magic', 'use_skill', 'skill_ready', 'skill_1'], SRC_CAST)
+    : pick(['sword_attack_a', 'attack', 'attack01', 'attack_1', 'commonattack', 'strike_1'], meleeSrc);
+  out.attack2 = pick(['sword_attack_c', 'attack_2', 'attack02', 'attack_3', 'skill2', 'attack2'], mag ? SRC_CAST : meleeSrc) || out.attack;
+  out.attack3 = pick(['sword_combo_finisher', 'skill3', 'skill_1', 'skill_1_1'], mag ? SRC_CAST : meleeSrc) || out.attack2;
+  out.cast = pick(['cast', 'skill1', 'attack1', 'skill_1_1', 'skill_1_2', 'standing_1h_cast_spell_01', 'use_magic', 'use_skill', 'skill_ready', 'skill_1'], mag || twoH || spear ? (twoH || spear ? meleeSrc : SRC_CAST) : SRC_CAST)
     || (mag ? (out.attack) : out.attack);
   out.stun = pick(['stun', 'verigo'], SRC_CAST);
+  out.hit = pick(['hit', 'hurt', 'hit-reaction', 'hit_reaction'], SRC_CAST);
   out.death = pick(['death', 'dead', 'die'], SRC_DEATH);
   out.climb = pick(['climb', 'climbing', 'up'], SRC_LOCO);
   out.swim = pick(['swim', 'swimming'], SRC_LOCO);

@@ -46,6 +46,8 @@ export function raceCharacterUrl(raceId) {
 export const CLIP_DONOR = `${COMBAT}/models/toon-clips/wk-knight.glb`;
 /** Estes 2016 Bip001 cast/skill donor — rotation rematch only, not a play mesh. */
 export const ESTES_CAST_DONOR = '/models/anims/estes-cast.glb';
+/** Kenpachi Sketchfab Bip001 — 2H melee donor, not a play mesh. */
+export const KENPACHI_DONOR = '/models/anims/kenpachi-donor.glb';
 
 /** Fallback single-clip GLBs if the combat donor is unreachable. */
 export const ANIM_URLS = {
@@ -61,6 +63,9 @@ export const COMBAT_DEPLOY = {
   telegraphWarning: `${COMBAT}/models/telegraph_warning.glb`,
   telegraphArrow: `${COMBAT}/models/telegraph_arrow.glb`,
   totemFire: `${CDN}/models/creatures/totem/fire_totem.glb`,
+  /** Gladiators skill VFX — dungeon skills are variants of these, not a second engine. */
+  fireOrb: `${COMBAT}/models/vfx/orbs/orb-fire.glb`,
+  fireTornado: '/models/vfx/fire-tornado.glb',
   /** Faction / Toon foes — race kit on CDN, clips from combat donor. */
   enemyFrom: 'toon-rts + combat clip donor',
   ban: 'FBX minions under combat /models/minions',
@@ -165,6 +170,8 @@ export function weaponClipPack(weaponId) {
   if (/bow|longbow|xbow/.test(w)) return WEAPON_CLIP_URLS.longbow;
   if (/staff|wand|tome|magic/.test(w)) return WEAPON_CLIP_URLS.magic;
   if (/unarmed|claw/.test(w)) return null;
+  if (/spear|pike|glaive|halberd/.test(w)) return null;
+  if (/two_hand|greataxe|greatsword/.test(w)) return null;
   return WEAPON_CLIP_URLS.sword_shield;
 }
 
@@ -221,7 +228,7 @@ export const PLAY = {
     defaultPitch: 0.18,
     lookSens: 0.0022,
     zoomSpeed: 0.5,
-    fog: 0.022,
+    fog: 0.011,
   },
 };
 

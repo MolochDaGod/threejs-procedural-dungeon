@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
-import { ANIM_URLS, CLIP_DONOR, ESTES_CAST_DONOR, PLAY, RACES, ROLE_KITS, WEAPON_KITS, WORGE_WEAPONS, raceCharacterUrl, weaponClipPack } from '../ssot.js';
+import { ANIM_URLS, CLIP_DONOR, ESTES_CAST_DONOR, KENPACHI_DONOR, PLAY, RACES, ROLE_KITS, WEAPON_KITS, WORGE_WEAPONS, raceCharacterUrl, weaponClipPack } from '../ssot.js';
 import { BIP001_PLAY, bip001ExtraForWeapon } from './clipLibrary.js';
 import { loadGltf } from './assets.js';
 import { plantFeet } from '../terrain/footPlant.js';
@@ -305,7 +305,31 @@ function remapClipTracks(clip, boneMap) {
     keep.push(track);
   }
   copy.tracks = keep;
+  fillMissingBip001Core(copy.tracks, boneMap);
   return copy;
+}
+
+/** If a clip has Spine but no Spine1/Spine2/Head, copy parent quats (Toon 22-core). */
+function fillMissingBip001Core(tracks, boneMap) {
+  const have = new Set(tracks.map((t) => t.name));
+  const nameOf = (want) => boneMap.get(boneKey(want)) || want;
+  const cloneQuat = (fromWant, toWant) => {
+    const from = nameOf(fromWant);
+    const to = nameOf(toWant);
+    if (!to) return;
+    const dest = `${to}.quaternion`;
+    if (have.has(dest)) return;
+    const src = tracks.find((t) => t.name === `${from}.quaternion`);
+    if (!src) return;
+    const nt = src.clone();
+    nt.name = dest;
+    tracks.push(nt);
+    have.add(dest);
+  };
+  cloneQuat('Bip001 Spine', 'Bip001 Spine1');
+  cloneQuat('Bip001 Spine1', 'Bip001 Spine2');
+  cloneQuat('Bip001 Spine', 'Bip001 Spine2');
+  cloneQuat('Bip001 Neck', 'Bip001 Head');
 }
 
 function stripPositionTracks(clip) {
@@ -604,6 +628,19 @@ async function gatherClips(gltf, boneMap, weaponId = '') {
     }
   } catch {
     /* estes optional */
+  }
+  if (/two_hand|greataxe|greatsword|gs_/.test(String(weaponId || ''))) {
+    try {
+      const g = await loadGltf(KENPACHI_DONOR);
+      for (const c of g.animations || []) {
+        if (!c.tracks?.length) continue;
+        const stem = clipStem(c.name).toLowerCase();
+        if (stem === 'run' || stem === 'idle' || stem === 'stay_show' || stem === 'back') continue;
+        take(c, { source: 'kenpachi' });
+      }
+    } catch {
+      /* kenpachi optional */
+    }
   }
   await Promise.all(Object.entries(ANIM_URLS).map(async ([key, url]) => {
     try { await tryUrl(url, key, key === 'death' ? 'death' : 'donor'); } catch { /* optional */ }

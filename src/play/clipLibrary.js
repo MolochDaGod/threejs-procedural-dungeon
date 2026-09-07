@@ -17,8 +17,14 @@ export const BIP001_PLAY = [
   { url: `${B}/loco/run_forward.json`, stem: 'run' },
   { url: `${B}/loco/jump.json`, stem: 'jump' },
   { url: `${B}/loco/dodging.json`, stem: 'dodge' },
+  { url: `${B}/loco/dodge_l.json`, stem: 'dodge' },
+  { url: `${B}/loco/dodge_r.json`, stem: 'dodge' },
   { url: `${B}/loco/dodge_back.json`, stem: 'dodge' },
   { url: `${B}/loco/land_roll.json`, stem: 'slide' },
+  { url: `${B}/loco/roll_left.json`, stem: 'slide' },
+  { url: `${B}/rifle/hit-reaction.json`, stem: 'hit' },
+  { url: `${B}/rifle/strafe-left.json`, stem: 'strafeL' },
+  { url: `${B}/rifle/strafe-right.json`, stem: 'strafeR' },
   { url: `${B}/loco/crouch_walk.json`, stem: 'crouch' },
   { url: `${B}/loco/plant_seed.json`, stem: 'plant' },
   { url: `${B}/climb/up.json`, stem: 'climb' },
@@ -62,10 +68,31 @@ export const BIP001_MAGIC_STAFF = [
   { url: `${B}/magic/ace_attack.json`, stem: 'attack1' },
 ];
 
+/** Ikkaku Bip001 JSON — spear attacks (attack1–5, skill1–8 + ult). */
+export const BIP001_SPEAR = [
+  { url: `${B}/spear/ikkaku_attack.json`, stem: 'attack' },
+  { url: `${B}/spear/ikkaku_attack2.json`, stem: 'attack2' },
+  { url: `${B}/spear/ikkaku_attack3.json`, stem: 'attack3' },
+  { url: `${B}/spear/ikkaku_attack4.json`, stem: 'attack' },
+  { url: `${B}/spear/ikkaku_attack5.json`, stem: 'attack2' },
+  { url: `${B}/spear/ikkaku_skill1.json`, stem: 'skill1' },
+  { url: `${B}/spear/ikkaku_skill2.json`, stem: 'skill2' },
+  { url: `${B}/spear/ikkaku_skill3.json`, stem: 'skill3' },
+  { url: `${B}/spear/ikkaku_skill4.json`, stem: 'skill1' },
+  { url: `${B}/spear/ikkaku_skill5.json`, stem: 'skill2' },
+  { url: `${B}/spear/ikkaku_skill6.json`, stem: 'skill3' },
+  { url: `${B}/spear/ikkaku_skill7.json`, stem: 'cast' },
+  { url: `${B}/spear/ikkaku_skill8.json`, stem: 'cast' },
+  { url: `${B}/spear/ikkaku_skill_ult.json`, stem: 'attack3' },
+  { url: `${B}/spear/ikkaku_hit.json`, stem: 'hit' },
+  { url: `${B}/spear/ikkaku_dead.json`, stem: 'death' },
+];
+
 export function bip001ExtraForWeapon(weaponId) {
   const w = String(weaponId || '');
   if (/rifle|musket|carbine|shotgun/.test(w)) return BIP001_RIFLE;
   if (/staff|wand|tome|magic/.test(w)) return BIP001_MAGIC_STAFF;
+  if (/spear|pike|glaive|halberd/.test(w)) return BIP001_SPEAR;
   return [];
 }
 
