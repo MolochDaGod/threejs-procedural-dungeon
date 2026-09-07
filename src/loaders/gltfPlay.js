@@ -1,6 +1,6 @@
 /**
  * Play GLTF loader — converted / SI-sized / textured kits.
- * One GLTFLoader + Draco. Never AABB-autoScale into ~1 unit (that is 100×).
+ * One GLTFLoader + Draco + Meshopt. Never AABB-autoScale into ~1 unit (that is 100×).
  * Skinned clones go through SkeletonUtils at spawn, not scene.clone().
  */
 import * as THREE from 'three';
@@ -19,6 +19,10 @@ export function getPlayGltfLoader() {
   const loader = new GLTFLoader();
   loader.setDRACOLoader(draco);
   playLoader = loader;
+  import('three/addons/libs/meshopt_decoder.module.js').then((m) => {
+    const dec = m.MeshoptDecoder;
+    if (dec) loader.setMeshoptDecoder(dec);
+  }).catch(() => { /* Draco-only kits still load */ });
   return loader;
 }
 
@@ -28,8 +32,8 @@ export function normalizePlayGltf(root, { yaw = 0 } = {}) {
   root.updateMatrixWorld(true);
   root.traverse((o) => {
     if (!o.isMesh) return;
-    o.castShadow = true;
     o.receiveShadow = true;
+    o.castShadow = !!o.isSkinnedMesh;
     if (o.isSkinnedMesh) o.frustumCulled = false;
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
     for (const m of mats) {

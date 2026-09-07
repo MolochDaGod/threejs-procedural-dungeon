@@ -27,7 +27,8 @@ export function layerOf(root, name) {
   return root?.getObjectByName(name) || root;
 }
 
-const LOD_FAR = { Dress: 46, Cover: 38, Pinata: 28 };
+const LOD_FAR = { Dress: 28, Cover: 24, Pinata: 18 };
+const _lodAt = new THREE.Vector3();
 
 /** Distance hide on static layers. Skinned Actors stay on (one mixer each). */
 export function tickInstanceLod(layers, cam, origin) {
@@ -40,8 +41,9 @@ export function tickInstanceLod(layers, cam, origin) {
     const far = LOD_FAR[name];
     const lim = far * far;
     for (const ch of g.children) {
-      const dx = ch.position.x - ox;
-      const dz = ch.position.z - oz;
+      ch.getWorldPosition(_lodAt);
+      const dx = _lodAt.x - ox;
+      const dz = _lodAt.z - oz;
       ch.visible = (dx * dx + dz * dz) < lim;
     }
   }

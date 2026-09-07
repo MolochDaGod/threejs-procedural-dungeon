@@ -802,8 +802,13 @@ function tryGenerate(seed, params){
    RENDERER
    ================================================================ */
 const canvasBg = 0x07080d;
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6));
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  powerPreference: 'high-performance',
+  stencil: false,
+  preserveDrawingBuffer: false,
+});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.setClearColor(canvasBg);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -831,11 +836,64 @@ function updateCam(){
 }
 updateCam();
 
+let playRender = false;
+let themeHemiI = 0.55;
+let themeDirI = 0.85;
+const _lightRank = [];
+function tunePlayRender(on) {
+  playRender = !!on;
+  if (playRender) {
+    POST.enabled = false;
+    dirL.castShadow = false;
+    renderer.shadowMap.enabled = false;
+    hemi.intensity = themeHemiI * 1.35;
+    dirL.intensity = themeDirI * 1.1;
+  } else {
+    POST.enabled = !!el?.tPost?.checked;
+    dirL.castShadow = true;
+    renderer.shadowMap.enabled = true;
+    hemi.intensity = themeHemiI * LIGHT_K;
+    dirL.intensity = themeDirI * LIGHT_K;
+    for (const L of lights) L.visible = true;
+  }
+}
+function tickPlayLights(origin) {
+  if (!playRender || !origin || !lights.length) return;
+  const ox = origin.x, oz = origin.z;
+  _lightRank.length = 0;
+  for (let i = 0; i < lights.length; i++) {
+    const L = lights[i];
+    const dx = L.position.x - ox, dz = L.position.z - oz;
+    _lightRank.push(i, dx * dx + dz * dz);
+  }
+  const n = lights.length;
+  const idx = [];
+  for (let i = 0; i < n; i++) idx.push(i);
+  idx.sort((a, b) => _lightRank[a * 2 + 1] - _lightRank[b * 2 + 1]);
+  const keep = 4;
+  const lim = 22 * 22;
+  for (const L of lights) L.visible = false;
+  for (let k = 0; k < Math.min(keep, idx.length); k++) {
+    const L = lights[idx[k]];
+    const d2 = _lightRank[idx[k] * 2 + 1];
+    L.visible = d2 < lim;
+    if (L.visible) {
+      const flicker = 0.88 + 0.16 * Math.sin(elapsed * 9 + (L.userData.ph || 0)) * Math.sin(elapsed * 4.7 + (L.userData.ph || 0) * 1.7);
+      L.intensity = (L.userData.base || 1.6) * flicker;
+    }
+  }
+}
+
 const play = new PlaySession({
   scene, cam, camTarget, updateCam, renderer,
   get yaw(){ return yaw; },
   setView(y, p){ yaw = y; pitch = p; updateCam(); },
-  onExitPlay(){ cam.zoom = 1; cam.updateProjectionMatrix(); }
+  tunePlayRender,
+  onExitPlay(){
+    cam.zoom = 1;
+    cam.updateProjectionMatrix();
+    tunePlayRender(false);
+  }
 });
 window.__GRUDGE_PLAY__ = play;
 
@@ -1512,6 +1570,8 @@ function applyThemeEnv(TH){
   curBg.set(TH.bg);
   hemi.color.set(TH.hemi[0]); hemi.groundColor.set(TH.hemi[1]); hemi.intensity = TH.hemi[2] * LIGHT_K;
   dirL.color.set(TH.dir[0]); dirL.intensity = TH.dir[1] * LIGHT_K;
+  themeHemiI = TH.hemi[2];
+  themeDirI = TH.dir[1];
   document.documentElement.style.setProperty('--ember', TH.accent);
 }
 
@@ -2507,9 +2567,11 @@ function liveUpdate(time, tt){
   /* device pixels per world unit, so particle sizes track the ortho zoom */
   partMat.uniforms.uZoom.value = renderer.domElement.height * cam.zoom / (2*BASE_HALF);
   for(const sp of fx.spinners) sp.m.rotation.y = time * sp.spd;
-  for(const L of lights){
-    const ramp = L.userData.ramp === undefined ? 1 : L.userData.ramp;
-    L.intensity = L.userData.base * LIGHT_K * ramp * (0.84 + 0.22*Math.sin(time*9 + L.userData.ph)*Math.sin(time*4.7 + L.userData.ph*1.7));
+  if (!playRender) {
+    for(const L of lights){
+      const ramp = L.userData.ramp === undefined ? 1 : L.userData.ramp;
+      L.intensity = L.userData.base * LIGHT_K * ramp * (0.84 + 0.22*Math.sin(time*9 + L.userData.ph)*Math.sin(time*4.7 + L.userData.ph*1.7));
+    }
   }
 }
 
@@ -2530,6 +2592,7 @@ function tick(){
     if(animT > animEnd + 0.35) finishAnim();
   }
   liveUpdate(elapsed, animating ? animT - 2.3 : Infinity);
+  if (playRender) tickPlayLights(play.pos);
   if (typeof fx.fire?.update === 'function') fx.fire.update(cam, elapsed);
   dressing.update(elapsed);
   forgeGates.update(dt);
@@ -2614,7 +2677,7 @@ if(btnExport) btnExport.addEventListener('click', ()=>{
 });
 el.tGraph.addEventListener('change', ()=>{ if(!animating) setOverlayStatic(); });
 el.tHeat.addEventListener('change', ()=>applyHeat(el.tHeat.checked));
-el.tPost.addEventListener('change', ()=>{ POST.enabled = el.tPost.checked; });
+el.tPost.addEventListener('change', ()=>{ POST.enabled = !playRender && el.tPost.checked; });
 document.querySelectorAll('#chips .chip').forEach(ch=>{
   ch.addEventListener('click', ()=>{ setThemeSel(ch.dataset.t); forge(true); });
 });
@@ -2664,7 +2727,7 @@ addEventListener('keydown', e=>{
     setThemeSel(order[(order.indexOf(themeSel)+1) % order.length]);
     forge(true);
   }
-  else if(e.code==='KeyP'){ el.tPost.checked = !el.tPost.checked; POST.enabled = el.tPost.checked; }
+  else if(e.code==='KeyP'){ el.tPost.checked = !el.tPost.checked; POST.enabled = !playRender && el.tPost.checked; }
   else if(e.code==='Space'){ e.preventDefault(); if(animating) finishAnim(); }
 });
 

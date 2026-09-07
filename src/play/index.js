@@ -1436,6 +1436,7 @@ export class PlaySession {
     this.tps.snap(this.pos.x, this.pos.y, this.pos.z, yaw);
     this.tps.enable();
     this.tps.resize();
+    this.ctx.tunePlayRender?.(true);
     if (this.aiming) {
       this.aiming.camera = this.tps.camera;
       this.aiming.setPointer(0, 0);

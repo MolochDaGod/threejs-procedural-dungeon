@@ -89,11 +89,8 @@ export class DungeonDressing {
       mesh.name = 'kit-torch';
       this.root.add(mesh);
       plantObjectOnTerrain(mesh, d.terrain?.sample);
-      const L = new THREE.PointLight(flame, intensity * 1.15, dist + 1.5, 2);
-      L.position.set(w.x + t.dx * 0.62, 1.72, w.z + t.dy * 0.62);
-      L.userData = { base: intensity * 1.15, ph: (t.x * 13 + t.y * 7) * 0.17 };
-      this.root.add(L);
-      this.lights.push(L);
+      /* Visual torch only — PointLights are the sampled budget in main.js.
+         One light per torch doubles the forward shader cost. */
     } catch {
       /* kit miss — procedural torch remains */
     }
