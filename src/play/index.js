@@ -265,7 +265,7 @@ export class PlaySession {
         e.preventDefault();
         const armed = this.loadout?.[this.activeSlot - 1];
         if (armed?.heal && !(armed.damage > 0)) this.cycleHealFocus();
-        else this.aiming?.cycleTarget(this.enemies);
+        else this.aiming?.cycleTarget(this.enemies, (e) => losToPlayer(this, e));
       }
     });
     addEventListener('keyup', (e) => {
@@ -1430,8 +1430,7 @@ export class PlaySession {
     if (fog && this._fogWas == null) this._fogWas = fog.density;
     if (fog) fog.density = PLAY.tps.fog;
     this.tps.setDungeon(this.d);
-    const occ = [this.layers?.Terrain, this.layers?.Cover, this.layers?.Dress].filter(Boolean);
-    this.tps.setOccluders(occ);
+    this.tps.setOccluders([]);
     const yaw = this.aim.lengthSq() > 0 ? Math.atan2(this.aim.x, this.aim.z) : 0;
     this.tps.snap(this.pos.x, this.pos.y, this.pos.z, yaw);
     this.tps.enable();
@@ -3157,8 +3156,16 @@ export class PlaySession {
     if (this.tps?.enabled) this.aiming?.setPointer(0, 0);
     this.aiming?.update(this.pos, this.aim, this.enemies);
     this.aiming?.lookAhead(this.look, 2.6);
+    if (this.aiming?.target && !losToPlayer(this, this.aiming.target)) this.aiming.target = null;
+    if (!this.aiming?.target) {
+      this.tps.getCameraForward(this.look);
+      this.aiming?.pickSmart(this.pos, this.look, this.enemies, {
+        maxD: AGGRO.detection,
+        los: (e) => losToPlayer(this, e),
+      });
+    }
     const aimLock = this.aiming?.target;
-    this.tps.setSoftLock(aimLock ? { x: aimLock.pos.x, y: 1.2, z: aimLock.pos.z } : null, aimLock ? 0.45 : 0);
+    this.tps.setSoftLock(aimLock ? { x: aimLock.pos.x, y: 1.2, z: aimLock.pos.z } : null, aimLock ? (this.focusEnabled ? 0.5 : 0.28) : 0);
     this.tps.setAnchor(this.pos.x, this.pos.y, this.pos.z);
     this.tps.setSprinting(this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'));
     const shake = this.vfx.shake.offset(dt);

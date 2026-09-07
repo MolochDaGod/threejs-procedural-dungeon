@@ -308,12 +308,25 @@ export function coverSpotNear(d, px, pz, ox, oz, maxR = 6) {
   return best;
 }
 
-function cellOfWorld(d, wx, wz) {
+export function cellOfWorld(d, wx, wz) {
   const cell = DUNGEON_SI.cell;
   return {
     gx: Math.round(wx / cell + d.W / 2 - 0.5),
     gz: Math.round(wz / cell + d.H / 2 - 0.5),
   };
+}
+
+/** True if a world point sits in wall / block / closed barrier. */
+export function isSolidWorld(d, wx, wz) {
+  if (!d) return false;
+  const { gx, gz } = cellOfWorld(d, wx, wz);
+  const i = cellIndex(d, gx, gz);
+  if (i < 0) return true;
+  if (d.grid[i] === TILE.WALL) return true;
+  const f = d.flags ? d.flags[i] : 0;
+  if (f & CELL_FLAG.BLOCK) return true;
+  if ((f & CELL_FLAG.BARRIER) && (!d.barrierStage || d.barrierStage[i] < 3)) return true;
+  return false;
 }
 
 function worldX(d, gx) {

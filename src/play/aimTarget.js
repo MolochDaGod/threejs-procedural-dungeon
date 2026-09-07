@@ -65,8 +65,8 @@ export class AimTarget {
     this.shape = shape;
   }
 
-  cycleTarget(enemies) {
-    const living = (enemies || []).filter((e) => e.alive);
+  cycleTarget(enemies, los = null) {
+    const living = (enemies || []).filter((e) => e.alive && (!los || los(e)));
     if (!living.length) {
       this.target = null;
       return null;
@@ -77,13 +77,31 @@ export class AimTarget {
   }
 
   pickNearest(origin, enemies, maxD = 18) {
+    return this.pickSmart(origin, this.dir, enemies, { maxD });
+  }
+
+  /**
+   * Soft lock: in front of camera, LOS, nearest-ish. No through-wall snaps.
+   * @param {(e: object) => boolean} [opts.los]
+   */
+  pickSmart(origin, fwd, enemies, { maxD = 14, los = null } = {}) {
     let best = null;
-    let bestD = maxD;
+    let bestS = -1e9;
+    const fx = fwd?.x || 0;
+    const fz = fwd?.z || 1;
     for (const e of enemies || []) {
       if (!e.alive) continue;
-      const d = origin.distanceTo(e.pos);
-      if (d < bestD) {
-        bestD = d;
+      const dx = e.pos.x - origin.x;
+      const dz = e.pos.z - origin.z;
+      const d2 = dx * dx + dz * dz;
+      if (d2 > maxD * maxD || d2 < 0.04) continue;
+      if (los && !los(e)) continue;
+      const dist = Math.sqrt(d2);
+      const facing = (dx * fx + dz * fz) / dist;
+      if (facing < 0.18) continue;
+      const score = facing * 2.4 - dist * 0.08 + (e.aggro > 0 ? 0.7 : 0) + (e.boss ? 1.1 : 0);
+      if (score > bestS) {
+        bestS = score;
         best = e;
       }
     }

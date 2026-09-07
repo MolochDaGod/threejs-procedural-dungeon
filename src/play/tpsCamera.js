@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { DUNGEON_SI, PLAY } from '../ssot.js';
-import { firstObstruction } from '../grid/cells.js';
+import { firstObstruction, isSolidWorld } from '../grid/cells.js';
 
 const _dir = new THREE.Vector3();
 const _fwd = new THREE.Vector3();
@@ -31,6 +31,7 @@ export class PlayTpsCamera {
     this.sprinting = false;
     this.occluders = [];
     this.dungeon = null;
+    this._shoulder = spec().shoulderOffset;
     this._rmb = false;
     this._lastX = 0;
     this._lastY = 0;
@@ -117,6 +118,7 @@ export class PlayTpsCamera {
     this.yaw = yaw;
     this.pitch = spec().defaultPitch;
     this.distance = spec().distance;
+    this._shoulder = spec().shoulderOffset;
     this._place(1);
   }
 
@@ -203,7 +205,7 @@ export class PlayTpsCamera {
     const cell = DUNGEON_SI.cell;
     const hx = (hit.gx + 0.5 - d.W / 2) * cell;
     const hz = (hit.gz + 0.5 - d.H / 2) * cell;
-    const pulled = Math.hypot(hx - from.x, hz - from.z) - 0.4;
+    const pulled = Math.hypot(hx - from.x, hz - from.z) - 0.55;
     return Math.max(spec().minDistance, Math.min(dist, pulled));
   }
 
@@ -219,24 +221,30 @@ export class PlayTpsCamera {
     _want.addScaledVector(_fwd, s.lookAhead);
     if (this.softLock) {
       _look.set(this.softLock.x, this.softLock.y, this.softLock.z);
-      _want.lerp(_look, 0.16 * this.softLock.w);
+      _want.lerp(_look, 0.14 * this.softLock.w);
     }
 
     let dist = this.sprinting ? s.sprintDistance : this.distance;
-    dist = this._gridPull(_want, -_dir.x, -_dir.z, dist);
-    if (this.occluders.length) {
-      _look.copy(_dir).multiplyScalar(-1);
-      _ray.set(_want, _look);
-      _ray.far = dist;
-      const hits = _ray.intersectObjects(this.occluders, true);
-      if (hits.length && hits[0].distance < dist) {
-        dist = Math.max(s.minDistance, hits[0].distance - 0.32);
-      }
-    }
+    const bx = -_dir.x, bz = -_dir.z;
+    dist = this._gridPull(_want, bx, bz, dist);
+    dist = Math.min(dist, this._gridPull(_want, bx + _right.x * 0.22, bz + _right.z * 0.22, dist));
+    dist = Math.min(dist, this._gridPull(_want, bx - _right.x * 0.22, bz - _right.z * 0.22, dist));
+
+    const wallClose = dist <= s.minDistance + 0.35;
+    const wantShoulder = wallClose ? 0.06 : s.shoulderOffset;
+    this._shoulder += (wantShoulder - this._shoulder) * Math.min(1, k * 8);
+    const lift = s.boomLift + (wallClose ? 0.38 : 0);
 
     _look.copy(_want).addScaledVector(_dir, -dist);
-    _look.y += s.boomLift;
-    _look.addScaledVector(_right, s.shoulderOffset);
+    _look.y += lift;
+    _look.addScaledVector(_right, this._shoulder);
+    if (isSolidWorld(this.dungeon, _look.x, _look.z)) {
+      this._shoulder *= 0.2;
+      dist = Math.max(s.minDistance, dist * 0.72);
+      _look.copy(_want).addScaledVector(_dir, -dist);
+      _look.y += lift + 0.2;
+      _look.addScaledVector(_right, this._shoulder);
+    }
     if (_look.y < 0.4) _look.y = 0.4;
 
     if (k >= 1) this.camera.position.copy(_look);
