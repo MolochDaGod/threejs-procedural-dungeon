@@ -1,0 +1,60 @@
+{
+  "note": "SSOT snapshot of saber-academy src/game/data/weapon-skills.json classSkills + classSkillsB + effects. Combat lab /admin editor.",
+  "classSkills": {
+    "warrior": [
+      { "id": "warcry", "name": "Warcry", "kind": "nova", "forceCost": 30, "cooldown": 8, "damage": 36, "radius": 7, "range": 0, "speed": 0, "color": 16733500, "texture": "flamestrike", "impact": "crit", "taunt": true },
+      { "id": "sunder", "name": "Sunder Charge", "kind": "projectile", "forceCost": 36, "cooldown": 7, "damage": 60, "radius": 2.6, "range": 30, "speed": 34, "color": 16743227, "texture": "flamestrike", "impact": "flamestrike" }
+    ],
+    "mage": [
+      { "id": "flame_strike", "name": "Flame Strike", "kind": "projectile", "forceCost": 28, "cooldown": 5, "damage": 52, "radius": 3.2, "range": 36, "speed": 30, "color": 16734762, "texture": "flamestrike", "impact": "flamestrike" },
+      { "id": "frost_nova", "name": "Frost Nova", "kind": "nova", "forceCost": 32, "cooldown": 7, "damage": 32, "radius": 6.2, "range": 0, "speed": 0, "color": 6737151, "texture": "frostbolt", "impact": "frozen" }
+    ],
+    "ranger": [
+      { "id": "piercing_shot", "name": "Piercing Shot", "kind": "projectile", "forceCost": 22, "cooldown": 3.5, "damage": 46, "radius": 1.8, "range": 44, "speed": 46, "color": 10289003, "texture": "arcanebolt", "impact": "crit" },
+      { "id": "arrow_storm", "name": "Arrow Storm", "kind": "nova", "forceCost": 34, "cooldown": 8, "damage": 30, "radius": 7, "range": 0, "speed": 0, "color": 11000063, "texture": "crit" }
+    ],
+    "worge": [
+      { "id": "savage_pounce", "name": "Savage Pounce", "kind": "projectile", "forceCost": 25, "cooldown": 4, "damage": 44, "radius": 3, "range": 22, "speed": 40, "color": 16731469, "texture": "hit", "impact": "crit" },
+      { "id": "bloodhowl", "name": "Bloodhowl", "kind": "nova", "forceCost": 30, "cooldown": 7, "damage": 34, "radius": 5.6, "range": 0, "speed": 0, "color": 16723245, "texture": "crit" }
+    ],
+    "blade dancer": [
+      { "id": "whirlwind_dash", "name": "Whirlwind Dash", "kind": "dash", "forceCost": 26, "cooldown": 5, "damage": 40, "radius": 3.4, "range": 14, "speed": 52, "color": 16743376, "texture": "crit", "impact": "crit" },
+      { "id": "boomerang_blade", "name": "Boomerang Blade", "kind": "boomerang", "forceCost": 30, "cooldown": 6, "damage": 38, "radius": 2.2, "range": 22, "speed": 40, "color": 14709407, "texture": "crit", "impact": "arcanebolt" }
+    ]
+  },
+  "classSkillsB": {
+    "warrior": [
+      { "id": "flame_strike", "name": "Flame Strike", "kind": "projectile", "forceCost": 28, "cooldown": 5, "damage": 52, "radius": 3.2, "range": 36, "speed": 30, "color": 16734762, "texture": "flamestrike", "impact": "flamestrike" },
+      { "id": "frost_nova", "name": "Frost Nova", "kind": "nova", "forceCost": 32, "cooldown": 7, "damage": 32, "radius": 6.2, "range": 0, "speed": 0, "color": 6737151, "texture": "frostbolt", "impact": "frozen" }
+    ],
+    "mage": [
+      { "id": "whirlwind", "name": "Whirlwind", "kind": "nova", "forceCost": 30, "cooldown": 6, "damage": 38, "radius": 5.2, "range": 0, "speed": 0, "color": 16757575, "texture": "crit" },
+      { "id": "sunder", "name": "Sunder Charge", "kind": "projectile", "forceCost": 36, "cooldown": 7, "damage": 60, "radius": 2.6, "range": 30, "speed": 34, "color": 16743227, "texture": "flamestrike", "impact": "flamestrike" }
+    ],
+    "ranger": [
+      { "id": "air_step", "name": "Air Step", "kind": "dash", "forceCost": 22, "cooldown": 4, "damage": 18, "radius": 2.2, "range": 16, "speed": 58, "color": 13234431, "texture": "arcanebolt", "impact": "arcanebolt" },
+      { "id": "gale_bolt", "name": "Gale Bolt", "kind": "projectile", "forceCost": 24, "cooldown": 5, "damage": 30, "radius": 1.8, "range": 30, "speed": 38, "color": 11983114, "texture": "arcanebolt", "impact": "arcanebolt" }
+    ],
+    "worge": [
+      { "id": "earth_heave", "name": "Earth Heave", "kind": "nova", "forceCost": 32, "cooldown": 7, "damage": 16, "radius": 6, "range": 0, "speed": 0, "color": 12163661, "texture": "hit" },
+      { "id": "stone_charge", "name": "Stone Charge", "kind": "dash", "forceCost": 28, "cooldown": 6, "damage": 38, "radius": 3.2, "range": 9, "speed": 36, "color": 7034692, "texture": "hit" }
+    ],
+    "blade dancer": [
+      { "id": "blink_gale", "name": "Blink Gale", "kind": "dash", "forceCost": 24, "cooldown": 6, "damage": 14, "radius": 2, "range": 18, "speed": 64, "color": 16055551, "texture": "heal" },
+      { "id": "air_cannon", "name": "Air Cannon", "kind": "nova", "forceCost": 26, "cooldown": 5, "damage": 10, "radius": 8, "range": 0, "speed": 0, "color": 13234431, "texture": "arcanebolt" }
+    ]
+  },
+  "effects": [
+    { "kind": "travel", "intensity": 1, "aoe": 2.4, "speed": 18, "size": 1, "color": "#ff7733", "meshId": "orb-fire", "duration": 0.8 },
+    { "kind": "impact", "intensity": 1.2, "aoe": 3.2, "speed": 0, "size": 1.1, "color": "#ffaa44", "meshId": "sphering", "duration": 0.45 },
+    { "kind": "trail", "intensity": 0.9, "aoe": 0.4, "speed": 0, "size": 1, "color": "#7ec8ff", "meshId": "slashblue", "duration": 0.35 },
+    { "kind": "residual", "intensity": 1, "aoe": 4, "speed": 12, "size": 1, "color": "#ff3355", "meshId": "slashred", "duration": 0.6 },
+    { "kind": "cast", "intensity": 1, "aoe": 0.8, "speed": 0, "size": 1, "color": "#b07fe8", "meshId": "staff-charge", "duration": 0.5 },
+    { "kind": "smoke", "intensity": 0.9, "aoe": 0.8, "speed": 2.4, "size": 0.7, "color": "#8899aa", "meshId": "smoke", "duration": 0.7 },
+    { "kind": "fire", "intensity": 1, "aoe": 1.1, "speed": 2.2, "size": 0.85, "color": "#ff6622", "meshId": "fire", "duration": 0.75, "effectId": "fire-attack" },
+    { "kind": "flame", "intensity": 1.1, "aoe": 0.55, "speed": 3.2, "size": 0.55, "color": "#ffaa33", "meshId": "flame", "duration": 0.45, "effectId": "flame-attack" },
+    { "kind": "frost", "intensity": 1, "aoe": 0.9, "speed": 1.8, "size": 0.75, "color": "#7ec8ff", "meshId": "frost", "duration": 0.8, "effectId": "frost-attack" },
+    { "kind": "heal", "intensity": 1.15, "aoe": 2.4, "speed": 1.6, "size": 0.9, "color": "#b8ff88", "meshId": "heal", "duration": 0.9, "effectId": "heal-bloom" },
+    { "kind": "aura", "intensity": 0.7, "aoe": 2, "speed": 0, "size": 1, "color": "#c9a04e", "meshId": "none", "duration": 1.2 }
+  ]
+}

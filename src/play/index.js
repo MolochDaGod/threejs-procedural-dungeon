@@ -42,6 +42,7 @@ import { bindHud, fillEquipPanel, mountHud, paintClassRadial, paintItemRadial, p
 import { classSkill0 } from './classSkill0.js';
 import { classifyFormClip, defaultFormFor, fitFormToSi, FORMS, formUrl } from './forms.js';
 import { overlayForSkill } from './stylizedProjectiles.js';
+import { parseFxColor } from './combatLabSkills.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 
 import { makeTotemMesh, TOTEM_LIFE, TOTEM_PULSE, TOTEM_RANGE_BONUS, TOTEM_SHIELD_MAX, TOTEM_SHIELD_TICK, TOTEM_STR } from './totems.js';
@@ -2328,6 +2329,7 @@ export class PlaySession {
     else this.player?.requestOneShot(animName, shotDur);
     playSfx(spell.kind === 'slash' || spell.kind === 'dash' ? 'combat_hit' : 'combat_spell', { volume: 0.32 });
     this.vfx.aura({ origin: this.pos.clone(), color: spell.color, life: 0.28 });
+    this.applyLabEffects(spell, origin, 'cast');
     const tel = spell.telegraphSec || 0.15;
     this.casting = Math.max(0.16, tel);
     this.castMax = this.casting;
@@ -2375,11 +2377,12 @@ export class PlaySession {
         this.vfx.mist({ origin: e.pos.clone().setY(1.1), color: 0x53e93f, radius: 0.9, life: 0.8 });
       }
       const p = e.pos.clone().setY(1.1);
-      if (spell.element === 'fire') this.vfx.fire({ origin: p, color: spell.color, duration: 'small' });
+      if (spell.labEffects?.length) this.applyLabEffects(spell, p, 'hit');
+      else if (spell.element === 'fire') this.vfx.fire({ origin: p, color: spell.color, duration: 'small' });
       else if (spell.element === 'ice' || spell.element === 'frost') this.vfx.mist({ origin: p, color: spell.color, radius: 1.2, life: 1.0 });
       else if (spell.element === 'holy' || spell.element === 'nature') this.vfx.mist({ origin: p, color: spell.color, radius: 1.15, life: 0.9 });
       else this.vfx.smoke({ origin: p, color: spell.color, life: 0.65 });
-      this.vfx.impact({ origin: p, color: spell.color });
+      if (!spell.labEffects?.length) this.vfx.impact({ origin: p, color: spell.color });
     };
 
     if (spell.kind === 'slash') {
@@ -2574,6 +2577,32 @@ export class PlaySession {
     let i = Number(this.healFocus) + 1;
     while (i < n && !this.allies[i]?.alive) i += 1;
     this.setHealFocus(i < n ? String(i) : 'player');
+  }
+
+  applyLabEffects(spell, origin, phase = 'cast') {
+    const list = spell?.labEffects;
+    if (!list?.length || !origin) return;
+    for (const e of list) {
+      const col = parseFxColor(e.color, spell.color);
+      const life = e.duration || 0.5;
+      const p = origin.clone();
+      p.y = (origin.y || 0) + (e.attach === 'feet' ? 0.08 : 0.2);
+      if (phase === 'cast') {
+        if (e.kind === 'cast' || e.kind === 'aura') this.vfx.aura({ origin: p, color: col, life });
+        if (e.kind === 'flame' || e.kind === 'fire') this.vfx.fire({ origin: p, color: col, duration: 'small' });
+        if (e.kind === 'frost' || e.kind === 'heal') this.vfx.mist({ origin: p, color: col, radius: e.aoe || 1.2, life });
+      }
+      if (phase === 'hit') {
+        if (e.kind === 'impact') this.vfx.impact({ origin: p, color: col });
+        if (e.kind === 'fire' || e.kind === 'flame') this.vfx.fire({ origin: p, color: col, duration: 'small' });
+        if (e.kind === 'frost') this.vfx.mist({ origin: p, color: col, radius: e.aoe || 1.3, life });
+        if (e.kind === 'smoke') this.vfx.smoke({ origin: p, color: col, life });
+        if (e.kind === 'heal') this.vfx.mist({ origin: p, color: col, radius: e.aoe || 2, life });
+        if (e.kind === 'residual' && spell.kind !== 'slash') {
+          this.linear.wave({ origin: p, dir: this.aim, color: col, range: e.aoe || 3.2, speed: e.speed || 14, overlay: spell.overlay || null });
+        }
+      }
+    }
   }
 
   applyPartyHeal(amount, origin, { range = 4.2, color = 0xc8f0a8, name = 'Heal', from = '' } = {}) {

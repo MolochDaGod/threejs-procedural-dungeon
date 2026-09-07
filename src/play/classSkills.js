@@ -6,6 +6,7 @@
 import { iconUrlFromPath, resolveSkillIcon } from './skillIcons.js';
 import { overlayForSkill } from './stylizedProjectiles.js';
 import { classSkill0 } from './classSkill0.js';
+import { compileLabSkill, labSkillsFor } from './combatLabSkills.js';
 
 export const CLASS_TREES_URL = 'https://info.grudge-studio.com/api/v1/master-skillTrees.json';
 
@@ -108,13 +109,21 @@ export function classLoadoutFor(classId, trees, level = 20) {
   }
   const granted = nodes.filter((s) => s.grantedAbility);
   const pick = (granted.length ? granted : nodes.filter((s) => !s.passive)).slice(0, 6);
-  const rows = pick.map((sk, i) => compileClassSkill(sk, i));
+  const treeRows = pick.map((sk, i) => compileClassSkill(sk, i));
+  const labRows = labSkillsFor(classId).map((d, i) => compileLabSkill(d, i));
   const f0 = classSkill0(classId);
+  const used = new Set(f0 ? [f0.id] : []);
+  const merged = [];
   if (f0) {
-    const rest = rows.filter((s) => s.id !== f0.id).slice(0, 5);
     const head = { ...f0, classSkill: true, slot: 0, key: 'F' };
     head.iconUrl = resolveSkillIcon(head);
-    return [head, ...rest.map((s, i) => ({ ...s, slot: i + 1, iconUrl: resolveSkillIcon(s) }))];
+    merged.push(head);
   }
-  return rows.map((s) => ({ ...s, iconUrl: resolveSkillIcon(s) }));
+  for (const s of [...labRows, ...treeRows]) {
+    if (used.has(s.id)) continue;
+    used.add(s.id);
+    merged.push(s);
+    if (merged.length >= 6) break;
+  }
+  return merged.map((s, i) => ({ ...s, slot: i, key: i === 0 ? 'F' : '', iconUrl: resolveSkillIcon(s) }));
 }
